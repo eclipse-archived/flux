@@ -1,0 +1,22 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Flux UI Integration
+Bundle-SymbolicName: org.eclipse.flux.ui.integration;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: Eclipse.org - Flux
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.resources,
+ org.eclipse.core.runtime,
+ org.eclipse.core.expressions,
+ org.json,
+ org.eclipse.flux.core,
+ org.eclipse.jdt.ui,
+ org.eclipse.ui.workbench.texteditor,
+ org.eclipse.jface.text,
+ org.eclipse.flux.jdt.service;bundle-version="1.0.0";resolution:=optional,
+ org.apache.commons.lang,
+ org.apache.commons.codec,
+ org.eclipse.core.filebuffers
+Bundle-Activator: org.eclipse.flux.ui.integration.FluxUiPlugin
+Bundle-ActivationPolicy: lazy

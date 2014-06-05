@@ -1,0 +1,49 @@
+@import "../../orion/editor/textview.css";
+@import "../../orion/editor/rulers.css";
+@import "../../orion/editor/annotations.css";
+@import "../../orion/editor/tooltip.css";
+@import "../../orion/editor/contentassist.css";
+@import "textstyler.css";
+@import "htmlStyles.css";
+
+body {
+	margin: 0;
+	padding: 0;
+	font: 14px Monaco;
+}
+
+a {
+	cursor: hand;
+	text-decoration: none;
+	color: #ffffff;
+}
+
+a:hover {
+	cursor: hand;
+	text-decoration: underline;
+	color: #ffffff;
+}
+/*
+.contentassist {
+	display: none;
+	background-color: #ffffff;
+	padding: 2px;
+	position: fixed;
+	top: 100px;
+	left: 100px;
+	border: 1px solid #cccccc;
+	z-index:10;
+	cursor: default;
+	overflow: auto;
+	height: 150px;
+	width: 500px;
+}
+
+.contentassist .selected {
+	background-color: #dddddd;
+}
+
+.textviewContainer {
+	font: 14px Monaco;
+}
+*/

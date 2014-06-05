@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+      		allPopups="false"
+            locationURI="popup:org.eclipse.ui.popup.any?after=additions">
+          <menu
+                id="org.eclipse.flux.ui.integration"
+                label="Flux">
+	         <command
+	               commandId="org.eclipse.flux.ui.integration.connect"
+	               style="push">
+	            <visibleWhen
+	                  checkEnabled="false">
+	               <with
+	                     variable="activeMenuSelection">
+	                  <iterate
+	                        ifEmpty="false"
+	                        operator="or">
+	                     <adapt
+	                           type="org.eclipse.core.resources.IProject">
+	                     </adapt>
+	                  </iterate>
+	               </with>
+	            </visibleWhen>
+	         </command>
+	         <command
+	               commandId="org.eclipse.flux.ui.integration.disconnect"
+	               style="push">
+	            <visibleWhen
+	                  checkEnabled="false">
+	               <with
+	                     variable="activeMenuSelection">
+	                  <iterate
+	                        ifEmpty="false"
+	                        operator="or">
+	                     <adapt
+	                           type="org.eclipse.core.resources.IProject">
+	                     </adapt>
+	                  </iterate>
+	               </with>
+	            </visibleWhen>
+	         </command>
+	         <command
+	               commandId="org.eclipse.flux.ui.integration.download"
+	               style="push">
+	         </command>
+          </menu> 
+      </menuContribution>
+   </extension>
+   
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            defaultHandler="org.eclipse.flux.ui.integration.handlers.SyncConnectHandler"
+            id="org.eclipse.flux.ui.integration.connect"
+            name="Connect">
+      </command>
+   </extension>
+
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            defaultHandler="org.eclipse.flux.ui.integration.handlers.SyncDisconnectHandler"
+            id="org.eclipse.flux.ui.integration.disconnect"
+            name="Disconnect">
+      </command>
+   </extension>
+   
+   <extension
+         point="org.eclipse.ui.commands">
+      <command
+            defaultHandler="org.eclipse.flux.ui.integration.handlers.SyncDownloadHandler"
+            id="org.eclipse.flux.ui.integration.download"
+            name="Download">
+      </command>
+   </extension>
+
+   <extension point="org.eclipse.ui.decorators">
+      <decorator
+            id="org.eclipse.flux.ui.integration.projectdecorator"
+            label="Cloud Sync Project Decorator"
+            state="true"
+            class="org.eclipse.flux.ui.integration.CloudProjectDecorator"
+            adaptable="true"
+            lightweight="true">
+            <enablement>
+                <objectClass name="org.eclipse.core.resources.IProject"/>
+            </enablement>
+      </decorator>
+   </extension>
+   <extension
+         point="org.eclipse.ui.startup">
+      <startup
+            class="org.eclipse.flux.ui.integration.FluxUiPlugin">
+      </startup>
+   </extension>
+
+</plugin>

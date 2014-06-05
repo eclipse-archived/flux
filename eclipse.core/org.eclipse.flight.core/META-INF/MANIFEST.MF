@@ -1,0 +1,20 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Flux Core
+Bundle-SymbolicName: org.eclipse.flux.core
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: Eclipse.org - Flux
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Import-Package: org.apache.commons.lang,
+ org.osgi.framework
+Require-Bundle: org.json,
+ org.eclipse.core.resources,
+ org.apache.commons.codec,
+ org.eclipse.core.runtime,
+ org.apache.commons.io,
+ org.eclipse.jdt.core
+Bundle-ClassPath: lib/socketio.jar,
+ .
+Export-Package: org.eclipse.flux.core
+Bundle-ActivationPolicy: lazy; exclude:="io.socket, org.java_websocket, org.java_websocket.client, org.java_websocket.drafts, org.java_websocket.exceptions, org.java_websocket.framing, org.java_websocket.handshake, org.java_websocket.server, org.java_websocket.util, org.json"
+Bundle-Activator: org.eclipse.flux.core.Activator

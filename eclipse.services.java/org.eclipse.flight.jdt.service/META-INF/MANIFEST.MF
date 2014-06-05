@@ -1,0 +1,17 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: JDT as a service
+Bundle-SymbolicName: org.eclipse.flux.jdt.service
+Bundle-Version: 1.0.0.qualifier
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: org.eclipse.flux.core,
+ org.eclipse.jdt.core,
+ org.json,
+ org.eclipse.core.runtime,
+ org.eclipse.core.resources
+Bundle-Activator: org.eclipse.flux.jdt.services.Activator
+Bundle-Vendor: Eclipse.org - Flux
+Import-Package: org.apache.commons.codec.digest
+Export-Package: org.eclipse.flux.jdt.services
+Bundle-ActivationPolicy: lazy
+
