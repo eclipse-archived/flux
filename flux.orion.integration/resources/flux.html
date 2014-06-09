@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>FluxPlugin</title>
+<script src="lib/plugin.js"></script>
+<script src="lib/Deferred.js"></script>
+<script src="lib/socket.io.js"></script>
+<script src="lib/sha1.js"></script>
+<script src="lib/require.js"></script>
+<script src="FluxFileSystem.js"></script>
+<!-- <script src="reconciling.js"></script> -->
+	<script type="text/javascript">
+	/*global window console eclipse orion*/
+		window.onload = function() {
+			var host = "localhost";
+			var port = 3000;
+			var user = 'defaultuser';
+			var provider = new orion.PluginProvider();
+			var base = "flux:http://" + host +":" + port + "/" + user + "/";
+			var service = new eclipse.FluxFileSystem(host, port, user);
+			provider.registerService("orion.core.file", service, {Name:'Flux Contents', top:base, pattern:base});
+			provider.connect();
+		};
+	</script>
+</head>
+<body></body>
+</html>
