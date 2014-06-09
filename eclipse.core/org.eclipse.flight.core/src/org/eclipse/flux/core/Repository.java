@@ -572,6 +572,16 @@ public class Repository {
 
 						newFolder.create(true, true, null);
 						newFolder.setLocalTimeStamp(updateTimestamp);
+						
+						JSONObject message = new JSONObject();
+						message.put("username", this.username);
+						message.put("project", projectName);
+						message.put("resource", resourcePath);
+						message.put("timestamp", updateTimestamp);
+						message.put("hash", updateHash);
+						message.put("type", type);
+						
+						messagingConnector.send("resourceStored", message);
 					}
 					else if ("file".equals(type)) {
 						JSONObject message = new JSONObject();
@@ -581,6 +591,7 @@ public class Repository {
 						message.put("resource", resourcePath);
 						message.put("timestamp", updateTimestamp);
 						message.put("hash", updateHash);
+						message.put("type", type);				
 
 						messagingConnector.send("getResourceRequest", message);
 					}
@@ -673,6 +684,7 @@ public class Repository {
 					message.put("resource", resourcePath);
 					message.put("timestamp", updateTimestamp);
 					message.put("hash", updateHash);
+					message.put("type", "file");
 					messagingConnector.send("resourceStored", message);
 				}
 			}
