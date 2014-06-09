@@ -803,6 +803,7 @@ public class Repository {
 			storedMessage.put("resource", resourcePath);
 			storedMessage.put("timestamp", timestamp);
 			storedMessage.put("hash", hash);
+			storedMessage.put("type", type);
 			messagingConnector.send("resourceStored", storedMessage);
 
 		} catch (Exception e) {
