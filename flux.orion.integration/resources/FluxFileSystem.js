@@ -1,20 +1,16 @@
 /*******************************************************************************
  * @license
- * Copyright (c) 2010, 2012 IBM Corporation and others.
+ * Copyright (c) 2014 Pivotal Software Inc. and others.
  * All rights reserved. This program and the accompanying materials are made 
  * available under the terms of the Eclipse Public License v1.0 
  * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
  * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
  * 
- * Contributors: IBM Corporation - initial API and implementation
+ * Contributors: Pivotal Software Inc. - initial API and implementation
  ******************************************************************************/
 
 /*global window eclipse:true orion FileReader Blob*/
 /*jslint forin:true devel:true*/
-
-window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;
-window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
-window.BlobBuilder = window.MozBlobBuilder || window.WebKitBlobBuilder || window.BlobBuilder;
 
 function resolveEntryURL(url) {
 	var d = new orion.Deferred();
@@ -478,31 +474,38 @@ eclipse.FluxFileSystem= (function() {
 			var hash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
 			var timestamp = Date.now();
 			
-			var data = {
-				'username' : user,
-				'project' : normalizedPath.project,
-				'resource' : normalizedPath.path,
-				'hash' : hash,
-				'type': type,
-				'timestamp' : timestamp
-			};
+			this._findFromLocation(location).then(function(resource) {
+				if (resource) {
+					deferred.reject("The resource \'" + location + "\' already exists!");
+				} else {
+					var data = {
+						'username' : user,
+						'project' : normalizedPath.project,
+						'resource' : normalizedPath.path,
+						'hash' : hash,
+						'type': type,
+						'timestamp' : timestamp
+					};
+								
+					saves[location] = {
+						'username' : user,
+						'project' : normalizedPath.project,
+						'resource' : normalizedPath.path,
+						'type': type,
+						'hash' : hash,
+						'timestamp' : timestamp,
+						'content' : contents ? contents : "",
+						'deferred' : deferred
+					};
 						
-			saves[location] = {
-				'username' : user,
-				'project' : normalizedPath.project,
-				'resource' : normalizedPath.path,
-				'type': type,
-				'hash' : hash,
-				'timestamp' : timestamp,
-				'content' : contents ? contents : "",
-				'deferred' : deferred
-			};
+					this.sendMessage("resourceCreated", data);								
+				}
 				
-			this.sendMessage("resourceCreated", data);			
+			});
 			
 			return deferred;
-		},		
-
+		},
+		
 		/**
 		 * Adds a project to a workspace.
 		 * @param {String} url The workspace location
@@ -511,7 +514,49 @@ eclipse.FluxFileSystem= (function() {
 		 * @param {Boolean} create If true, the project is created on the server file system if it doesn't already exist
 		 */
 		createProject: function(url, projectName, serverPath, create) {
-			return this.createResource(url + '/' + projectName, 'folder');
+			var self = this;
+			var deferred = new orion.Deferred();
+			this.getWorkspace(url).then(function(workspace) {
+				if (workspace._childrenCache && workspace._childrenCache[projectName]) {
+					deferred.reject("Project with name \'" + projectName + "\' already exists!");
+				} else {
+					var hash = CryptoJS.SHA1(projectName).toString(CryptoJS.enc.Hex);
+					var timestamp = Date.now();
+					var location = url + projectName;
+					var project = {
+						Attributes: {
+							ReadOnly: false,
+							SymLink: false,
+							Hidden: false,
+							Archive: false,
+						},
+						Name: projectName,
+						Directory: true,
+						ETag: hash,
+						LocalTimeStamp: timestamp,
+						Location: location,
+						Children: [],
+						ChildrenLocation: location + '/',
+						Parents: [ workspace ],
+						_childrenCache: {},
+						Id: projectName,
+					};
+					if (!workspace._childrenCache) {
+						workspace._childrenCache = {};
+					}
+					workspace._childrenCache[projectName] = project;
+					if (!workspace.Children) {
+						workspace.Children = [];
+					}
+					workspace.Children.push(project);
+					self.sendMessage("projectCreated", {
+						'username' : user,
+						'project' : projectName
+					});
+					deferred.resolve(project);
+				}
+			});
+			return deferred;
 		},
 		
 		/**

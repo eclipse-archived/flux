@@ -8,18 +8,35 @@
 <script src="lib/socket.io.js"></script>
 <script src="lib/sha1.js"></script>
 <script src="lib/require.js"></script>
+<script src="FluxEditor.js"></script>
 <script src="FluxFileSystem.js"></script>
-<!-- <script src="reconciling.js"></script> -->
 	<script type="text/javascript">
 	/*global window console eclipse orion*/
 		window.onload = function() {
 			var host = "localhost";
 			var port = 3000;
-			var user = 'defaultuser';
-			var provider = new orion.PluginProvider();
+			var user = 'defaultuser';		
 			var base = "flux:http://" + host +":" + port + "/" + user + "/";
-			var service = new eclipse.FluxFileSystem(host, port, user);
-			provider.registerService("orion.core.file", service, {Name:'Flux Contents', top:base, pattern:base});
+			
+			var contentTypes = ["application/javascript", "text/plain" ];
+			
+			var headers = {
+				'Name' : "Flux",
+				'Version' : "0.1",
+				'Description' : "Flux Integration",
+				'top' : base,
+				'pattern' : base,
+			};
+			
+			var provider = new orion.PluginProvider(headers);			
+
+			var fileService = new eclipse.FluxFileSystem(host, port, user);
+			provider.registerService("orion.core.file", fileService, headers);
+			
+			var editorService = new eclipse.FluxEditor(host, port, user);
+			provider.registerService("orion.edit.model", editorService, { 'contentType' : contentTypes });
+			provider.registerService("orion.edit.contentAssist", editorService, { 'contentType' : contentTypes });
+			
 			provider.connect();
 		};
 	</script>
