@@ -36,6 +36,7 @@
 			var editorService = new eclipse.FluxEditor(host, port, user);
 			provider.registerService("orion.edit.model", editorService, { 'contentType' : contentTypes });
 			provider.registerService("orion.edit.contentAssist", editorService, { 'contentType' : contentTypes });
+			provider.registerService("orion.edit.validator", editorService, { 'contentType' : contentTypes});
 			
 			provider.connect();
 		};

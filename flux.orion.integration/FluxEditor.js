@@ -109,7 +109,15 @@ eclipse.FluxEditor = (function() {
 		},
 		
 		computeContentAssist: function(editorContext, options) {
-			console("Editor content assist: " + JSON.stringify(editorContext));
+			console.log("Editor content assist: " + JSON.stringify(editorContext));
+		},
+		
+		computeProblems: function(editorContext, options) {
+			console.log("Validator (Problems): " + JSON.stringify(options));	
+		},
+		
+		checkSyntax: function(title, contents) {
+			console.log("Validator (Syntax): " + JSON.stringify(title));	
 		},
 
 	};
