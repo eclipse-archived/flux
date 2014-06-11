@@ -213,6 +213,8 @@ eclipse.FluxFileSystem= (function() {
 				if (callbacks) {
 					message.callback_id = generateCallbackId();
 					callbacksCache[message.callback_id] = callbacks;
+				} else {
+					message.callback_id = 0;
 				}
 				this.socket.emit(type, message);
 				return true;
@@ -473,6 +475,7 @@ eclipse.FluxFileSystem= (function() {
 			var normalizedPath = this._normalizeLocation(location);
 			var hash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
 			var timestamp = Date.now();
+			var self = this;
 			
 			this._findFromLocation(location).then(function(resource) {
 				if (resource) {
@@ -498,7 +501,7 @@ eclipse.FluxFileSystem= (function() {
 						'deferred' : deferred
 					};
 						
-					this.sendMessage("resourceCreated", data);								
+					self.sendMessage("resourceCreated", data);								
 				}
 				
 			});
