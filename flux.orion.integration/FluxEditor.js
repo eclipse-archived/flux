@@ -251,7 +251,6 @@ eclipse.FluxEditor = (function() {
 					'username' : user,
 					'project' : normalizedLocation.project,
 					'resource' : normalizedLocation.path,
-					'metadataOnly' : true
 				}, function(data) {
 					var location = self._rootLocation + data.project + '/' + data.resource;
 					if (self._resourceUrl === location) {
