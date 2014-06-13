@@ -9,15 +9,6 @@
  * Contributors: Pivotal Software Inc. - initial API and implementation
  ******************************************************************************/
 
-/*global window eclipse:true orion FileReader Blob*/
-/*jslint forin:true devel:true*/
-
-function resolveEntryURL(url) {
-	var d = new orion.Deferred();
-	window.resolveLocalFileSystemURL(url, d.resolve, d.reject);
-	return d;
-}
-
 function assignAncestry(parents, childrenDepthMap, depth) {
 	var child, parentLocation, parent;
 	if (childrenDepthMap[depth]) {
@@ -57,6 +48,9 @@ function assignAncestry(parents, childrenDepthMap, depth) {
 
 var counter = 1;
 function generateCallbackId() {
+	if (counter === Number.MAX_VALUE) {
+		counter = 1;
+	}
 	return counter++;
 }
 
@@ -106,35 +100,31 @@ eclipse.FluxFileSystem= (function() {
 				}, function(answer) {
 					if (answer.connectedToChannel) {
 						self._connectedToChannel = true;
-						console.log("Connected to FLUX channel: " + user);
+						console.log("FileSystem connected to FLUX channel: " + user);
 					}
 				});
 //			}
 		});
 		
 		this.socket.on('getProjectsResponse', function(data) {
-			console.log("getProjectsResponse: " + JSON.stringify(data));
 			if (data.username === user) {
 				self._handleMessage(data);				
 			}
 		});
 		
 		this.socket.on('getProjectResponse', function(data) {
-			console.log("getProjectResponse: " + JSON.stringify(data));
 			if (data.username === user) {
 				self._handleMessage(data);				
 			}
 		});
 		
 		this.socket.on('getResourceResponse', function(data) {
-			console.log("getResourceResponse: " + JSON.stringify(data));
 			if (data.username === user) {
 				self._handleMessage(data);				
 			}
 		});
 			
 		this.socket.on('resourceStored', function(data) {
-			console.log("resourceStored: " + JSON.stringify(data));
 			if (data.username === user) {
 				var resource = self._createOrionResource(data);
 				var parentPath = resource.Location.substr(0, resource.Location.lastIndexOf('/'));
@@ -165,7 +155,6 @@ eclipse.FluxFileSystem= (function() {
 		});
 		
 		this.socket.on('getResourceRequest', function(data) {
-			console.log("getResourceRequest: " + JSON.stringify(data));
 			if (data.username === user) {
 				var resource = self._createOrionResource(data);
 				var cachedSave = saves[resource.Location];
@@ -190,7 +179,7 @@ eclipse.FluxFileSystem= (function() {
 		});
 		
 		this.socket.on("resourceCreated", function(data) {
-			console.log("resourceCreated: " + JSON.stringify(data));
+//			console.log("resourceCreated: " + JSON.stringify(data));
 		});
 	}
 	
@@ -267,9 +256,7 @@ eclipse.FluxFileSystem= (function() {
 			}
 			return deferred;
 		},
-		_getEntry: function(location) {
-			return resolveEntryURL(location || this._rootLocation);
-		},
+		
 		/**
 		 * Obtains the children of a remote resource
 		 * @param location The location of the item to obtain children for
@@ -616,18 +603,7 @@ eclipse.FluxFileSystem= (function() {
 		 * @param {String} [name] The name of the destination file or directory in the case of a rename
 		 */
 		moveFile: function(sourceLocation, targetLocation, name) {
-			var that = this;
-			if (sourceLocation.indexOf(this._rootLocation) === -1 || targetLocation.indexOf(this._rootLocation) === -1) {
-				throw "Not supported";	
-			}
-
-			return this._getEntry(sourceLocation).then(function(entry) {
-				return that._getEntry(targetLocation).then(function(parent) {
-					var d = new orion.Deferred();
-					entry.moveTo(parent, name, function() {d.resolve(that.read(targetLocation + "/" + (name || entry.name), true));}, d.reject);
-					return d;
-				});
-			});
+			throw "Move file not supported";
 		},
 
 		/**
@@ -637,18 +613,7 @@ eclipse.FluxFileSystem= (function() {
 		 * @param {String} [name] The name of the destination file or directory in the case of a rename
 		 */
 		copyFile: function(sourceLocation, targetLocation, name) {
-			var that = this;
-			if (sourceLocation.indexOf(this._rootLocation) === -1 || targetLocation.indexOf(this._rootLocation) === -1) {
-				throw "Not supported";	
-			}
-
-			return this._getEntry(sourceLocation).then(function(entry) {
-				return that._getEntry(targetLocation).then(function(parent) {
-					var d = new orion.Deferred();
-					entry.copyTo(parent, name, function() {d.resolve(that.read(targetLocation + "/" + (name || entry.name), true));}, d.reject);
-					return d;
-				});
-			});
+			throw "Copy file not supported";	
 		},
 		
 		_createOrionResource: function(data) {
@@ -750,7 +715,7 @@ eclipse.FluxFileSystem= (function() {
 		 * @return A deferred for chaining events after the import completes
 		 */		
 		remoteImport: function(targetLocation, options) {
-			throw "Not supported";
+			throw "Remote Import not supported";
 		},
 		/**
 		 * Exports file and directory contents to another server
@@ -760,7 +725,7 @@ eclipse.FluxFileSystem= (function() {
 		 * @return A deferred for chaining events after the export completes
 		 */		
 		remoteExport: function(sourceLocation, options) {
-			throw "Not supported";
+			throw "Remote Export not supported";
 		}
 	};
 
