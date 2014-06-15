@@ -24,6 +24,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
+ * Implements "Jump to declaration" navigation for a location in a Java file.
  * @author Martin Lippert
  */
 public class NavigationService {
@@ -34,7 +35,7 @@ public class NavigationService {
 	public NavigationService(IMessagingConnector messagingConnector, LiveEditUnits liveEditUnits) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditUnits = liveEditUnits;
-		
+
 		IMessageHandler contentAssistRequestHandler = new AbstractMessageHandler("navigationrequest") {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
@@ -43,14 +44,14 @@ public class NavigationService {
 		};
 		messagingConnector.addMessageHandler(contentAssistRequestHandler);
 	}
-	
+
 	protected void handleNavigationRequest(JSONObject message) {
 		try {
 			String username = message.getString("username");
 			String projectName = message.getString("project");
 			String resourcePath = message.getString("resource");
 			int callbackID = message.getInt("callback_id");
-			
+
 			String liveEditID = projectName + "/" + resourcePath;
 			if (liveEditUnits.isLiveEditResource(username, liveEditID)) {
 
@@ -59,7 +60,7 @@ public class NavigationService {
 				String sender = message.getString("requestSenderID");
 
 				JSONObject navigationResult = computeNavigation(username, liveEditID, offset, length);
-				
+
 				if (navigationResult != null) {
 					JSONObject responseMessage = new JSONObject();
 					responseMessage.put("username", username);
@@ -68,7 +69,7 @@ public class NavigationService {
 					responseMessage.put("callback_id", callbackID);
 					responseMessage.put("requestSenderID", sender);
 					responseMessage.put("navigation", navigationResult);
-	
+
 					messagingConnector.send("navigationresponse", responseMessage);
 				}
 			}
@@ -82,48 +83,49 @@ public class NavigationService {
 			ICompilationUnit liveEditUnit = liveEditUnits.getLiveEditUnit(username, requestorResourcePath);
 			if (liveEditUnit != null) {
 				IJavaElement[] elements = liveEditUnit.codeSelect(offset, length);
-	
+
 				if (elements != null && elements.length > 0) {
 					JSONObject result = new JSONObject();
-					
+
 					IJavaElement element = elements[0];
 					IResource resource = element.getResource();
-					
+
+					//if the selected element corresponds to a resource in workspace, navigate to it
 					if (resource != null && resource.getProject() != null) {
 						String projectName = resource.getProject().getName();
 						String resourcePath = resource.getProjectRelativePath().toString();
-						
+
 						result.put("project", projectName);
 						result.put("resource", resourcePath);
-		
+
 						if (element instanceof ISourceReference) {
 							ISourceRange nameRange = ((ISourceReference) element).getNameRange();
 							result.put("offset", nameRange.getOffset());
 							result.put("length", nameRange.getLength());
 						}
-						
+
 						return result;
 					}
-					else {
-						while (element != null && !(element instanceof IClassFile)) {
-							element = element.getParent();
-						}
-						
-						if (element != null && element instanceof IClassFile) {
-							IClassFile classFile = (IClassFile) element;
-							ISourceRange sourceRange = classFile.getSourceRange();
-							if (sourceRange != null) {
-								String projectName = element.getJavaProject().getProject().getName();
-								String resourcePath  = classFile.getParent().getElementName().replace('.', '/');
-								resourcePath = "classpath:/" + resourcePath + "/" + classFile.getElementName();
-								
-								result.put("project", projectName);
-								result.put("resource", resourcePath);
-								
-								return result;
-							}
+					//walk up the java model until we reach a class file
+					while (element != null && !(element instanceof IClassFile)) {
+						element = element.getParent();
+					}
+
+					if (element instanceof IClassFile) {
+						IClassFile classFile = (IClassFile) element;
+						ISourceRange sourceRange = classFile.getSourceRange();
+						if (sourceRange != null) {
+							String projectName = element.getJavaProject().getProject().getName();
+							String resourcePath = classFile.getParent().getElementName().replace('.', '/');
+							resourcePath = "classpath:/" + resourcePath + "/" + classFile.getElementName();
+
+							result.put("project", projectName);
+							result.put("resource", resourcePath);
+
+							return result;
 						}
 					}
+					//we don't know how to navigate to this element
 				}
 			}
 

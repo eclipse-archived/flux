@@ -11,7 +11,9 @@
  *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
-import org.eclipse.flux.core.*;
+import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.core.LiveEditCoordinator;
+import org.eclipse.flux.core.Repository;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 
