@@ -121,12 +121,14 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 				return true;
 		});
 
+		//Navigate to declaration (F3)
 		editor.getTextView().setKeyBinding(new mKeyBinding.KeyBinding(114), "navigate");
 		editor.getTextView().setAction("navigate", function(){
 				navigate(editor);
 				return true;
 		});
 
+		//Rename in file (F4)
 		editor.getTextView().setKeyBinding(new mKeyBinding.KeyBinding(115), "renameinfile");
 		editor.getTextView().setAction("renameinfile", function(){
 				renameInFile(editor);
