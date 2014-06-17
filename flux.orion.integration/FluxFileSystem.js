@@ -65,7 +65,7 @@ function _cleanSaves(resource) {
 	var cachedSave = saves[resource.Location];
 	if (cachedSave && (resource.Directory || (!resource.Directory
 			&& cachedSave.hash === resource.ETag
-			&& cachedSave.timestamp === resource.LocalTimeStamp))) {
+			/*&& cachedSave.timestamp === resource.LocalTimeStamp*/))) {
 		if (cachedSave.deferred && cachedSave.deferred.resolve && cachedSave.deferred.resolve.call) {
 			cachedSave.deferred.resolve(resource);
 		}
@@ -130,7 +130,7 @@ eclipse.FluxFileSystem= (function() {
 				var parentPath = resource.Location.substr(0, resource.Location.lastIndexOf('/'));
 				
 				self._findFromLocation(parentPath).then(function(parent) {
-					var foundResource = parent._childrenCache[resource.Name];
+					var foundResource = parent._childrenCache ? parent._childrenCache[resource.Name] : null;
 					if (foundResource) {
 						if (foundResource.LocalTimeStamp < resource.LocalTimeStamp) {
 							foundResource.LocalTimeStamp = resource.LocalTimeStamp;
@@ -170,6 +170,7 @@ eclipse.FluxFileSystem= (function() {
 						'project' : cachedSave.project,
 						'resource' : cachedSave.resource,
 						'timestamp' : cachedSave.timestamp,
+						'type' : cachedSave.type,
 						'hash' : cachedSave.hash,
 						'content' : cachedSave.content 						
 					});
@@ -350,7 +351,7 @@ eclipse.FluxFileSystem= (function() {
 			for (j in entries) {
 				entries[j].Location = this._rootLocation + entries[j].Location;
 				if (entries[j].Directory) {
-					entries[j].ChildrenLocation = this._rootLocation + entries[j].ChildrenLocation;
+					entries[j].ChildrenLocation = entries[j].Location + '/';
 				}
 			}
 			return result;
@@ -450,7 +451,7 @@ eclipse.FluxFileSystem= (function() {
 				if (relativeLocation) {
 					var path = relativeLocation.split('/');
 					for (var i = 0; i < path.length && result; i++) {
-						result = result._childrenCache[path[i]];
+						result = result._childrenCache ? result._childrenCache[path[i]] : null;
 					}
 				}
 				return result;

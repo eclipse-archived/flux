@@ -1,0 +1,134 @@
+diff --git a/bundles/org.eclipse.orion.client.ui/web/orion/editorView.js b/bundles/org.eclipse.orion.client.ui/web/orion/editorView.js
+index 569667a..b31cbdf 100644
+--- a/bundles/org.eclipse.orion.client.ui/web/orion/editorView.js
++++ b/bundles/org.eclipse.orion.client.ui/web/orion/editorView.js
+@@ -36,6 +36,7 @@
+ 	'orion/highlight',
+ 	'orion/markOccurrences',
+ 	'orion/syntaxchecker',
++	'orion/liveEditSession',
+ 	'orion/keyBinding',
+ 	'orion/uiUtils',
+ 	'orion/util',
+@@ -46,7 +47,7 @@
+ 	mEmacs, mVI, mEditorPreferences, mThemePreferences, mThemeData, EditorSettings,
+ 	mSearcher, mEditorCommands, mGlobalCommands,
+ 	mDispatcher, EditorContext, TypeDefRegistry, Highlight,
+-	mMarkOccurrences, mSyntaxchecker,
++	mMarkOccurrences, mSyntaxchecker, mLiveEditor,
+ 	mKeyBinding, mUIUtils, util, objects
+ ) {
+ 
+@@ -472,6 +473,11 @@
+ 			var markOccurrences = this.markOccurrences = new mMarkOccurrences.MarkOccurrences(serviceRegistry, inputManager, editor);
+ 			markOccurrences.setOccurrencesVisible(this.settings.occurrencesVisible);
+ 			markOccurrences.findOccurrences();
++			
++			var liveEditSession = new mLiveEditor.LiveEditSession(serviceRegistry, editor);
++			editor.addEventListener("InputChanged", function(evt) { //$NON-NLS-0$
++				liveEditSession.start(inputManager.getContentType(), evt.title, evt.contents);
++			});
+ 			var syntaxChecker = new mSyntaxchecker.SyntaxChecker(serviceRegistry, editor);
+ 			editor.addEventListener("InputChanged", function(evt) { //$NON-NLS-0$
+ 				syntaxChecker.checkSyntax(inputManager.getContentType(), evt.title, evt.message, evt.contents);
+diff --git a/bundles/org.eclipse.orion.client.ui/web/orion/liveEditSession.js b/bundles/org.eclipse.orion.client.ui/web/orion/liveEditSession.js
+new file mode 100644
+index 0000000..78f1df0
+--- /dev/null
++++ b/bundles/org.eclipse.orion.client.ui/web/orion/liveEditSession.js
+@@ -0,0 +1,95 @@
++/*******************************************************************************
++ * @license
++ * Copyright (c) 2010, 2013 IBM Corporation and others.
++ * All rights reserved. This program and the accompanying materials are made 
++ * available under the terms of the Eclipse Public License v1.0 
++ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
++ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
++ * 
++ * Contributors: IBM Corporation - initial API and implementation
++ ******************************************************************************/
++
++/*global define window */
++
++define([
++	'orion/Deferred',
++	'orion/edit/editorContext'
++], function(Deferred, EditorContext) {
++
++var LiveEditSession = (function () {
++	/**
++	 * @name orion.LiveEditSession
++	 * @class Provides access to validation services registered with the service registry.
++	 * @description Provides access to validation services registered with the service registry.
++	 */
++	function LiveEditSession(serviceRegistry, editor) {
++		this.registry = serviceRegistry;
++		this.editor = editor;
++	}
++
++	LiveEditSession.prototype = /** @lends orion.LiveEditSession.prototype */ {
++		/**
++		 * Looks up applicable live edit sessions, calls them to pass editor context to services.
++		 */
++		start: function (contentType, title, contents) {
++			function getLiveEditors(registry, contentType) {
++				var contentTypeService = registry.getService("orion.core.contentTypeRegistry"); //$NON-NLS-0$
++				function getFilteredLiveEditSession(registry, liveEditSession, contentType) {
++					var contentTypeIds = liveEditSession.getProperty("contentType"); //$NON-NLS-0$
++					return contentTypeService.isSomeExtensionOf(contentType, contentTypeIds).then(function(result) {
++						return result ? liveEditSession : null;
++					});
++				}
++				var liveEditSessions = registry.getServiceReferences("orion.edit.live"); //$NON-NLS-0$
++				var filteredLiveEditSessions = [];
++				for (var i=0; i < liveEditSessions.length; i++) {
++					var serviceReference = liveEditSessions[i];
++					var pattern = serviceReference.getProperty("pattern"); // backwards compatibility //$NON-NLS-0$
++					if (serviceReference.getProperty("contentType")) { //$NON-NLS-0$
++						filteredLiveEditSessions.push(getFilteredLiveEditSession(registry, serviceReference, contentType));
++					} else if (pattern && new RegExp(pattern).test(title)) {
++						var d = new Deferred();
++						d.resolve(serviceReference);
++						filteredLiveEditSessions.push(d);
++					}
++				}
++				// Return a promise that gives the validators that aren't null
++				return Deferred.all(filteredLiveEditSessions, function(error) {return {_error: error}; }).then(
++					function(liveEditSessions) {
++						var capableLiveEditSessions = [];
++						for (var i=0; i < liveEditSessions.length; i++) {
++							var liveEdit = liveEditSessions[i];
++							if (liveEdit && !liveEdit._error) {
++								capableLiveEditSessions.push(liveEdit);
++							}
++						}
++						return capableLiveEditSessions;
++					});
++			}
++			
++			if (!contentType) {
++				return;
++			}
++			var self = this;
++			var serviceRegistry = this.registry;
++			getLiveEditors(serviceRegistry, contentType).then(function(liveEditors) {
++				var editSessionPromises = liveEditors.map(function(liveEditor) {
++					var service = serviceRegistry.getService(liveEditor);
++					var promise;
++					if (service.startEdit) {
++						var context = {
++							contentType: contentType.id,
++							title: title
++						};
++						return service.startEdit(EditorContext.getEditorContext(serviceRegistry), context);
++					}
++				});
++					
++				self._previousEditSession = Deferred.all(editSessionPromises, function(error) {return {_error: error}; });
++			});
++		}
++	};
++	return LiveEditSession;
++}());
++return {LiveEditSession: LiveEditSession};
++});
