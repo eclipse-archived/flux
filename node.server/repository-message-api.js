@@ -82,6 +82,7 @@ MessagesRepository.prototype.getResource = function(data) {
 				'project' : data.project,
 				'resource' : data.resource,
 				'timestamp' : timestamp,
+				'type' : content ? 'file' : 'folder',
 				'hash' : hash,
 				'content' : content});
 		}
@@ -216,6 +217,7 @@ MessagesRepository.prototype.resourceChanged = function(data) {
 					'project' : projectName,
 					'resource' : resource,
 					'timestamp' : timestamp,
+					'type' : type,
 					'hash' : hash
 				});
 			}

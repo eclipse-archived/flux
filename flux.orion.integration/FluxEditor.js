@@ -19,6 +19,7 @@ var eclipse = eclipse || {};
 var callbacksCache = {};
 var user;
 var muteLiveEdit = false;
+var editSession;
 
 var counter = 1;
 function generateCallbackId() {
@@ -270,9 +271,13 @@ eclipse.FluxEditor = (function() {
 				this._resourceUrl = null;
 				this._editorContext = null;
 				this._resourceMetadata = null;
+				if (editSession) {
+					editSession.resolve();
+				}
 				muteLiveEdit = true;
 				if (this._isFluxResource(resourceUrl)) {
 					this._resourceUrl = resourceUrl;
+					editSession = new orion.Deferred();
 					this._editorContext = editorContext;
 					muteLiveEdit = false;
 					
@@ -287,7 +292,8 @@ eclipse.FluxEditor = (function() {
 						});	
 					});				
 				}
-			}			
+			}
+			return editSession;
 		},
 		
 		onModelChanging: function(evt) {
@@ -366,13 +372,18 @@ eclipse.FluxEditor = (function() {
 		computeProblems: function(editorContext, options) {
 			console.log("Validator (Problems): " + JSON.stringify(options));
 			var problemsRequest = new orion.Deferred();
-			this._setEditorInput(options.title, editorContext);
+//			this._setEditorInput(options.title, editorContext);
 			this._waitForProblemMarkers(this._resourceUrl, 50, function(markers) {
 				problemsRequest.resolve(markers);
 			}, function() {
 				problemsRequest.reject();
 			});			
 			return problemsRequest;
+		},
+		
+		startEdit: function(editorContext, options) {
+			console.log("LIVE EDIT: " + JSON.stringify(options));
+			return this._setEditorInput(options.title, editorContext);
 		},
 		
 		_waitForProblemMarkers: function(resourceUrl, interval, successCallback, failureCallback) {

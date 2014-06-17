@@ -27,17 +27,33 @@
 				'top' : base,
 				'pattern' : base,
 			};
-			
+						
 			var provider = new orion.PluginProvider(headers);			
 
 			var fileService = new eclipse.FluxFileSystem(host, port, user);
 			provider.registerService("orion.core.file", fileService, headers);
 			
 			var editorService = new eclipse.FluxEditor(host, port, user);
-			provider.registerService("orion.edit.model", editorService, { 'contentType' : contentTypes });
-			provider.registerService("orion.edit.contentAssist", editorService, { 'contentType' : contentTypes });
-			provider.registerService("orion.edit.validator", editorService, { 'contentType' : contentTypes});
 			
+			provider.registerService([
+					"orion.edit.validator",
+					"orion.edit.live"
+				],
+				editorService,
+				{
+					'pattern' : base + ".*"
+				}
+			);
+			provider.registerService([
+					"orion.edit.model",
+					"orion.edit.contentAssist"
+				],
+				editorService,
+				{
+					'contentType' : contentTypes
+				}
+			);
+
 			provider.connect();
 		};
 	</script>
