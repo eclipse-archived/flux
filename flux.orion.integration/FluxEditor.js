@@ -18,8 +18,9 @@ var eclipse = eclipse || {};
 
 var callbacksCache = {};
 var user;
-var muteLiveEdit = false;
+var muteLiveEdit = true;
 var editSession;
+var serviceRegistry;
 
 var counter = 1;
 function generateCallbackId() {
@@ -181,7 +182,10 @@ eclipse.FluxEditor = (function() {
 							'start' : /*(data.problems[i].start - lineOffset) + 1*/ data.problems[i].start,
 							'end' : /*data.problems[i].end - lineOffset*/ data.problems[i].end
 						};
-					}	
+					}
+					if (serviceRegistry) {
+						serviceRegistry.getService("orion.core.marker")._setProblems(resourceMetadata.markers);
+					}
 				}
 				self._handleMessage(data);
 			});			
@@ -383,7 +387,19 @@ eclipse.FluxEditor = (function() {
 		
 		startEdit: function(editorContext, options) {
 			console.log("LIVE EDIT: " + JSON.stringify(options));
-			return this._setEditorInput(options.title, editorContext);
+			var url = options ? options.title : null;
+			serviceRegistry = serviceRegistry || options ? options.serviceRegistry : null;
+			return this._setEditorInput(url, editorContext);
+		},
+		
+		endEdit: function(resourceUrl) {
+			this._resourceUrl = null;
+			this._editorContext = null;
+			this._resourceMetadata = null;
+			if (editSession) {
+				editSession.resolve();
+			}
+			muteLiveEdit = true;
 		},
 		
 		_waitForProblemMarkers: function(resourceUrl, interval, successCallback, failureCallback) {
