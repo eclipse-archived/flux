@@ -590,7 +590,7 @@ eclipse.FluxFileSystem= (function() {
 						'username' : user,
 						'project' : normalizedPath.project,
 						'resource' : normalizedPath.path,
-						'timestamp' : resource.LocalTimeStamp,
+						'timestamp' : Date.now(),
 						'hash' : resource.ETag
 					});
 				}

@@ -50,7 +50,7 @@ index 569667a..9b69289 100644
  				syntaxChecker.checkSyntax(inputManager.getContentType(), evt.title, evt.message, evt.contents);
 diff --git a/bundles/org.eclipse.orion.client.ui/web/orion/liveEditSession.js b/bundles/org.eclipse.orion.client.ui/web/orion/liveEditSession.js
 new file mode 100644
-index 0000000..a0d14c7
+index 0000000..4c6503d
 --- /dev/null
 +++ b/bundles/org.eclipse.orion.client.ui/web/orion/liveEditSession.js
 @@ -0,0 +1,110 @@
@@ -151,7 +151,7 @@ index 0000000..a0d14c7
 +								title: title
 +							};
 +							services.push(service);
-+							return service.startEdit(EditorContext.getEditorContext(serviceRegistry), context, serviceRegistry);
++							return service.startEdit(EditorContext.getEditorContext(serviceRegistry), context, serviceRegistry.getService("orion.core.marker"));
 +						}
 +					});
 +						
