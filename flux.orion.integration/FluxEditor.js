@@ -65,6 +65,10 @@ eclipse.FluxEditor = (function() {
 			self._handleMessage(data);				
 		});
 		
+		this.socket.on('getMetadataResponse', function(data) {
+			self._handleMessage(data);				
+		});
+		
 		this.socket.on('contentassistresponse', function(data) {
 			self._handleMessage(data);				
 		});
@@ -168,14 +172,14 @@ eclipse.FluxEditor = (function() {
 					&& resourceMetadata.resource === data.resource
 					&& data.problems !== undefined) {
 					
-					resourceMetadata.markers = [];
+					resourceMetadata.liveMarkers = [];
 					var i;
 					for(i = 0; i < data.problems.length; i++) {
 //						var lineOffset = editor.getModel().getLineStart(data.problems[i].line - 1);
 		
 //						console.log(lineOffset);
 		
-						resourceMetadata.markers[i] = {
+						resourceMetadata.liveMarkers[i] = {
 							'description' : data.problems[i].description,
 //							'line' : data.problems[i].line,
 							'severity' : data.problems[i].severity,
@@ -184,7 +188,7 @@ eclipse.FluxEditor = (function() {
 						};
 					}
 					if (markerService) {
-						markerService._setProblems(resourceMetadata.markers);
+						markerService._setProblems(resourceMetadata.liveMarkers/*.concat(resourceMetadata.markers)*/);
 					}
 				}
 				self._handleMessage(data);
@@ -260,6 +264,7 @@ eclipse.FluxEditor = (function() {
 					var location = self._rootLocation + data.project + '/' + data.resource;
 					if (self._resourceUrl === location) {
 						self._resourceMetadata = data;
+						self._resourceMetadata.liveMarkers = [];
 						self._resourceMetadata.markers = [];
 						request.resolve(self._resourceMetadata);
 					}
@@ -382,18 +387,32 @@ eclipse.FluxEditor = (function() {
 				
 			this._getResourceData().then(function(resourceMetadata) {
 				if (self._resourceUrl === options.title) {
-					var problems = resourceMetadata.markers ? resourceMetadata.markers : [];
-					problemsRequest.resolve(problems);
+					self.sendMessage("getMetadataRequest", {
+						'username' : resourceMetadata.username,
+						'project' : resourceMetadata.project,
+						'resource' : resourceMetadata.resource
+					}, function(data) {
+						if (data.username === resourceMetadata.username
+							&& data.project === resourceMetadata.project
+							&& data.resource === resourceMetadata.resource) {
+								
+							resourceMetadata.markers = [];
+							for(var i = 0; i < data.metadata.length; i++) {				
+								resourceMetadata.markers[i] = {
+									'description' : data.metadata[i].description,
+									'severity' : data.metadata[i].severity,
+									'start' : data.metadata[i].start,
+									'end' : data.metadata[i].end
+								};
+							}
+						}
+						problemsRequest.resolve(resourceMetadata.markers);
+					});
 				} else {
 					problemsRequest.reject();
 				}	
 			});
 
-//			this._waitForProblemMarkers(this._resourceUrl, 50, function(markers) {
-//				problemsRequest.resolve(markers);
-//			}, function() {
-//				problemsRequest.reject();
-//			});			
 			return problemsRequest;
 		},
 		
@@ -405,37 +424,9 @@ eclipse.FluxEditor = (function() {
 		},
 		
 		endEdit: function(resourceUrl) {
-			this._resourceUrl = null;
-			this._editorContext = null;
-			this._resourceMetadata = null;
-			if (editSession) {
-				editSession.resolve();
-			}
-			muteLiveEdit = true;
+			this._setEditorInput(null, null);
 		},
-		
-//		_waitForProblemMarkers: function(resourceUrl, interval, successCallback, failureCallback) {
-//			var self = this;			
-//			var wait = function() {
-//				self._getResourceData().then(function(resourceMetadata) {
-//					if (self._resourceUrl === resourceUrl) {
-//						if (resourceMetadata.markers) {
-//							if (successCallback && successCallback.call) {
-//								successCallback.call(self, resourceMetadata.markers);
-//							}
-//						} else {
-//							setTimeout(wait, interval);
-//						}
-//					} else {
-//						if (failureCallback && failureCallback.call) {
-//							failureCallback.call(self);
-//						}
-//					}	
-//				});
-//			};
-//			wait.call(this);
-//		},
-		
+				
 	};
 
 	return FluxEditor;
