@@ -36,8 +36,8 @@ eclipse.FluxEditor = (function() {
 	 * @class Provides operations on files, folders, and projects.
 	 * @name FileServiceImpl
 	 */
-	function FluxEditor(host, port, userId) {
-		this._rootLocation = "flux:http://" + host +":" + port + "/" + userId + "/";
+	function FluxEditor(host, port, userId, root) {
+		this._rootLocation = root;
 		user = userId;
 
 		this.socket = io.connect(host, {

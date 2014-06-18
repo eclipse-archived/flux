@@ -15,8 +15,8 @@
 		window.onload = function() {
 			var host = "localhost";
 			var port = 3000;
-			var user = 'defaultuser';		
-			var base = "flux:http://" + host +":" + port + "/" + user + "/";
+			var user = 'defaultuser';
+			var base = "flux://" + host + ":" + port + "/" + user + "/";
 			
 			var contentTypes = ["application/javascript", "text/plain" ];
 			
@@ -30,10 +30,10 @@
 						
 			var provider = new orion.PluginProvider(headers);			
 
-			var fileService = new eclipse.FluxFileSystem(host, port, user);
+			var fileService = new eclipse.FluxFileSystem(host, port, user, base);
 			provider.registerService("orion.core.file", fileService, headers);
 			
-			var editorService = new eclipse.FluxEditor(host, port, user);
+			var editorService = new eclipse.FluxEditor(host, port, user, base);
 			
 			provider.registerService([
 					"orion.edit.validator",
