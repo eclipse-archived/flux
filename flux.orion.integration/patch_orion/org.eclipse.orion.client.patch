@@ -1,5 +1,5 @@
 diff --git a/bundles/org.eclipse.orion.client.ui/web/orion/editorView.js b/bundles/org.eclipse.orion.client.ui/web/orion/editorView.js
-index 569667a..b31cbdf 100644
+index 569667a..9b69289 100644
 --- a/bundles/org.eclipse.orion.client.ui/web/orion/editorView.js
 +++ b/bundles/org.eclipse.orion.client.ui/web/orion/editorView.js
 @@ -36,6 +36,7 @@
@@ -19,24 +19,41 @@ index 569667a..b31cbdf 100644
  	mKeyBinding, mUIUtils, util, objects
  ) {
  
-@@ -472,6 +473,11 @@
+@@ -438,9 +439,11 @@
+ 				localSettings = new EditorSettings({local: true, editor: editor, themePreferences: themePreferences, preferences: editorPreferences});
+ 			}
+ 
++			var liveEditSession = new mLiveEditor.LiveEditSession(serviceRegistry, editor);
+ 			inputManager.addEventListener("InputChanged", function(event) { //$NON-NLS-0$
+ 				var textView = editor.getTextView();
+ 				if (textView) {
++					liveEditSession.start(inputManager.getContentType(), event.title, event.contents);
+ 					textView.setOptions(this.updateViewOptions(this.settings));
+ 					this.syntaxHighlighter.setup(event.contentType, editor.getTextView(), editor.getAnnotationModel(), event.title, true).then(function() {
+ 						this.updateStyler(this.settings);
+@@ -449,6 +452,8 @@
+ 							setContentAssistProviders(editor, editor.getContentAssist());
+ 						}
+ 					}.bind(this));
++				} else {
++					liveEditSession.start();					
+ 				}
+ 			}.bind(this));
+ 			inputManager.addEventListener("Saving", function(event) { //$NON-NLS-0$
+@@ -472,6 +477,7 @@
  			var markOccurrences = this.markOccurrences = new mMarkOccurrences.MarkOccurrences(serviceRegistry, inputManager, editor);
  			markOccurrences.setOccurrencesVisible(this.settings.occurrencesVisible);
  			markOccurrences.findOccurrences();
 +			
-+			var liveEditSession = new mLiveEditor.LiveEditSession(serviceRegistry, editor);
-+			editor.addEventListener("InputChanged", function(evt) { //$NON-NLS-0$
-+				liveEditSession.start(inputManager.getContentType(), evt.title, evt.contents);
-+			});
  			var syntaxChecker = new mSyntaxchecker.SyntaxChecker(serviceRegistry, editor);
  			editor.addEventListener("InputChanged", function(evt) { //$NON-NLS-0$
  				syntaxChecker.checkSyntax(inputManager.getContentType(), evt.title, evt.message, evt.contents);
 diff --git a/bundles/org.eclipse.orion.client.ui/web/orion/liveEditSession.js b/bundles/org.eclipse.orion.client.ui/web/orion/liveEditSession.js
 new file mode 100644
-index 0000000..78f1df0
+index 0000000..a0d14c7
 --- /dev/null
 +++ b/bundles/org.eclipse.orion.client.ui/web/orion/liveEditSession.js
-@@ -0,0 +1,95 @@
+@@ -0,0 +1,110 @@
 +/*******************************************************************************
 + * @license
 + * Copyright (c) 2010, 2013 IBM Corporation and others.
@@ -54,6 +71,11 @@ index 0000000..78f1df0
 +	'orion/Deferred',
 +	'orion/edit/editorContext'
 +], function(Deferred, EditorContext) {
++	
++
++var resource;
++var services = [];
++var previousEditSession;
 +
 +var LiveEditSession = (function () {
 +	/**
@@ -106,26 +128,36 @@ index 0000000..78f1df0
 +					});
 +			}
 +			
-+			if (!contentType) {
-+				return;
-+			}
-+			var self = this;
-+			var serviceRegistry = this.registry;
-+			getLiveEditors(serviceRegistry, contentType).then(function(liveEditors) {
-+				var editSessionPromises = liveEditors.map(function(liveEditor) {
-+					var service = serviceRegistry.getService(liveEditor);
-+					var promise;
-+					if (service.startEdit) {
-+						var context = {
-+							contentType: contentType.id,
-+							title: title
-+						};
-+						return service.startEdit(EditorContext.getEditorContext(serviceRegistry), context);
-+					}
++			if (resource !== title) {
++				if (services) {
++					services.forEach(function(service) {
++						service.endEdit(resource);
++					});
++				}
++				services = [];
++				resource = title;
++				if (!contentType) {
++					return;
++				}
++				var self = this;
++				var serviceRegistry = this.registry;
++				getLiveEditors(serviceRegistry, contentType).then(function(liveEditors) {
++					var editSessionPromises = liveEditors.map(function(liveEditor) {
++						var service = serviceRegistry.getService(liveEditor);
++						var promise;
++						if (service.startEdit) {
++							var context = {
++								contentType: contentType.id,
++								title: title
++							};
++							services.push(service);
++							return service.startEdit(EditorContext.getEditorContext(serviceRegistry), context, serviceRegistry);
++						}
++					});
++						
++					previousEditSession = Deferred.all(editSessionPromises, function(error) {return {_error: error}; });
 +				});
-+					
-+				self._previousEditSession = Deferred.all(editSessionPromises, function(error) {return {_error: error}; });
-+			});
++			}
 +		}
 +	};
 +	return LiveEditSession;
