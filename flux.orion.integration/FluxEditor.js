@@ -20,7 +20,7 @@ var callbacksCache = {};
 var user;
 var muteLiveEdit = true;
 var editSession;
-var serviceRegistry;
+var markerService;
 
 var counter = 1;
 function generateCallbackId() {
@@ -183,8 +183,8 @@ eclipse.FluxEditor = (function() {
 							'end' : /*data.problems[i].end - lineOffset*/ data.problems[i].end
 						};
 					}
-					if (serviceRegistry) {
-						serviceRegistry.getService("orion.core.marker")._setProblems(resourceMetadata.markers);
+					if (markerService) {
+						markerService._setProblems(resourceMetadata.markers);
 					}
 				}
 				self._handleMessage(data);
@@ -260,7 +260,8 @@ eclipse.FluxEditor = (function() {
 					var location = self._rootLocation + data.project + '/' + data.resource;
 					if (self._resourceUrl === location) {
 						self._resourceMetadata = data;
-						request.resolve(data);
+						self._resourceMetadata.markers = [];
+						request.resolve(self._resourceMetadata);
 					}
 				});
 			} else {
@@ -375,20 +376,31 @@ eclipse.FluxEditor = (function() {
 		
 		computeProblems: function(editorContext, options) {
 			console.log("Validator (Problems): " + JSON.stringify(options));
+			var self = this;
 			var problemsRequest = new orion.Deferred();
 //			this._setEditorInput(options.title, editorContext);
-			this._waitForProblemMarkers(this._resourceUrl, 50, function(markers) {
-				problemsRequest.resolve(markers);
-			}, function() {
-				problemsRequest.reject();
-			});			
+				
+			this._getResourceData().then(function(resourceMetadata) {
+				if (self._resourceUrl === options.title) {
+					var problems = resourceMetadata.markers ? resourceMetadata.markers : [];
+					problemsRequest.resolve(problems);
+				} else {
+					problemsRequest.reject();
+				}	
+			});
+
+//			this._waitForProblemMarkers(this._resourceUrl, 50, function(markers) {
+//				problemsRequest.resolve(markers);
+//			}, function() {
+//				problemsRequest.reject();
+//			});			
 			return problemsRequest;
 		},
 		
-		startEdit: function(editorContext, options) {
+		startEdit: function(editorContext, options, orionMarkerService) {
 			console.log("LIVE EDIT: " + JSON.stringify(options));
 			var url = options ? options.title : null;
-			serviceRegistry = serviceRegistry || options ? options.serviceRegistry : null;
+			markerService = markerService || orionMarkerService;
 			return this._setEditorInput(url, editorContext);
 		},
 		
@@ -402,27 +414,27 @@ eclipse.FluxEditor = (function() {
 			muteLiveEdit = true;
 		},
 		
-		_waitForProblemMarkers: function(resourceUrl, interval, successCallback, failureCallback) {
-			var self = this;			
-			var wait = function() {
-				self._getResourceData().then(function(resourceMetadata) {
-					if (self._resourceUrl === resourceUrl) {
-						if (resourceMetadata.markers) {
-							if (successCallback && successCallback.call) {
-								successCallback.call(self, resourceMetadata.markers);
-							}
-						} else {
-							setTimeout(wait, interval);
-						}
-					} else {
-						if (failureCallback && failureCallback.call) {
-							failureCallback.call(self);
-						}
-					}	
-				});
-			};
-			wait.call(this);
-		},
+//		_waitForProblemMarkers: function(resourceUrl, interval, successCallback, failureCallback) {
+//			var self = this;			
+//			var wait = function() {
+//				self._getResourceData().then(function(resourceMetadata) {
+//					if (self._resourceUrl === resourceUrl) {
+//						if (resourceMetadata.markers) {
+//							if (successCallback && successCallback.call) {
+//								successCallback.call(self, resourceMetadata.markers);
+//							}
+//						} else {
+//							setTimeout(wait, interval);
+//						}
+//					} else {
+//						if (failureCallback && failureCallback.call) {
+//							failureCallback.call(self);
+//						}
+//					}	
+//				});
+//			};
+//			wait.call(this);
+//		},
 		
 	};
 
