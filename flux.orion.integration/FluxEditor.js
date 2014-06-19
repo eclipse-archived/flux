@@ -18,7 +18,6 @@ var eclipse = eclipse || {};
 
 var callbacksCache = {};
 var user;
-var muteLiveEdit = true;
 var editSession;
 var markerService;
 
@@ -81,12 +80,12 @@ eclipse.FluxEditor = (function() {
 					&& data.callback_id !== undefined
 					&& resourceMetadata.timestamp === data.savePointTimestamp 
 					&& resourceMetadata.hash === data.savePointHash) {
-					muteLiveEdit = true;
+					resourceMetadata._queueMuteRequest();
 					self._editorContext.setText(data.liveContent).then(function() {
-						muteLiveEdit = false;
+						resourceMetadata._dequeueMuteRequest();
 					}, function() {
-						muteLiveEdit = false;
-					});;
+						resourceMetadata._dequeueMuteRequest();
+					});
 				}
 			}, function(err) {
 				console.log(err);
@@ -155,11 +154,11 @@ eclipse.FluxEditor = (function() {
 						
 					var text = data.addedCharacters !== undefined ? data.addedCharacters : "";
 					
-					muteLiveEdit = true;
+					resourceMetadata._queueMuteRequest();
 					self._editorContext.setText(text, data.offset, data.offset + data.removedCharCount).then(function() {
-						muteLiveEdit = false;
+						resourceMetadata._dequeueMuteRequest();
 					}, function() {
-						muteLiveEdit = false;
+						resourceMetadata._dequeueMuteRequest();
 					});
 				}
 			});
@@ -266,6 +265,17 @@ eclipse.FluxEditor = (function() {
 						self._resourceMetadata = data;
 						self._resourceMetadata.liveMarkers = [];
 						self._resourceMetadata.markers = [];
+						self._resourceMetadata._muteRequests = 0;
+						self._resourceMetadata._queueMuteRequest = function() {
+							this._muteRequests++;
+						};
+						self._resourceMetadata._dequeueMuteRequest = function() {
+							this._muteRequests--;
+						};
+						self._resourceMetadata._canLiveEdit = function() {
+							return this._muteRequests === 0;
+						};
+
 						request.resolve(self._resourceMetadata);
 					}
 				});
@@ -284,12 +294,10 @@ eclipse.FluxEditor = (function() {
 				if (editSession) {
 					editSession.resolve();
 				}
-				muteLiveEdit = true;
 				if (this._isFluxResource(resourceUrl)) {
 					this._resourceUrl = resourceUrl;
 					editSession = new orion.Deferred();
 					this._editorContext = editorContext;
-					muteLiveEdit = false;
 					
 					this._getResourceData().then(function(resourceMetadata) {
 						self.sendMessage('liveResourceStarted', {
@@ -309,20 +317,19 @@ eclipse.FluxEditor = (function() {
 		onModelChanging: function(evt) {
 			console.log("Editor changing: " + JSON.stringify(evt));
 			var self = this;
-			if (muteLiveEdit) {
-				return;
-			}
 			this._getResourceData().then(function(resourceMetadata) {
-				var changeData = {
-					'username' : resourceMetadata.username,
-					'project' : resourceMetadata.project,
-					'resource' : resourceMetadata.resource,
-					'offset' : evt.start,
-					'removedCharCount' : evt.removedCharCount,
-					'addedCharacters' : evt.text,
-				};
-		
-				self.sendMessage('liveResourceChanged', changeData);
+				if (resourceMetadata._canLiveEdit()) {
+					var changeData = {
+						'username' : resourceMetadata.username,
+						'project' : resourceMetadata.project,
+						'resource' : resourceMetadata.resource,
+						'offset' : evt.start,
+						'removedCharCount' : evt.removedCharCount,
+						'addedCharacters' : evt.text,
+					};
+			
+					self.sendMessage('liveResourceChanged', changeData);
+				}
 			});
 		},
 		
