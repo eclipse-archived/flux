@@ -426,11 +426,12 @@ eclipse.FluxEditor = (function() {
 		startEdit: function(editorContext, options, orionMarkerService) {
 			console.log("LIVE EDIT: " + JSON.stringify(options));
 			var url = options ? options.title : null;
-			markerService = markerService || orionMarkerService;
+			markerService = orionMarkerService;
 			return this._setEditorInput(url, editorContext);
 		},
 		
 		endEdit: function(resourceUrl) {
+			markerService = null;
 			this._setEditorInput(null, null);
 		},
 				
