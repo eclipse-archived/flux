@@ -26,6 +26,22 @@ function generateCallbackId() {
 	return counter++;
 }
 
+function createResourceMetadata(data) {
+	data.liveMarkers = [];
+	data.markers = [];
+	data._muteRequests = 0;
+	data._queueMuteRequest = function() {
+		this._muteRequests++;
+	};
+	data._dequeueMuteRequest = function() {
+		this._muteRequests--;
+	};
+	data._canLiveEdit = function() {
+		return this._muteRequests === 0;
+	};
+	return data;
+}
+
 /**
  * An implementation of the file service that understands the Orion 
  * server file API. This implementation is suitable for invocation by a remote plugin.
@@ -141,7 +157,7 @@ eclipse.FluxEditor = (function() {
 		this.socket.on('resourceStored', function(data) {
 			var location = self._rootLocation + data.project + '/' + data.resource;
 			if (self._resourceUrl === location) {
-				this._resourceMetadata = data;
+				this._resourceMetadata = createResourceMetadata(data);
 			}
 		});
 		
@@ -262,20 +278,7 @@ eclipse.FluxEditor = (function() {
 				}, function(data) {
 					var location = self._rootLocation + data.project + '/' + data.resource;
 					if (self._resourceUrl === location) {
-						self._resourceMetadata = data;
-						self._resourceMetadata.liveMarkers = [];
-						self._resourceMetadata.markers = [];
-						self._resourceMetadata._muteRequests = 0;
-						self._resourceMetadata._queueMuteRequest = function() {
-							this._muteRequests++;
-						};
-						self._resourceMetadata._dequeueMuteRequest = function() {
-							this._muteRequests--;
-						};
-						self._resourceMetadata._canLiveEdit = function() {
-							return this._muteRequests === 0;
-						};
-
+						self._resourceMetadata = createResourceMetadata(data);
 						request.resolve(self._resourceMetadata);
 					}
 				});
@@ -424,7 +427,6 @@ eclipse.FluxEditor = (function() {
 		},
 		
 		startEdit: function(editorContext, options, orionMarkerService) {
-			console.log("LIVE EDIT: " + JSON.stringify(options));
 			var url = options ? options.title : null;
 			markerService = orionMarkerService;
 			return this._setEditorInput(url, editorContext);
