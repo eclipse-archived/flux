@@ -618,12 +618,13 @@ eclipse.FluxFileSystem= (function() {
 		},
 		
 		_createOrionResource: function(data) {
-			if (data.resource) {
-				data.resource = '/' + data.resource;
+			var resourceUrl = data.resource;
+			if (resourceUrl) {
+				resourceUrl = '/' + resourceUrl;
 			}
-			data.resource = data.project + data.resource;
-			var lastIndexOfSlash = data.resource.lastIndexOf('/');
-			var name = lastIndexOfSlash < 0 ? data.resource : data.resource.substr(lastIndexOfSlash + 1);
+			resourceUrl = data.project + resourceUrl;
+			var lastIndexOfSlash = resourceUrl.lastIndexOf('/');
+			var name = lastIndexOfSlash < 0 ? resourceUrl : resourceUrl.substr(lastIndexOfSlash + 1);
 			var isFile = data.type === 'file';
 			var entry = {
 				Attributes: {
@@ -636,7 +637,7 @@ eclipse.FluxFileSystem= (function() {
 				Directory: !isFile,
 				ETag: data.hash,
 				LocalTimeStamp: data.timestamp,
-				Location: data.resource,
+				Location: resourceUrl,
 				ContentType: "text/plain",
 			};
 			entry.Location = this._rootLocation + entry.Location;

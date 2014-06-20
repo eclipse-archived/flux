@@ -19,7 +19,6 @@ var eclipse = eclipse || {};
 var callbacksCache = {};
 var user;
 var editSession;
-var markerService;
 
 var counter = 1;
 function generateCallbackId() {
@@ -27,19 +26,23 @@ function generateCallbackId() {
 }
 
 function createResourceMetadata(data) {
-	data.liveMarkers = [];
-	data.markers = [];
-	data._muteRequests = 0;
-	data._queueMuteRequest = function() {
+	var resourceMetadata = {};
+	for (var key in data) {
+		resourceMetadata[key] = data[key];
+	}
+	resourceMetadata.liveMarkers = [];
+	resourceMetadata.markers = [];
+	resourceMetadata._muteRequests = 0;
+	resourceMetadata._queueMuteRequest = function() {
 		this._muteRequests++;
 	};
-	data._dequeueMuteRequest = function() {
+	resourceMetadata._dequeueMuteRequest = function() {
 		this._muteRequests--;
 	};
-	data._canLiveEdit = function() {
+	resourceMetadata._canLiveEdit = function() {
 		return this._muteRequests === 0;
 	};
-	return data;
+	return resourceMetadata;
 }
 
 /**
@@ -109,15 +112,20 @@ eclipse.FluxEditor = (function() {
 		});
 	
 		this.socket.on('liveResourceStarted', function(data) {
-			self._getResourceData().then(function(resourceMetadata) {
-				if (data.username === resourceMetadata.username 
+			orion.Deferred.all([self._getResourceData(), self._editorContext.getText()]).then(function(results) {
+				var resourceMetadata = results[0];
+				var contents = results[1];
+				if (resourceMetadata
+					&& data.username === resourceMetadata.username
 					&& data.project === resourceMetadata.project 
 					&& data.resource === resourceMetadata.resource 
 					&& data.callback_id !== undefined
 					&& data.hash === resourceMetadata.hash
 					&& data.timestamp === resourceMetadata.timestamp) {
-		
-					self._editorContext.getText().then(function(contents) {
+						
+					var livehash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
+					
+					if (livehash !== data.hash) {
 						self.sendMessage('liveResourceStartedResponse', {
 							'callback_id'        : data.callback_id,
 							'requestSenderID'    : data.requestSenderID,
@@ -128,7 +136,7 @@ eclipse.FluxEditor = (function() {
 							'savePointHash'      : resourceMetadata.hash,
 							'liveContent'        : contents
 						});
-					});
+					}		
 				}
 			});
 		});
@@ -157,7 +165,8 @@ eclipse.FluxEditor = (function() {
 		this.socket.on('resourceStored', function(data) {
 			var location = self._rootLocation + data.project + '/' + data.resource;
 			if (self._resourceUrl === location) {
-				this._resourceMetadata = createResourceMetadata(data);
+				self._resourceMetadata = createResourceMetadata(data);
+				self._editorContext.markClean();
 			}
 		});
 		
@@ -202,8 +211,8 @@ eclipse.FluxEditor = (function() {
 							'end' : /*data.problems[i].end - lineOffset*/ data.problems[i].end
 						};
 					}
-					if (markerService) {
-						markerService._setProblems(resourceMetadata.liveMarkers/*.concat(resourceMetadata.markers)*/);
+					if (self._editorContext) {
+						self._editorContext.showMarkers(resourceMetadata.liveMarkers);
 					}
 				}
 				self._handleMessage(data);
@@ -426,14 +435,12 @@ eclipse.FluxEditor = (function() {
 			return problemsRequest;
 		},
 		
-		startEdit: function(editorContext, options, orionMarkerService) {
+		startEdit: function(editorContext, options) {
 			var url = options ? options.title : null;
-			markerService = orionMarkerService;
 			return this._setEditorInput(url, editorContext);
 		},
 		
 		endEdit: function(resourceUrl) {
-			markerService = null;
 			this._setEditorInput(null, null);
 		},
 				
