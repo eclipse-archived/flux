@@ -13,6 +13,7 @@ package org.eclipse.flux.ui.integration.handlers;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.eclipse.core.filebuffers.FileBuffers;
 import org.eclipse.core.filebuffers.IFileBuffer;
 import org.eclipse.core.filebuffers.IFileBufferListener;
@@ -249,7 +250,10 @@ public class LiveEditConnector {
 			String projectName = resourcePath.substring(0, resourcePath.indexOf('/'));
 			String relativeResourcePath = resourcePath.substring(projectName.length() + 1);
 			
-			this.liveEditCoordinator.sendLiveEditStartedResponse(LIVE_EDIT_CONNECTOR_ID, requestSenderID, callbackID, username, projectName, relativeResourcePath, hash, timestamp, content);
+			String liveUnitHash = DigestUtils.shaHex(content);
+			if (!liveUnitHash.equals(hash)) {
+				this.liveEditCoordinator.sendLiveEditStartedResponse(LIVE_EDIT_CONNECTOR_ID, requestSenderID, callbackID, username, projectName, relativeResourcePath, hash, timestamp, content);
+			}
 		}
 	}
 
