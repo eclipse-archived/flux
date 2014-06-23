@@ -12,7 +12,6 @@ package org.eclipse.flux.jdt.services;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.eclipse.flux.core.AbstractMessageHandler;
 import org.eclipse.flux.core.IMessageHandler;
 import org.eclipse.flux.core.IMessagingConnector;
@@ -28,6 +27,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
+ * Responds to requests to rename a member of a Java type and update all local references.
  * @author Martin Lippert
  */
 public class RenameService {
@@ -38,7 +38,7 @@ public class RenameService {
 	public RenameService(IMessagingConnector messagingConnector, LiveEditUnits liveEditUnits) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditUnits = liveEditUnits;
-		
+
 		IMessageHandler contentAssistRequestHandler = new AbstractMessageHandler("renameinfilerequest") {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
@@ -47,14 +47,14 @@ public class RenameService {
 		};
 		messagingConnector.addMessageHandler(contentAssistRequestHandler);
 	}
-	
+
 	protected void handleRenameInFileRequest(JSONObject message) {
 		try {
 			String username = message.getString("username");
 			String projectName = message.getString("project");
 			String resourcePath = message.getString("resource");
 			int callbackID = message.getInt("callback_id");
-			
+
 			String liveEditID = projectName + "/" + resourcePath;
 			if (liveEditUnits.isLiveEditResource(username, liveEditID)) {
 
@@ -63,7 +63,7 @@ public class RenameService {
 				String sender = message.getString("requestSenderID");
 
 				JSONArray references = computeReferences(username, liveEditID, offset, length);
-				
+
 				if (references != null) {
 					JSONObject responseMessage = new JSONObject();
 					responseMessage.put("username", username);
@@ -72,7 +72,7 @@ public class RenameService {
 					responseMessage.put("callback_id", callbackID);
 					responseMessage.put("requestSenderID", sender);
 					responseMessage.put("references", references);
-	
+
 					messagingConnector.send("renameinfileresponse", responseMessage);
 				}
 			}
@@ -80,24 +80,24 @@ public class RenameService {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public JSONArray computeReferences(String username, String resourcePath, int offset, int length) {
 		try {
 			ICompilationUnit unit = liveEditUnits.getLiveEditUnit(username, resourcePath);
 			if (unit != null) {
 				final ASTParser parser = ASTParser.newParser(AST.JLS4);
-	
-			    // Parse the class as a compilation unit.
-			    parser.setKind(ASTParser.K_COMPILATION_UNIT);
-			    parser.setSource(unit);
-			    parser.setResolveBindings(true);
-	
-			    // Return the compiled class as a compilation unit
-			    final ASTNode compilationUnit = parser.createAST(null);
-				final ASTNode nameNode= NodeFinder.perform(compilationUnit, offset, length);
-				
+
+				// Parse the class as a compilation unit.
+				parser.setKind(ASTParser.K_COMPILATION_UNIT);
+				parser.setSource(unit);
+				parser.setResolveBindings(true);
+
+				// Return the compiled class as a compilation unit
+				final ASTNode compilationUnit = parser.createAST(null);
+				final ASTNode nameNode = NodeFinder.perform(compilationUnit, offset, length);
+
 				final List<ASTNode> nodes = new ArrayList<ASTNode>();
-				
+
 				if (nameNode instanceof SimpleName) {
 					compilationUnit.accept(new ASTVisitor() {
 						@Override
@@ -109,16 +109,16 @@ public class RenameService {
 						}
 					});
 				}
-				
+
 				JSONArray references = new JSONArray();
 				for (ASTNode astNode : nodes) {
 					JSONObject nodeObject = new JSONObject();
 					nodeObject.put("offset", astNode.getStartPosition());
 					nodeObject.put("length", astNode.getLength());
-					
+
 					references.put(nodeObject);
 				}
-				
+
 				return references;
 			}
 		} catch (JSONException e) {

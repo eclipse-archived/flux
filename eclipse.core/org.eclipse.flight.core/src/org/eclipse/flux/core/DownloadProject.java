@@ -12,7 +12,6 @@ package org.eclipse.flux.core;
 
 import java.io.ByteArrayInputStream;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
@@ -28,9 +27,10 @@ import org.json.JSONObject;
  * @author Martin Lippert
  */
 public class DownloadProject {
-	
+
 	public interface CompletionCallback {
 		public void downloadComplete(IProject project);
+
 		public void downloadFailed();
 	}
 
@@ -39,16 +39,15 @@ public class DownloadProject {
 	private String projectName;
 	private int callbackID;
 	private CompletionCallback completionCallback;
-	
+
 	private String username;
 	private IProject project;
-	
+
 	private AtomicInteger requestedFileCount = new AtomicInteger(0);
 	private AtomicInteger downloadedFileCount = new AtomicInteger(0);
 
 	private CallbackIDAwareMessageHandler projectResponseHandler;
 	private CallbackIDAwareMessageHandler resourceResponseHandler;
-
 
 	public DownloadProject(IMessagingConnector messagingConnector, String projectName, String username) {
 		this.messagingConnector = messagingConnector;
@@ -56,7 +55,7 @@ public class DownloadProject {
 		this.username = username;
 
 		this.callbackID = this.hashCode();
-		
+
 		projectResponseHandler = new CallbackIDAwareMessageHandler("getProjectResponse", this.callbackID) {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
@@ -70,20 +69,20 @@ public class DownloadProject {
 			}
 		};
 	}
-	
+
 	public void run(CompletionCallback completionCallback) {
 		this.messagingConnector.addMessageHandler(projectResponseHandler);
 		this.messagingConnector.addMessageHandler(resourceResponseHandler);
 
 		this.completionCallback = completionCallback;
-		
+
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 		project = root.getProject(projectName);
 
 		try {
 			project.create(null);
 			project.open(null);
-		
+
 			JSONObject message = new JSONObject();
 			message.put("callback_id", this.callbackID);
 			message.put("username", this.username);
@@ -102,47 +101,46 @@ public class DownloadProject {
 			this.completionCallback.downloadFailed();
 		}
 	}
-	
+
 	public void getProjectResponse(JSONObject response) {
 		try {
-			final String projectName = response.getString("project");
-			final String username = response.getString("username");
+			final String responseProject = response.getString("project");
+			final String responseUser = response.getString("username");
 			final JSONArray files = response.getJSONArray("files");
 
-			if (this.username.equals(username)) {
+			if (this.username.equals(responseUser)) {
 				for (int i = 0; i < files.length(); i++) {
 					JSONObject resource = files.getJSONObject(i);
-	
+
 					String resourcePath = resource.getString("path");
 					long timestamp = resource.getLong("timestamp");
-	
+
 					String type = resource.optString("type");
-					
+
 					if (type.equals("folder")) {
 						IFolder folder = project.getFolder(new Path(resourcePath));
 						if (!folder.exists()) {
 							folder.create(true, true, null);
 						}
 						folder.setLocalTimeStamp(timestamp);
-					}
-					else if (type.equals("file")) {
+					} else if (type.equals("file")) {
 						requestedFileCount.incrementAndGet();
 					}
 				}
-				
+
 				for (int i = 0; i < files.length(); i++) {
 					JSONObject resource = files.getJSONObject(i);
-	
+
 					String resourcePath = resource.getString("path");
 					String type = resource.optString("type");
-					
+
 					if (type.equals("file")) {
 						JSONObject message = new JSONObject();
 						message.put("callback_id", callbackID);
 						message.put("username", this.username);
-						message.put("project", projectName);
+						message.put("project", responseProject);
 						message.put("resource", resourcePath);
-	
+
 						messagingConnector.send("getResourceRequest", message);
 					}
 				}
@@ -154,24 +152,23 @@ public class DownloadProject {
 			this.completionCallback.downloadFailed();
 		}
 	}
-	
+
 	public void getResourceResponse(JSONObject response) {
 		try {
-			final String username = response.getString("username");
+			final String responseUser = response.getString("username");
 			final String resourcePath = response.getString("resource");
 			final long timestamp = response.getLong("timestamp");
 			final String content = response.getString("content");
-			
-			if (this.username.equals(username)) {
+
+			if (this.username.equals(responseUser)) {
 				IFile file = project.getFile(resourcePath);
 				if (!file.exists()) {
 					file.create(new ByteArrayInputStream(content.getBytes()), true, null);
-				}
-				else {
+				} else {
 					file.setContents(new ByteArrayInputStream(content.getBytes()), true, false, null);
 				}
 				file.setLocalTimeStamp(timestamp);
-				
+
 				int downloaded = this.downloadedFileCount.incrementAndGet();
 				if (downloaded == this.requestedFileCount.get()) {
 					this.messagingConnector.removeMessageHandler(projectResponseHandler);
@@ -186,5 +183,5 @@ public class DownloadProject {
 			this.completionCallback.downloadFailed();
 		}
 	}
-	
+
 }

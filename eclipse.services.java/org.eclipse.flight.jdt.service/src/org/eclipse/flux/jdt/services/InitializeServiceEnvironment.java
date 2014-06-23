@@ -18,23 +18,25 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.flux.core.AbstractMessageHandler;
 import org.eclipse.flux.core.CallbackIDAwareMessageHandler;
 import org.eclipse.flux.core.DownloadProject;
+import org.eclipse.flux.core.DownloadProject.CompletionCallback;
 import org.eclipse.flux.core.IMessageHandler;
 import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.Repository;
-import org.eclipse.flux.core.DownloadProject.CompletionCallback;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
+ * For each project that is found or that becomes connected, initialize it for this workspace
+ * (create, open, and build as necessary).
  * @author Martin Lippert
  */
 public class InitializeServiceEnvironment {
 
 	private static int GET_PROJECTS_CALLBACK = "InitializeServiceEnvironment - getProjectsCallback".hashCode();
-	
-	private IMessagingConnector messagingConnector;
-	private Repository repository;
+
+	private final IMessagingConnector messagingConnector;
+	final Repository repository;
 
 	private IMessageHandler getProjectsResponseHandler;
 	private IMessageHandler projectConnectedHandler;
@@ -52,7 +54,7 @@ public class InitializeServiceEnvironment {
 			}
 		};
 		messagingConnector.addMessageHandler(getProjectsResponseHandler);
-		
+
 		projectConnectedHandler = new AbstractMessageHandler("projectConnected") {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
@@ -60,7 +62,7 @@ public class InitializeServiceEnvironment {
 			}
 		};
 		messagingConnector.addMessageHandler(projectConnectedHandler);
-		
+
 		try {
 			JSONObject message = new JSONObject();
 			message.put("username", repository.getUsername());
@@ -82,22 +84,20 @@ public class InitializeServiceEnvironment {
 					initializeProject(projectName);
 				}
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	protected void handleProjectConnected(JSONObject message) {
 		try {
 			String username = message.getString("username");
 			String projectName = message.getString("project");
-			
+
 			if (repository.getUsername().equals(username)) {
 				initializeProject(projectName);
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -107,7 +107,7 @@ public class InitializeServiceEnvironment {
 			// already connected project
 			if (repository.isConnected(projectName))
 				return;
-	
+
 			// project exists in workspace, but is not yet connected
 			IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 			IProject project = root.getProject(projectName);
@@ -118,25 +118,25 @@ public class InitializeServiceEnvironment {
 				repository.addProject(project);
 				return;
 			}
-			
+
 			// project doesn't exist in workspace
 			DownloadProject downloadProject = new DownloadProject(messagingConnector, projectName, repository.getUsername());
 			downloadProject.run(new CompletionCallback() {
 				@Override
 				public void downloadFailed() {
 				}
+
 				@Override
-				public void downloadComplete(IProject project) {
+				public void downloadComplete(IProject downloadedProject) {
 					try {
-						project.build(IncrementalProjectBuilder.FULL_BUILD, null);
+						downloadedProject.build(IncrementalProjectBuilder.FULL_BUILD, null);
 					} catch (CoreException e) {
 						e.printStackTrace();
 					}
-					repository.addProject(project);
+					repository.addProject(downloadedProject);
 				}
 			});
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

@@ -9,9 +9,11 @@ Require-Bundle: org.eclipse.flux.core,
  org.json,
  org.eclipse.core.runtime,
  org.eclipse.core.resources
-Bundle-Activator: org.eclipse.flux.jdt.services.Activator
 Bundle-Vendor: Eclipse.org - Flux
-Import-Package: org.apache.commons.codec.digest
+Import-Package: org.apache.commons.codec.digest,
+ org.osgi.service.component;version="1.2.2",
+ org.osgi.service.component.annotations;version="1.2.0"
 Export-Package: org.eclipse.flux.jdt.services
 Bundle-ActivationPolicy: lazy
+Service-Component: OSGI-INF/jdtservice.xml
 

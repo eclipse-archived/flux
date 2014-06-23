@@ -12,7 +12,6 @@ package org.eclipse.flux.jdt.services;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.jdt.core.IProblemRequestor;
 import org.eclipse.jdt.core.compiler.IProblem;
@@ -20,13 +19,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
+ * Accepts computed compilation problems from JDT and forwards them to the message bus.
  * @author Martin Lippert
  */
 public class LiveEditProblemRequestor implements IProblemRequestor {
 
 	private IMessagingConnector messagingConnector;
 	private String resourcePath;
-	private List<IProblem> problems;
+	private final List<IProblem> problems;
 	private String username;
 	private String projectName;
 
@@ -51,7 +51,7 @@ public class LiveEditProblemRequestor implements IProblemRequestor {
 
 	@Override
 	public void endReporting() {
-		sendMarkers((IProblem[]) this.problems.toArray(new IProblem[this.problems.size()]));
+		sendMarkers(this.problems.toArray(new IProblem[this.problems.size()]));
 	}
 
 	@Override
@@ -68,7 +68,7 @@ public class LiveEditProblemRequestor implements IProblemRequestor {
 			message.put("project", this.projectName);
 			message.put("resource", this.resourcePath);
 			message.put("problems", array);
-			
+
 			messagingConnector.send("liveMetadataChanged", message);
 			System.out.println("livemetadata transmitted");
 		} catch (Exception e) {
@@ -90,9 +90,9 @@ public class LiveEditProblemRequestor implements IProblemRequestor {
 			result.append(",\"line\":" + problem.getSourceLineNumber());
 			result.append(",\"severity\":\"" + (problem.isError() ? "error" : "warning") + "\"");
 			result.append(",\"start\":" + problem.getSourceStart());
-			
+
 			int end = problem.getSourceEnd() + 1;
-			
+
 			result.append(",\"end\":" + end);
 			result.append("}");
 
