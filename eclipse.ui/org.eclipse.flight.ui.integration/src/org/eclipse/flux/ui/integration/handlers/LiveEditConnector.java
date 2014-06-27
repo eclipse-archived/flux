@@ -238,6 +238,16 @@ public class LiveEditConnector {
 				});
 			}
 		});
+		/*
+		 * Connect open editors for all already connected projects. Flux Core
+		 * plug-in is activated earlier than the UI plug-in, consequently
+		 * projects connected before UI plugin is activated won't have their
+		 * opened editors hooked to Flux server
+		 */
+		for (ConnectedProject connectedProject : repository
+				.getConnectedProjects()) {
+			connectOpenEditors(connectedProject.getProject());
+		}
 	}
 	
 	protected void remoteEditorStarted(String requestSenderID, int callbackID, String username, String resourcePath, String hash, long timestamp) {

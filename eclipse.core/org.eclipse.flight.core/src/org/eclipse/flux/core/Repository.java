@@ -240,7 +240,12 @@ public class Repository {
 			e.printStackTrace();
 		}
 	}
-
+	
+	public ConnectedProject[] getConnectedProjects() {
+		return syncedProjects.values().toArray(
+				new ConnectedProject[syncedProjects.size()]);
+	}
+	
 	public void getProjects(JSONObject request) {
 		try {
 			int callbackID = request.getInt("callback_id");
