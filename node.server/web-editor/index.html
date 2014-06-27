@@ -5,22 +5,23 @@
 		<meta http-equiv="Content-Language" content="en-us">
 		<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 		<title>Welcom to Flux</title>
-		<link rel="stylesheet" type="text/css" href="../js/editor/textview/embeddededitor.css" />
+		<link rel="stylesheet" type="text/css" href="css/flux.css" />
 	
 		
-		<script src="../js/jquery-1.11.1.js"></script>
-		<script src="../js/requirejs/require.js"></script>
+		<script src="js/jquery-1.11.1.js"></script>
+		<script src="js/requirejs/require.js"></script>
 		<script>
 			require({
-			  baseUrl: '../js',
+			  baseUrl: 'js',
 			  paths: {
 				  text: 'requirejs/text',
 				  i18n: 'requirejs/i18n',
 				  tests: '/js-tests',
-			      domReady: 'requirejs/domReady'
+			      domReady: 'requirejs/domReady',
+				  socketio: '/socket.io/socket.io'
 			  }
 			});
-			require(["../js/flux-welcome.js"]);
+			require(["js/flux-welcome.js"]);
 		</script>
    </head>
 

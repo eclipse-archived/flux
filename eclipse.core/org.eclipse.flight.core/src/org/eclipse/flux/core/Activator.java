@@ -53,7 +53,7 @@ public class Activator implements BundleActivator {
 	public void start(BundleContext context) throws Exception {
 		plugin = this;
 		
-		String username = System.getProperty("flux-username", "defaultuser");
+		String username = System.getProperty("flux.user.name", "defaultuser");
 		// TODO: change this username property to a preference and add authentication
 		
 		messagingConnector = new SocketIOMessagingConnector(username);

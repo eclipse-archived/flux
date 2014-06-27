@@ -1,7 +1,7 @@
 /*global $*/
 define(function (require) {
 
-	var socketio = require("editor/socket.io");
+	var socketio = require("socketio");
 	//Map from projectName -> ProjectView
 	var projects = {};
 
@@ -59,7 +59,7 @@ define(function (require) {
 	function editorLink(projectName, resource) {
 		//Example:
 		//  http://localhost:3000/client/html/editor.html#defaultuser/Hello-World/src/santa/HoHoHo.java
-		return "editor.html#"+username+"/"+projectName + "/" +resource.path;
+		return "html/editor.html#"+username+"/"+projectName + "/" +resource.path;
 	}
 
 	function ResourceView(parent, resource) {

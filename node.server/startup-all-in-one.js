@@ -11,6 +11,8 @@
 *******************************************************************************/
 /*global require console exports process __dirname*/
 
+var SESSION_SECRET = 'keyboard cat';
+
 // create and configure express
 var URI = require('URIjs');
 var express = require('express');
@@ -22,13 +24,13 @@ var githubSecret = require('./github-secret');
 
 var host = process.env.VCAP_APP_HOST || 'localhost';
 var port = process.env.VCAP_APP_PORT || '3000';
-var homepage = '/client/html/index.html';
+var homepage = '/client/index.html';
 var pathResolve = require('path').resolve;
 
 app.use(express.cookieParser());
 app.use(express.bodyParser());
 app.use(express.methodOverride());
-app.use(express.session({ secret: 'keyboard cat' }));
+app.use(express.session({ secret: SESSION_SECRET }));
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -47,7 +49,7 @@ passport.use(new GitHubStrategy({
   },
   function(accessToken, refreshToken, profile, done) {
     process.nextTick(function () {
-
+	  console.log('GH strategy user lookup called');
       // To keep the example simple, the user's GitHub profile is returned to
       // represent the logged-in user. In a typical application, you would want
       // to associate the GitHub account with a user record in your database,
@@ -70,9 +72,14 @@ passport.use(new GitHubStrategy({
 //});
 
 function ensureAuthenticated(req, res, next) {
+	console.log('Checking auth for: '+req.url);
 	var ok = req.isAuthenticated();
-	var user = req.query.user;
-	if (user && req.isAuthenticated()) { return next(); }
+	console.log('user = '+req.user);
+	if (req.isAuthenticated()) {
+		console.log('Calling next() middleware');
+		return next();
+	}
+	console.log('redirecting to /auth/github');
 	res.redirect('/auth/github');
 }
 
@@ -85,14 +92,13 @@ app.get('/auth/github',
   passport.authenticate('github'));
 
 app.get('/auth/github/callback',
-  passport.authenticate('github', { failureRedirect: '/login' }),
+  passport.authenticate('github', { failureRedirect: '/auth/github' }),
   function(req, res) {
-	console.log('Authenticated as '+userName(req));
+	console.log('callback received, userName = '+userName(req));
 	var target = URI(homepage).query({user: userName(req)}).toString();
 	console.log('redirecting: '+target);
-
 	res.redirect(URI(homepage).query({user: userName(req)}).toString());
-    //res.send('Authenticated');
+	//res.send('Authenticated as '+userName(req) + '(' + userDisplayName(req) +')');
   }
 );
 
@@ -124,6 +130,14 @@ console.log('Express server started on port ' + port);
 // create and configure socket.io
 var io = require('socket.io').listen(server);
 io.set('transports', ['websocket']);
+io.set('log level', 1); //makes too much noise otherwise
+
+io.set('authorization', function (handshakeData, callback) {
+	console.log('io.handshakeData: ', handshakeData);
+	//authorization logic should go in here to check handshakeData comes from authenticated user.
+
+	callback(null, true);
+});
 
 // create and configure services
 var MessageCore = require('./messages-core.js').MessageCore;
