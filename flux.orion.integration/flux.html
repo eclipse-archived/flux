@@ -10,6 +10,7 @@
 <script src="lib/require.js"></script>
 <script src="FluxEditor.js"></script>
 <script src="FluxFileSystem.js"></script>
+<script src="OpenDeclaration.js"></script>
 	<script type="text/javascript">
 	/*global window console eclipse orion*/
 		window.onload = function() {
@@ -53,7 +54,23 @@
 					'contentType' : contentTypes
 				}
 			);
-
+			
+			var openDeclaration = new flux.OpenDeclaration(host, port, user, base);
+			provider.registerService("orion.edit.command",
+				openDeclaration,
+				{
+					'name': "Navigate to Definition",
+					'id': "org.eclipse.flux.navigateToDefintion",
+					/* 'img': "", */
+					'key': [ 114 ], /* F3 key */
+					/* 'validationProperties': [], */
+					'contentType': [ "text/x-java-source" ],
+					/* 'nls' : "", */
+					/* 'nameKey' : "", */
+					/* 'tooltipKey': "" */
+				}
+			);
+			
 			provider.connect();
 		};
 	</script>
