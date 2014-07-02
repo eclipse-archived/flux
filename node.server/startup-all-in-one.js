@@ -11,7 +11,7 @@
 *******************************************************************************/
 /*global require console exports process __dirname*/
 
-var SESSION_SECRET = 'keyboard cat';
+var SESSION_SECRET = 'When we get serious this "secret" should be really secret';
 
 // create and configure express
 var URI = require('URIjs');
@@ -21,16 +21,27 @@ var app = express();
 var passport = require('passport');
 var GitHubStrategy = require('passport-github').Strategy;
 var githubSecret = require('./github-secret');
+var cookieParse = require('cookie').parse;
+var deref = require('./util/deref');
 
 var host = process.env.VCAP_APP_HOST || 'localhost';
 var port = process.env.VCAP_APP_PORT || '3000';
 var homepage = '/client/index.html';
 var pathResolve = require('path').resolve;
+var connect = require('connect');
+
+var github = require('./github');
+
+var sessionStore = new express.session.MemoryStore(); //TODO: use database
+var session = express.session({
+	secret: SESSION_SECRET,
+	store: sessionStore
+});
 
 app.use(express.cookieParser());
 app.use(express.bodyParser());
 app.use(express.methodOverride());
-app.use(express.session({ secret: SESSION_SECRET }));
+app.use(session);
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -72,14 +83,10 @@ passport.use(new GitHubStrategy({
 //});
 
 function ensureAuthenticated(req, res, next) {
-	console.log('Checking auth for: '+req.url);
 	var ok = req.isAuthenticated();
-	console.log('user = '+req.user);
 	if (req.isAuthenticated()) {
-		console.log('Calling next() middleware');
 		return next();
 	}
-	console.log('redirecting to /auth/github');
 	res.redirect('/auth/github');
 }
 
@@ -132,11 +139,62 @@ var io = require('socket.io').listen(server);
 io.set('transports', ['websocket']);
 io.set('log level', 1); //makes too much noise otherwise
 
-io.set('authorization', function (handshakeData, callback) {
+io.set('authorization', function (handshakeData, accept) {
 	console.log('io.handshakeData: ', handshakeData);
-	//authorization logic should go in here to check handshakeData comes from authenticated user.
 
-	callback(null, true);
+	//See: http://howtonode.org/socket-io-auth for the source of this code below
+	if (handshakeData.headers.cookie) {
+		console.log('header.cookie = ', handshakeData.headers.cookie);
+		var cookie = cookieParse(handshakeData.headers.cookie);
+		console.log('parsedCookie = ', cookie);
+
+		var sessionID = connect.utils.parseSignedCookie(cookie['connect.sid'], SESSION_SECRET);
+		console.log('sessionID = ', sessionID);
+		//Note: check below is different from the one in the sample code linked above
+		// Nevertheless this *is* the correct check. When cookie cannot be 'unsigned' with our secret
+		// sessionID will be false.
+		if (!sessionID) {
+			console.log('Cookie forged?');
+			return accept('Cookie is invalid.', false);
+		}
+		return sessionStore.get(sessionID, function (err, session) {
+			if (err) {
+				console.log('Trouble accessing session store', err);
+				return accept(err, false);
+			}
+			console.log('session = ', session);
+			handshakeData.fluxUser = deref(session, ['passport', 'user', 'username']);
+			if (!handshakeData.fluxUser) {
+				console.log('passport session data not found, user not authenticated?');
+				return accept('passport session data missing', false);
+			}
+			return accept(null, true);
+		});
+	} else {
+		console.log('No cookie, check for custom header with github token');
+		var token = handshakeData.headers['x-flux-user-token'];
+		var user = handshakeData.headers['x-flux-user-name'];
+		console.log('token = ',token);
+		if (!token) {
+			console.log('No token');
+			return accept('No cookie or github token', false);
+		}
+		return github.verify(user, token, function (err, user) {
+			if (err) {
+				console.log('github verify failed: ', err);
+				return accept(err, false);
+			}
+			console.log('user = ', user);
+			if (!user) {
+				console.log('Token not associate with a valid user ', user);
+				return accept('token not valid', false);
+			}
+			//TODO: here we know user is a valid user. But nowhere do we check
+			//what data a user is allowed to see (i.e what messages).
+			//So really, any valid user can access any data at the moment.
+			return accept(null, true);
+		});
+	}
 });
 
 // create and configure services

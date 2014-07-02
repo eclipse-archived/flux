@@ -40,13 +40,15 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 
 	private transient boolean connectedToUserspace;
 	private transient boolean connected;
+	private String username;
 	
-	public SocketIOMessagingConnector(final String username) {
+	public SocketIOMessagingConnector(final String username, final String token) {
+		this.username = username;
 		host = System.getProperty("flux-host", "http://localhost:3000");
 
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
-			socket = new SocketIO(host);
+			socket = createSocket(username, token);
 			socket.connect(new IOCallback() {
 
 				@Override
@@ -61,12 +63,12 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 				public void onError(SocketIOException ex) {
 					ex.printStackTrace();
 					
-					try {
-						socket = new SocketIO(host);
-						socket.connect(this);
-					} catch (MalformedURLException e) {
-						e.printStackTrace();
-					}
+//					try {
+//						socket = createSocket(username, token);
+//						socket.connect(this);
+//					} catch (MalformedURLException e) {
+//						e.printStackTrace();
+//					}
 				}
 
 				@Override
@@ -116,6 +118,15 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 		}
 	}
 
+	private SocketIO createSocket(String username, String token) throws MalformedURLException {
+		SocketIO socket = new SocketIO(host);
+		if (token!=null) {
+			socket.addHeader("X-flux-user-name", username);
+			socket.addHeader("X-flux-user-token", token);
+		}
+		return socket;
+	}
+
 	@Override
 	public void send(String messageType, JSONObject message) {
 		socket.emit(messageType, message);
@@ -126,4 +137,8 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 		return connected && connectedToUserspace;
 	}
 	
+	@Override
+	public String getUserName() {
+		return username;
+	}
 }

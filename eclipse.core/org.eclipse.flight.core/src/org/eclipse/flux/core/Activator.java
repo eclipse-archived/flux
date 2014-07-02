@@ -54,9 +54,10 @@ public class Activator implements BundleActivator {
 		plugin = this;
 		
 		String username = System.getProperty("flux.user.name", "defaultuser");
+		String token = System.getProperty("flux.user.token");
 		// TODO: change this username property to a preference and add authentication
 		
-		messagingConnector = new SocketIOMessagingConnector(username);
+		messagingConnector = new SocketIOMessagingConnector(username, token);
 		repository = new Repository(messagingConnector, username);
 		liveEditCoordinator = new LiveEditCoordinator(messagingConnector);
 		
