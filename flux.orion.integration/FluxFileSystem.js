@@ -203,7 +203,7 @@ eclipse.FluxFileSystem= (function() {
 				if (callbacks) {
 					message.callback_id = generateCallbackId();
 					callbacksCache[message.callback_id] = callbacks;
-				} else {
+				} else if (!message.callback_id) {
 					message.callback_id = 0;
 				}
 				this.socket.emit(type, message);

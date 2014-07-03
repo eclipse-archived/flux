@@ -143,9 +143,7 @@ eclipse.FluxEditor = (function() {
 	
 		this.socket.on('getLiveResourcesRequest', function(data) {
 			self._getResourceData().then(function(resourceMetadata) {
-				if (data.username === resourceMetadata.username 
-					&& data.callback_id !== undefined
-					&& data.project === resourceMetadata.project) {
+				if (data.username === resourceMetadata.username) {
 						
 					self.sendMessage('getLiveResourcesResponse', {
 						'callback_id'        : data.callback_id,
@@ -240,7 +238,7 @@ eclipse.FluxEditor = (function() {
 				if (callbacks) {
 					message.callback_id = generateCallbackId();
 					callbacksCache[message.callback_id] = callbacks;
-				} else {
+				} else if (!message.callback_id) {
 					message.callback_id = 0;
 				}
 				this.socket.emit(type, message);
