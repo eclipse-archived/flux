@@ -1,0 +1,355 @@
+package org.eclipse.flux.jdt.services;
+
+import java.util.List;
+
+import org.eclipse.core.runtime.Assert;
+import org.eclipse.jdt.core.CompletionProposal;
+import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.ITypeParameter;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.Signature;
+import org.eclipse.jdt.core.compiler.CharOperation;
+
+public class CompletionProposalReplacementProvider {
+	
+	final private static char SPACE = ' ';
+	final private static char LPAREN = '(';
+	final private static char RPAREN = ')';
+	final private static char SEMICOLON = ';';
+	final private static char COMMA = ',';
+	
+	private ICompilationUnit compilationUnit;
+	private int offset;
+	private String prefix;
+	private CompletionProposal proposal;
+		
+	public CompletionProposalReplacementProvider(ICompilationUnit compilationUnit, CompletionProposal proposal, int offset, String prefix) {
+		super();
+		this.compilationUnit = compilationUnit;
+		this.offset = offset;
+		this.prefix = prefix;
+		this.proposal = proposal;
+	}
+	
+	
+	public StringBuilder createReplacement(List<Integer> positions) {
+		return createReplacement(proposal, (char) 0, positions);
+	}
+	
+	public StringBuilder createReplacement(CompletionProposal proposal, char trigger, List<Integer> positions) {
+		StringBuilder completionBuffer = new StringBuilder();
+		if (isSupportingRequiredProposals(proposal)) {
+			CompletionProposal[] requiredProposals= proposal.getRequiredProposals();
+			for (int i= 0; requiredProposals != null &&  i < requiredProposals.length; i++) {
+				if (requiredProposals[i].getKind() == CompletionProposal.TYPE_REF) {
+					appendRequiredType(completionBuffer, requiredProposals[i], trigger, positions);
+				} else if (requiredProposals[i].getKind() == CompletionProposal.TYPE_IMPORT) {
+					completionBuffer.append(createReplacement(requiredProposals[i], (char) 0, positions));
+				} else if (requiredProposals[i].getKind() == CompletionProposal.METHOD_IMPORT) {
+					completionBuffer.append(createReplacement(requiredProposals[i], (char) 0, positions));
+				} else if (requiredProposals[i].getKind() == CompletionProposal.FIELD_IMPORT) {
+					completionBuffer.append(createReplacement(requiredProposals[i], (char) 0, positions));
+				} else {
+					/*
+					 * In 3.3 we only support the above required proposals, see
+					 * CompletionProposal#getRequiredProposals()
+					 */
+					 Assert.isTrue(false);
+				}
+			}
+		}
+
+//			boolean isSmartTrigger= isSmartTrigger(trigger);
+			
+			appendReplacementString(completionBuffer, proposal, positions);
+
+//			String replacement;
+//			if (isSmartTrigger || trigger == (char) 0) {
+//				int referenceOffset= offset - prefix.length() + completionBuffer.length();
+//				//add ; to the replacement string if replacement string do not end with a semicolon and the document do not already have a ; at the reference offset.
+//				if (trigger == ';'
+//					&& proposal.getCompletion()[proposal.getCompletion().length - 1] != ';'
+//					&& (referenceOffset >= compilationUnit.getBuffer()
+//							.getLength() || compilationUnit.getBuffer()
+//							.getChar(referenceOffset) != ';')) {
+//					completionBuffer.append(';');
+//				}
+//			} else {
+//				StringBuffer buffer= new StringBuffer(getReplacementString());
+//
+//				// fix for PR #5533. Assumes that no eating takes place.
+//				if ((getCursorPosition() > 0 && getCursorPosition() <= buffer.length() && buffer.charAt(getCursorPosition() - 1) != trigger)) {
+//					// insert trigger ';' for methods with parameter at the end of the replacement string and not at the cursor position.
+//					int length= getReplacementString().length();
+//					if (trigger == ';' && getCursorPosition() != length) {
+//						if (buffer.charAt(length - 1) != trigger) {
+//							buffer.insert(length, trigger);
+//						}
+//					} else {
+//						buffer.insert(getCursorPosition(), trigger);
+//						setCursorPosition(getCursorPosition() + 1);
+//					}
+//				}
+//
+//				replacement= buffer.toString();
+//				setReplacementString(replacement);
+//			}
+//
+//			// PR 47097
+//			if (isSmartTrigger) {
+//				// avoid inserting redundant semicolon when smart insert is enabled.
+//				if (!(trigger == ';' && (completionBuffer.charAt(completionBuffer.length() - 1) == ';' /*|| document.getChar(referenceOffset) == ';'*/))) { //$NON-NLS-1$
+//					handleSmartTrigger(trigger, offset - prefix.length() + completionBuffer.length());
+//				}
+//			}
+
+			return completionBuffer;
+	}
+
+	private boolean isSupportingRequiredProposals(CompletionProposal proposal) {
+		return proposal != null
+				&& (proposal.getKind() == CompletionProposal.METHOD_REF
+						|| proposal.getKind() == CompletionProposal.FIELD_REF
+						|| proposal.getKind() == CompletionProposal.TYPE_REF
+						|| proposal.getKind() == CompletionProposal.CONSTRUCTOR_INVOCATION || proposal
+						.getKind() == CompletionProposal.ANONYMOUS_CLASS_CONSTRUCTOR_INVOCATION);
+	}
+	
+	protected boolean hasArgumentList(CompletionProposal proposal) {
+		if (CompletionProposal.METHOD_NAME_REFERENCE == proposal.getKind())
+			return false;
+		char[] completion= proposal.getCompletion();
+		return !isInJavadoc() && completion.length > 0 && completion[completion.length - 1] == ')';
+	}
+	
+	private boolean isInJavadoc() {
+		return false;
+	}
+
+	private void appendReplacementString(StringBuilder buffer, CompletionProposal proposal, List<Integer> positions) {
+		if (!hasArgumentList(proposal)) {
+			buffer.append(String.valueOf(proposal.getCompletion()));
+			return;
+		}
+
+		// we're inserting a method plus the argument list - respect formatter preferences
+		appendMethodNameReplacement(buffer, proposal);
+
+		if (hasParameters(proposal)) {
+			appendGuessingCompletion(buffer, proposal, positions);
+		}
+
+		buffer.append(RPAREN);
+		
+		if (canAutomaticallyAppendSemicolon(proposal))
+			buffer.append(SEMICOLON);
+	}
+
+	private boolean hasParameters(CompletionProposal proposal) throws IllegalArgumentException {
+		return Signature.getParameterCount(proposal.getSignature()) > 0;
+	}
+
+	private void appendMethodNameReplacement(StringBuilder buffer, CompletionProposal proposal) {
+		if (proposal.getKind() == CompletionProposal.METHOD_REF_WITH_CASTED_RECEIVER) {
+			String coreCompletion= String.valueOf(proposal.getCompletion());
+//			String lineDelimiter = TextUtilities.getDefaultLineDelimiter(getTextViewer().getDocument());
+//			String replacement= CodeFormatterUtil.format(CodeFormatter.K_EXPRESSION, coreCompletion, 0, lineDelimiter, fInvocationContext.getProject());
+//			buffer.append(replacement.substring(0, replacement.lastIndexOf('.') + 1));
+			buffer.append(coreCompletion);
+		}
+
+		if (proposal.getKind() != CompletionProposal.CONSTRUCTOR_INVOCATION)
+			buffer.append(proposal.getName());
+
+		buffer.append(LPAREN);
+	}
+
+	private void appendGuessingCompletion(StringBuilder buffer, CompletionProposal proposal, List<Integer> positions) {
+		char[][] parameterNames= proposal.findParameterNames(null);
+
+		int count= parameterNames.length;
+
+		for (int i= 0; i < count; i++) {
+			if (i != 0) {
+				buffer.append(COMMA);
+				buffer.append(SPACE);
+			}
+
+			char[] argument = parameterNames[i];
+			
+			positions.add(offset - prefix.length() + buffer.length());
+			positions.add(argument.length);
+
+			buffer.append(argument);
+		}
+	}
+	
+	private final boolean canAutomaticallyAppendSemicolon(CompletionProposal proposal) {
+		return !proposal.isConstructor() && CharOperation.equals(new char[] { Signature.C_VOID }, Signature.getReturnType(proposal.getSignature()));
+	}
+	
+	private StringBuilder appendRequiredType(StringBuilder buffer, CompletionProposal typeProposal, char trigger, List<Integer> positions) {
+		
+		appendReplacementString(buffer, typeProposal, positions);
+		
+		if (compilationUnit == null /*|| getContext() != null && getContext().isInJavadoc()*/) {
+			return buffer; 
+		}
+
+		IJavaProject project= compilationUnit.getJavaProject();
+		if (!shouldProposeGenerics(project))
+			return buffer;
+
+		char[] completion= typeProposal.getCompletion();
+		// don't add parameters for import-completions nor for proposals with an empty completion (e.g. inside the type argument list)
+		if (completion.length > 0 && (completion[completion.length - 1] == ';' || completion[completion.length - 1] == '.'))
+			return buffer;
+
+		/*
+		 * Add parameter types
+		 */
+		boolean onlyAppendArguments;
+		try {
+			onlyAppendArguments= proposal.getCompletion().length == 0 && offset > 0 && compilationUnit.getBuffer().getChar(offset - 1) == '<';
+		} catch (JavaModelException e) {
+			onlyAppendArguments= false;
+		}
+		if (onlyAppendArguments || shouldAppendArguments(typeProposal, trigger)) {
+			appendParameterList(buffer, computeTypeArgumentProposals(typeProposal), positions, onlyAppendArguments);
+		}
+		return buffer;
+	}
+	
+	private final boolean shouldProposeGenerics(IJavaProject project) {
+		String sourceVersion;
+		if (project != null)
+			sourceVersion= project.getOption(JavaCore.COMPILER_SOURCE, true);
+		else
+			sourceVersion= JavaCore.getOption(JavaCore.COMPILER_SOURCE);
+
+		return !isVersionLessThan(sourceVersion, JavaCore.VERSION_1_5);
+	}
+	
+	public static boolean isVersionLessThan(String version1, String version2) {
+		if (JavaCore.VERSION_CLDC_1_1.equals(version1)) {
+			version1= JavaCore.VERSION_1_1 + 'a';
+		}
+		if (JavaCore.VERSION_CLDC_1_1.equals(version2)) {
+			version2= JavaCore.VERSION_1_1 + 'a';
+		}
+		return version1.compareTo(version2) < 0;
+	}
+	
+	private IJavaElement resolveJavaElement(IJavaProject project, CompletionProposal proposal) throws JavaModelException {
+		char[] signature= proposal.getSignature();
+		String typeName= SignatureUtil.stripSignatureToFQN(String.valueOf(signature));
+		return project.findType(typeName);
+	}
+	
+	private String[] computeTypeArgumentProposals(CompletionProposal proposal) {
+		try {
+			IType type = (IType) resolveJavaElement(
+					compilationUnit.getJavaProject(), proposal);
+			if (type == null)
+				return new String[0];
+	
+			ITypeParameter[] parameters = type.getTypeParameters();
+			if (parameters.length == 0)
+				return new String[0];
+	
+			String[] arguments = new String[parameters.length];
+	
+			// for type arguments that are not mapped through to the expected type,
+			// take the lower bound of the type parameter
+			for (int i = 0; i < arguments.length; i++) {
+				if (arguments[i] == null) {
+					arguments[i] = computeTypeProposal(parameters[i]);
+				}
+			}
+			return arguments;
+		} catch (JavaModelException e) {
+			return new String[0];
+		}
+	}
+
+	private String computeTypeProposal(ITypeParameter parameter) throws JavaModelException {
+		String[] bounds= parameter.getBounds();
+		String elementName= parameter.getElementName();
+		if (bounds.length == 1 && !"java.lang.Object".equals(bounds[0])) //$NON-NLS-1$
+			return Signature.getSimpleName(bounds[0]);
+		else
+			return elementName;
+	}
+
+	private StringBuilder appendParameterList(StringBuilder buffer, String[] typeArguments, List<Integer> positions, boolean onlyAppendArguments) {
+		final char LESS= '<';
+		final char GREATER= '>';
+		if (!onlyAppendArguments) {
+			buffer.append(LESS);
+		}
+		StringBuffer separator= new StringBuffer(3);
+		separator.append(COMMA);
+
+		for (int i= 0; i != typeArguments.length; i++) {
+			if (i != 0)
+				buffer.append(separator);
+
+			positions.add(offset - prefix.length() + buffer.length());
+			positions.add(typeArguments[i].length());
+			buffer.append(typeArguments[i]);
+		}
+
+		if (!onlyAppendArguments)
+			buffer.append(GREATER);
+
+		return buffer;
+	}
+
+	
+	private boolean shouldAppendArguments(CompletionProposal proposal,
+			char trigger) {
+		/*
+		 * No argument list if there were any special triggers (for example a
+		 * period to qualify an inner type).
+		 */
+		if (trigger != '\0' && trigger != '<' && trigger != '(')
+			return false;
+
+		/*
+		 * No argument list if the completion is empty (already within the
+		 * argument list).
+		 */
+		char[] completion = proposal.getCompletion();
+		if (completion.length == 0)
+			return false;
+
+		/*
+		 * No argument list if there already is a generic signature behind the
+		 * name.
+		 */
+		int index = prefix.length() - 1;
+		while (index >= 0
+				&& Character.isUnicodeIdentifierPart(prefix.charAt(index))
+				&& prefix.charAt(index) != '\n')
+			--index;
+
+		if (index < 0)
+			return true;
+
+		char ch = prefix.charAt(index);
+		return ch != '<' && ch != '\n';
+
+	}
+
+//	private boolean isSmartTrigger(char trigger) {
+//		return false;
+//	}
+//	
+//	private void handleSmartTrigger(char trigger, int refrenceOffset) {
+//		
+//	}
+}
