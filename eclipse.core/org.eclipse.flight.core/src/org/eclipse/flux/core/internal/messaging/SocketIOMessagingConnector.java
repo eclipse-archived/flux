@@ -15,10 +15,13 @@ import io.socket.IOCallback;
 import io.socket.SocketIO;
 import io.socket.SocketIOException;
 
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URLEncoder;
 
 import javax.net.ssl.SSLContext;
 
+import org.eclipse.core.runtime.Assert;
 import org.eclipse.flux.core.IMessagingConnector;
 import org.json.JSONObject;
 
