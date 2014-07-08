@@ -239,8 +239,6 @@ public class CompletionProposalDescriptionProvider {
 	StringBuilder createMethodProposalLabel(CompletionProposal methodProposal) {
 		StringBuilder description = new StringBuilder();
 		
-//		description.append("\"icon\":{\"src\":\"../js/editor/textview/methpub_obj.gif\"},");
-		description.append("\"segments\": ");
 		description.append("[");
 
 		description.append("{\"value\":\"");
@@ -311,8 +309,6 @@ public class CompletionProposalDescriptionProvider {
 	StringBuilder createJavadocMethodProposalLabel(CompletionProposal methodProposal) {
 		StringBuilder nameBuffer= new StringBuilder();
 		
-//		nameBuffer.append("\"icon\":{\"src\":\"../js/editor/textview/methpub_obj.gif\"},");
-		nameBuffer.append("\"segments\": ");
 		nameBuffer.append("[");
 
 		nameBuffer.append("{\"value\":\"");
@@ -343,8 +339,6 @@ public class CompletionProposalDescriptionProvider {
 	StringBuilder createOverrideMethodProposalLabel(CompletionProposal methodProposal) {
 		StringBuilder nameBuffer= new StringBuilder();
 		
-//		nameBuffer.append("\"icon\":{\"src\":\"../js/editor/textview/methpub_obj.gif\"},");
-		nameBuffer.append("\"segments\": ");
 		nameBuffer.append("[");
 
 		nameBuffer.append("{\"value\":\"");
@@ -443,8 +437,6 @@ public class CompletionProposalDescriptionProvider {
 
 		StringBuilder nameBuffer= new StringBuilder();
 		
-//		nameBuffer.append("\"icon\":{\"src\":\"../js/editor/textview/methpub_obj.gif\"},");
-		nameBuffer.append("\"segments\": ");
 		nameBuffer.append("[");
 
 		nameBuffer.append("{\"value\":\"");
@@ -456,6 +448,7 @@ public class CompletionProposalDescriptionProvider {
 		if (qIndex > 0) {
 			nameBuffer.append(",");
 			nameBuffer.append("{\"value\":\"");
+			nameBuffer.append(QUALIFIER_SEPARATOR);
 			nameBuffer.append(new String(fullName, 0, qIndex - 1));
 			nameBuffer.append("\",\"style\":{");
 			nameBuffer.append("\"color\":\"#AAAAAA\"");
@@ -474,8 +467,6 @@ public class CompletionProposalDescriptionProvider {
 		
 		StringBuilder nameBuffer= new StringBuilder();
 		
-//		nameBuffer.append("\"icon\":{\"src\":\"../js/editor/textview/methpub_obj.gif\"},");
-		nameBuffer.append("\"segments\": ");
 		nameBuffer.append("[");
 
 		nameBuffer.append("{\"value\":\"");
@@ -488,6 +479,7 @@ public class CompletionProposalDescriptionProvider {
 		if (qIndex > 0) {
 			nameBuffer.append(",");
 			nameBuffer.append("{\"value\":\"");
+			nameBuffer.append(QUALIFIER_SEPARATOR);
 			nameBuffer.append(new String(fullName, 0, qIndex - 1));
 			nameBuffer.append("\",\"style\":{");
 			nameBuffer.append("\"color\":\"#AAAAAA\"");
@@ -514,8 +506,6 @@ public class CompletionProposalDescriptionProvider {
 	StringBuilder createSimpleLabelWithType(CompletionProposal proposal) {
 		StringBuilder nameBuffer= new StringBuilder();
 		
-//		nameBuffer.append("\"icon\":{\"src\":\"../js/editor/textview/methpub_obj.gif\"},");
-		nameBuffer.append("\"segments\": ");
 		nameBuffer.append("[");
 
 		nameBuffer.append("{\"value\":\"");
@@ -550,7 +540,6 @@ public class CompletionProposalDescriptionProvider {
 		if (!isThisPrefix(name))
 			name= proposal.getName();
 		StringBuilder buf= new StringBuilder();
-		buf.append("\"segments\": ");
 		buf.append("[");
 
 		buf.append("{\"value\":\"");
@@ -592,7 +581,6 @@ public class CompletionProposalDescriptionProvider {
 	StringBuilder createPackageProposalLabel(CompletionProposal proposal) {
 		Assert.isTrue(proposal.getKind() == CompletionProposal.PACKAGE_REF);
 		StringBuilder buf= new StringBuilder();
-		buf.append("\"segments\": ");
 		buf.append("[");
 		buf.append("{\"value\":\"");
 		buf.append(String.valueOf(proposal.getDeclarationSignature()));
@@ -603,7 +591,6 @@ public class CompletionProposalDescriptionProvider {
 
 	StringBuilder createSimpleLabel(CompletionProposal proposal) {
 		StringBuilder buf= new StringBuilder();
-		buf.append("\"segments\": ");
 		buf.append("[");
 		buf.append("{\"value\":\"");
 		buf.append(String.valueOf(proposal.getCompletion()));
@@ -616,7 +603,6 @@ public class CompletionProposalDescriptionProvider {
 		declaringTypeSignature= Signature.getTypeErasure(declaringTypeSignature);
 
 		StringBuilder buf= new StringBuilder();
-		buf.append("\"segments\": ");
 		buf.append("[");
 		buf.append("{\"value\":\"");
 		

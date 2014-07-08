@@ -63,8 +63,6 @@ public class ContentAssistService {
 				String prefix = message.optString("prefix");
 				String sender = message.getString("requestSenderID");
 
-				String proposalsSource = computeContentAssist(username, liveEditID, offset, prefix);
-
 				JSONObject responseMessage = new JSONObject();
 				responseMessage.put("username", username);
 				responseMessage.put("project", projectName);
@@ -72,8 +70,7 @@ public class ContentAssistService {
 				responseMessage.put("callback_id", callbackID);
 				responseMessage.put("requestSenderID", sender);
 
-				JSONArray proposals = new JSONArray(proposalsSource);
-				responseMessage.put("proposals", proposals);
+				responseMessage.put("proposals", computeContentAssist(username, liveEditID, offset, prefix));
 
 				messagingConnector.send("contentassistresponse", responseMessage);
 			}
@@ -82,7 +79,7 @@ public class ContentAssistService {
 		}
 	}
 
-	protected String computeContentAssist(String username, String resourcePath, int offset, String prefix) {
+	protected JSONArray computeContentAssist(String username, String resourcePath, int offset, String prefix) throws JSONException {
 		final List<CompletionProposal> proposals = new ArrayList<CompletionProposal>();
 
 		ICompilationUnit liveEditUnit = liveEditUnits.getLiveEditUnit(username, resourcePath);
@@ -117,260 +114,91 @@ public class ContentAssistService {
 			e.printStackTrace();
 		}
 
-		Collections.sort(proposals, new Comparator<CompletionProposal>() {
+		List<JSONObject> jsonProposals = new ArrayList<JSONObject>(proposals.size());	
+		for (CompletionProposal proposal : proposals) {
+			JSONObject jsonDescription = getDescription(proposal);
+			List<Integer> positionsList = new ArrayList<Integer>();
+			StringBuilder jsonCompletion = new CompletionProposalReplacementProvider(liveEditUnit, proposal, offset, prefix).createReplacement(positionsList);
+			
+			JSONObject jsonProposal = new JSONObject();
+			jsonProposal.put("description", jsonDescription);
+			jsonProposal.put("proposal", jsonCompletion);
+			if (positionsList != null && !positionsList.isEmpty()) {
+				jsonProposal.put("positions", getPositions(positionsList));
+			}
+			jsonProposal.put("style", "attributedString");
+			jsonProposal.put("replace", true);
+			jsonProposal.put("relevance", proposal.getRelevance());
+			
+			jsonProposals.add(jsonProposal);
+		}
+		
+		Collections.sort(jsonProposals, new Comparator<JSONObject>() {
 			@Override
-			public int compare(CompletionProposal o1, CompletionProposal o2) {
-				return o2.getRelevance() - o1.getRelevance();
+			public int compare(JSONObject o1, JSONObject o2) {
+				try {
+					int diff = o2.getInt("relevance") - o1.getInt("relevance");
+					if (diff == 0) {
+						JSONArray nameDescription1 = o1.getJSONObject("description").getJSONArray("segments");
+						JSONArray nameDescription2 = o2.getJSONObject("description").getJSONArray("segments");
+						StringBuilder nameBuffer1 = new StringBuilder();
+						for (int i = 0; i < nameDescription1.length(); i++) {
+							nameBuffer1.append(nameDescription1.getJSONObject(i).getString("value"));
+						}
+						StringBuilder nameBuffer2 = new StringBuilder();
+						for (int i = 0; i < nameDescription2.length(); i++) {
+							nameBuffer2.append(nameDescription2.getJSONObject(i).getString("value"));
+						}
+						return nameBuffer1.toString().compareTo(nameBuffer2.toString());
+					} else {
+						return diff;
+					}
+				} catch (JSONException e) {
+					return -1;
+				}
 			}
 		});
 
-		StringBuilder result = new StringBuilder();
-		boolean flag = false;
-		result.append("[");
-		for (CompletionProposal proposal : proposals) {
-			String description = getDescription(proposal);
-			List<Integer> positionsList = new ArrayList<Integer>();
-			String completion = new CompletionProposalReplacementProvider(liveEditUnit, proposal, offset, prefix).createReplacement(positionsList).toString();
-			String positions = getPositions(positionsList);
-
-			if (description != null) {
-				if (flag) {
-					result.append(",");
-				}
-
-				result.append("{");
-				result.append("\"proposal\"");
-				result.append(":");
-				result.append("\"");
-				result.append(completion);
-				result.append("\",");
-				result.append("\"description\"");
-				result.append(":");
-				result.append(description);
-				result.append(",");
-
-				if (positions != null) {
-					result.append("\"positions\"");
-					result.append(":");
-					result.append(positions);
-					result.append(",");
-				}
-
-				result.append("\"style\":\"attributedString\",");
-				result.append("\"replace\"");
-				result.append(":");
-				result.append("true");
-				result.append("}");
-
-				flag = true;
-			}
-		}
-		result.append("]");
-		return result.toString();
+		return new JSONArray(jsonProposals);
 	}
 	
-	private String getPositions(List<Integer> positionsList) {
+	private JSONArray getPositions(List<Integer> positionsList) throws JSONException {
 		if (positionsList != null && positionsList.size() % 2 == 0) {
-			StringBuilder positions = new StringBuilder();
-			positions.append("[");
-
+			JSONArray jsonPositions = new JSONArray();
 			for (int i = 0; i < positionsList.size(); i += 2) {
-				if (i > 0) {
-					positions.append(",");
-				}
-				positions.append("{");
-				positions.append("\"offset\"");
-				positions.append(":");
-				positions.append(positionsList.get(i));
-
-				positions.append(",");
-				positions.append("\"length\"");
-				positions.append(":");
-				positions.append(positionsList.get(i + 1));
-
-				positions.append("}");
-
+				JSONObject position = new JSONObject();
+				position.put("offset", positionsList.get(i));
+				position.put("length", positionsList.get(i + 1));
+				jsonPositions.put(position);
 			}
-			positions.append("]");
-			return positions.toString();
+			return jsonPositions;
 		} else {
 			return null;
 		}
 	}
 	
-//	private String getPositions(CompletionProposal proposal, String prefix, int globalOffset) {
-//		if (proposal.getKind() == CompletionProposal.METHOD_REF) {
-//			String completion = new String(proposal.getCompletion());
-//			if (completion.startsWith(prefix)) {
-//				completion = completion.substring(prefix.length());
-//			}
-//
-//			StringBuilder positions = new StringBuilder();
-//			positions.append("[");
-//
-//			char[][] parameterNames = proposal.findParameterNames(null);
-//			if (parameterNames != null && parameterNames.length > 0 && completion.endsWith(")")) {
-//				int offset = globalOffset;
-//				offset += completion.length() - 1;
-//
-//				for (int i = 0; i < parameterNames.length; i++) {
-//					if (i > 0) {
-//						positions.append(",");
-//					}
-//					positions.append("{");
-//					positions.append("\"offset\"");
-//					positions.append(":");
-//					positions.append(offset);
-//
-//					positions.append(",");
-//					positions.append("\"length\"");
-//					positions.append(":");
-//					positions.append(parameterNames[i].length);
-//
-//					positions.append("}");
-//
-//					offset += parameterNames[i].length;
-//					offset += ", ".length();
-//				}
-//			}
-//
-//			positions.append("]");
-//			return positions.toString();
-//		} else {
-//			return null;
-//		}
-//	}
-
-//	private String getCompletion(CompletionProposal proposal, String prefix) {
-//		String completion = new String(proposal.getCompletion());
-//		if (completion.startsWith(prefix)) {
-//			completion = completion.substring(prefix.length());
-//		}
-//
-//		if (proposal.getKind() == CompletionProposal.METHOD_REF) {
-//			char[][] parameterNames = proposal.findParameterNames(null);
-//			if (parameterNames != null && parameterNames.length > 0 && completion.endsWith(")")) {
-//				completion = completion.substring(0, completion.length() - 1);
-//				for (int i = 0; i < parameterNames.length; i++) {
-//					if (i > 0) {
-//						completion += ", ";
-//					}
-//					completion += new String(parameterNames[i]);
-//				}
-//				completion += ")";
-//			}
-//		}
-//
-//		return completion;
-//	}
-	
-//	protected String getDescription(CompletionProposal proposal) {
-//		StringBuilder description = new StringBuilder();
-//		description.append("{");
-//
-//		if (proposal.getKind() == CompletionProposal.METHOD_REF) {
-//			description.append("\"icon\":{\"src\":\"../js/editor/textview/methpub_obj.gif\"},");
-//			description.append("\"segments\": ");
-//			description.append("[");
-//
-//			char[][] parameterNames = proposal.findParameterNames(null);
-//			String[] parameters = new String[parameterNames.length];
-//			for (int i = 0; i < parameterNames.length; i++) {
-//				parameters[i] = new String(parameterNames[i]);
-//			}
-//
-//			String sig = Signature.toString(new String(proposal.getSignature()), new String(proposal.getName()), parameters, false, false);
-//
-//			description.append("{");
-//			String result = sig + " : " + Signature.getSimpleName(Signature.toString(Signature.getReturnType(new String(proposal.getSignature()))));
-//			description.append("\"value\":\"" + result + "\"");
-//			description.append("}");
-//
-//			description.append(",");
-//			description.append("{");
-//			String appendix = " - " + Signature.getSignatureSimpleName(new String(proposal.getDeclarationSignature()));
-//			description.append("\"value\":\"" + appendix + "\",");
-//			description.append("\"style\":{");
-//			description.append("\"color\":\"#AAAAAA\"");
-//			description.append("}");
-//			description.append("}");
-//
-//			description.append("]");
-//
-//		} else if (proposal.getKind() == CompletionProposal.FIELD_REF) {
-//			description.append("\"icon\":{\"src\":\"../js/editor/textview/field_public_obj.gif\"},");
-//			description.append("\"segments\": ");
-//			description.append("[");
-//
-//			description.append("{");
-//			String result = new String(proposal.getCompletion()) + " : " + (proposal.getSignature() != null ? Signature.getSignatureSimpleName(new String(proposal.getSignature())) : "<unknown>");
-//			description.append("\"value\":\"" + result + "\"");
-//			description.append("}");
-//
-//			description.append(",");
-//			description.append("{");
-//			String appendix = " - " + (proposal.getDeclarationSignature() != null ? Signature.getSignatureSimpleName(new String(proposal.getDeclarationSignature())) : "<unknown>");
-//			description.append("\"value\":\"" + appendix + "\",");
-//			description.append("\"style\":{");
-//			description.append("\"color\":\"#AAAAAA\"");
-//			description.append("}");
-//			description.append("}");
-//
-//			description.append("]");
-//
-//		} else if (proposal.getKind() == CompletionProposal.TYPE_REF) {
-//			if (proposal.getAccessibility() == IAccessRule.K_NON_ACCESSIBLE) {
-//				return null;
-//			}
-//
-//			description.append("\"icon\":{\"src\":\"../js/editor/textview/class_obj.gif\"},");
-//			description.append("\"segments\": ");
-//			description.append("[");
-//
-//			description.append("{");
-//			String result = Signature.getSignatureSimpleName(new String(proposal.getSignature()));
-//			description.append("\"value\":\"" + result + "\"");
-//			description.append("}");
-//
-//			description.append(",");
-//			description.append("{");
-//			String appendix = " - " + new String(proposal.getDeclarationSignature());
-//			description.append("\"value\":\"" + appendix + "\",");
-//			description.append("\"style\":{");
-//			description.append("\"color\":\"#AAAAAA\"");
-//			description.append("}");
-//			description.append("}");
-//
-//			description.append("]");
-//
-//		} else {
-//			return null;
-//		}
-//
-//		description.append("}");
-//		return description.toString();
-//	}
-	
-
-	protected String getDescription(CompletionProposal proposal) {
+	protected JSONObject getDescription(CompletionProposal proposal) throws JSONException {
 		CompletionProposalDescriptionProvider provider = new CompletionProposalDescriptionProvider();
-		StringBuilder description = new StringBuilder();
-		description.append("{");
+		JSONObject description = new JSONObject();
 		/*
 		 * Add icon field for now. Possibly needs to be moved to a client side
 		 */
 		if (proposal.getKind() == CompletionProposal.METHOD_REF) {
-			description.append("\"icon\":{\"src\":\"../js/editor/textview/methpub_obj.gif\"},");
+			JSONObject src = new JSONObject();
+			src.put("src", "../js/editor/textview/methpub_obj.gif");
+			description.put("icon", src);
 		} else if (proposal.getKind() == CompletionProposal.FIELD_REF) {
-			description.append("\"icon\":{\"src\":\"../js/editor/textview/field_public_obj.gif\"},");
+			JSONObject src = new JSONObject();
+			src.put("src", "../js/editor/textview/field_public_obj.gif");
+			description.put("icon", src);
 		} else if (proposal.getKind() == CompletionProposal.TYPE_REF) {
-			description.append("\"icon\":{\"src\":\"../js/editor/textview/class_obj.gif\"},");
+			JSONObject src = new JSONObject();
+			src.put("src", "../js/editor/textview/class_obj.gif");
+			description.put("icon", src);
 		}
 		
-		description.append(provider.createDescription(proposal));
-		description.append(", \"metadata\" : ");
-		description.append(provider.createMetadata(proposal));		
-		description.append("}");
-		return description.toString();
+		description.put("segments", new JSONArray(provider.createDescription(proposal).toString()));
+		description.put("metadata", new JSONObject(provider.createMetadata(proposal)));
+		return description;
 	}
 }
