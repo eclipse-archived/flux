@@ -117,9 +117,9 @@ MongoClient.connect("mongodb://localhost:27017/flight-db", function(err, db) {
 
 	var client_io = require('socket.io-client');
 
-	var client_socket = client_io.connect(messagingHost, {
+	var client_socket = client_io.connect(messagingHost, authentication.asSuperUser({
 		port : messagingPort
-	});
+	}));
 
 	client_socket.on('connect', function() {
 		console.log('client socket connected');

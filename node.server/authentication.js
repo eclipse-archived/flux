@@ -26,6 +26,11 @@ var express = require('express');
 var connect = require('connect');
 var cookieParse = require('cookie').parse;
 
+var SUPER_USER = '$super$'; //A special user id that identifies the super user.
+                            //This should be string that is not valid as a userid on github
+                            //Otherwise attackers could create such a user on github and
+                            //become the superuser by authenticating as this user.
+
 var SESSION_SECRET = githubSecret.secret; //reuse our github client secret also as session secret.
 
 var sessionStore = new express.session.MemoryStore(); //TODO: use database
@@ -34,72 +39,118 @@ var session = express.session({
 	store: sessionStore
 });
 
+var URIjs = require('URIjs');
+
 /**
  * socket.io handshake handler that authenticates connection based on express session
  * cookie. This method is used to implicitly authenticate connections estabilshed from
  * browser code running in a express session context.
  */
 function sessionCookieHandshake(handshakeData, accept) {
-	console.log('io.handshakeData: ', handshakeData);
+	//console.log('io.handshakeData: ', handshakeData);
 
 	//See: http://howtonode.org/socket-io-auth for the source of this code below
 	if (handshakeData.headers.cookie) {
-		console.log('header.cookie = ', handshakeData.headers.cookie);
+		//console.log('header.cookie = ', handshakeData.headers.cookie);
 		var cookie = cookieParse(handshakeData.headers.cookie);
-		console.log('parsedCookie = ', cookie);
+		//console.log('parsedCookie = ', cookie);
 
 		var sessionID = connect.utils.parseSignedCookie(cookie['connect.sid'], SESSION_SECRET);
-		console.log('sessionID = ', sessionID);
+		//console.log('sessionID = ', sessionID);
 		//Note: check below is different from the one in the sample code linked above
 		// Nevertheless this *is* the correct check. When cookie cannot be 'unsigned' with our secret
 		// sessionID will be false.
 		if (!sessionID) {
-			console.log('Cookie forged?');
+			//console.log('Cookie forged?');
 			return accept('Cookie is invalid.', false);
 		}
 		return sessionStore.get(sessionID, function (err, session) {
 			if (err) {
-				console.log('Trouble accessing session store', err);
+				//console.log('Trouble accessing session store', err);
 				return accept(err, false);
 			}
-			console.log('session = ', session);
+			//console.log('session = ', session);
 			handshakeData.fluxUser = deref(session, ['passport', 'user', 'username']);
 			if (!handshakeData.fluxUser) {
-				console.log('passport session data not found, user not authenticated?');
+				//console.log('passport session data not found, user not authenticated?');
 				return accept('passport session data missing', false);
 			}
 			return accept(null, true);
 		});
 	}
-	console.log('No cookie');
+	//console.log('No cookie');
 	return accept('No cookie', false);
 }
 
 /**
- * socket.io handshake handler that authenticates connection based on
- * 'x-flux-user' and 'x-flux-token' request headers. This method is
- * used by the Java client.
+ * Extract user (name) and oauth token from handshake data.
  */
-function xFluxHeaderHandshake(handshakeData, accept) {
-	console.log('check x-flux headers for user/token');
+function getUserToken(handshakeData, callback) {
+	// First look in the headers (provided like this by Java client)
 	var token = handshakeData.headers['x-flux-user-token'];
 	var user = handshakeData.headers['x-flux-user-name'];
-	console.log('token = ',token);
-	if (!token) {
-		console.log('No token');
-		return accept('No github token', false);
+	if (token && user) {
+		return callback(user, token);
 	}
-	return github.verify(user, token, function (err, user) {
-		if (err) {
-			console.log('github verify failed: ', err);
-			return accept(err, false);
+
+	// Then look in query params (provided like this by nodejs client)
+	return callback(
+		deref(handshakeData, ["query", "user"]),
+		deref(handshakeData, ["query", "token"])
+	);
+}
+
+function authenticateSuperUser(user, token) {
+	return user===SUPER_USER && token===githubSecret.secret;
+}
+
+/**
+ * socket.io handshake handler that authenticates connection based on
+ * user and github oauth token. The user and token can be provided either
+ * as query params or as 'x-flux-user' and 'x-flux-token' request headers.
+ *
+ * The header method is used by Java clients and the query params by
+ * nodejs clients.
+ *
+ * In theory nodejs and java should both be able to use the same method
+ * of authentication.
+ *
+ * However...
+ *    - the Java library makes it
+ *         - easy to set request headers
+ *         - provides no way to set query parameters
+ *    - the node client is exactly the oposite!
+ */
+function tokenHandshake(handshakeData, accept) {
+	return getUserToken(handshakeData, function (user, token) {
+		console.log('token = ',token);
+		if (!token) {
+			//console.log('No token');
+			return accept('No x-flux-user-token header', false);
 		}
-		console.log('user = ', user);
 		if (!user) {
-			console.log('Token not associate with a valid user ', user);
-			return accept('token not valid', false);
+			return accept('No user specified', false);
 		}
-		return accept(null, true);
+		if (!token) {
+			return accept('No github token specified', false);
+		}
+		if (authenticateSuperUser(user, token)) {
+			handshakeData.fluxUser = SUPER_USER;
+			return accept(null, true);
+		}
+		return github.verify(user, token, function (err, user) {
+			if (err) {
+				//console.log('x-flux-user-token verify failed: ', err);
+				return accept(err, false);
+			}
+			//console.log('user = ', user);
+			if (!user) {
+				//console.log('Token not associate with a valid user ', user);
+				return accept('x-flux-user-token not valid for user '+user, false);
+			}
+			handshakeData.fluxUser = user;
+			return accept(null, true);
+		});
 	});
 }
 
@@ -110,15 +161,27 @@ function xFluxHeaderHandshake(handshakeData, accept) {
 function handshakeCompose() {
 
 	/**
-	 * On the way out of a chain of handshake handlers this function appends
-	 * error messages together so that if all handlers fail, the error messages
+	 * On the way out of a chain of handshake handlers this function wraps the
+	 * acceptFun so that if all handlers fail, the error messages
 	 * from each handler in the chain are combined.
 	 */
 	function appendError(err, acceptFun) {
-		//TODO: proper implementation should append err messages together
-		// This implementation is nice and simple (so no bugs :-) but it looses
-		// errors from all but the last handshake handler.
-		return acceptFun;
+		if (!err) {
+			return acceptFun;
+		} else {
+			return function (err2, accepted) {
+				if (accepted) {
+					//err message doesn't really matter in this case
+					return acceptFun(err2, accepted);
+				} else if (!err2) {
+					//No second error message, so only report first error
+					return acceptFun(err, accepted);
+				} else {
+					//Retain both error explanations in a single message.
+					return acceptFun(err + " & "+err2, accepted);
+				}
+			};
+		}
 	}
 
 	/**
@@ -137,6 +200,7 @@ function handshakeCompose() {
 	}
 
 	var shakers = Array.prototype.slice.call(arguments, 0);
+
 	function loop(i) {
 		if (i===shakers.length-1) {
 			//Only one shaker left, no need to compose, just use as is.
@@ -149,13 +213,30 @@ function handshakeCompose() {
 }
 
 /**
+ * Add some logging to a socket.io handshake handler. This wraps the
+ * handler returning a new 'logging handler' delegating to it.
+ */
+function addLogging(shaker) {
+	return function (hsd, accept) {
+		return shaker(hsd, function (err, accepted) {
+			if (accepted) {
+				console.log('User authenticated: ', hsd.fluxUser);
+			} else {
+				console.log('Autentication REJECTED: ',err);
+			}
+			return accept(err, accepted);
+		});
+	};
+}
+
+/**
  * Handler that is called by socket.io when websocket connections are being established.
  * This function is supposed to verify whether connection can be authorized.
  */
-var socketIoHandshake = handshakeCompose(
-	sessionCookieHandshake,
-	xFluxHeaderHandshake
-);
+var socketIoHandshake = addLogging(handshakeCompose(
+	sessionCookieHandshake, // browser clients use this
+	tokenHandshake			// Java and nodejs clients use this
+));
 
 /**
  * express middleware that checks whether req is authenticated.
@@ -167,6 +248,25 @@ function ensureAuthenticated(req, res, next) {
 		return next();
 	}
 	res.redirect('/auth/github');
+}
+
+///////////////////////////////////////
+// Configuration options for nodejs
+// socket.io client
+
+/**
+ * Given an options objects to create nodejs socketio client connections,
+ * add credentials that grant super user access to the connection.
+ */
+function asSuperUser(options) {
+	options.query = new URIjs()
+		.query(options.query||"")
+		.query({
+			user: SUPER_USER,
+			token: githubSecret.secret
+		})
+		.query();
+	return options;
 }
 
 ///////////////////////////////////////
@@ -205,3 +305,4 @@ exports.ensureAuthenticated = ensureAuthenticated;
 exports.socketIoHandshake = socketIoHandshake;
 exports.session = session;
 exports.passport = passport;
+exports.asSuperUser = asSuperUser;
