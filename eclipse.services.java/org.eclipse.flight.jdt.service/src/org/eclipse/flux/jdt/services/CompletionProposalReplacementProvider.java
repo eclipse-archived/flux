@@ -48,11 +48,11 @@ public class CompletionProposalReplacementProvider {
 				if (requiredProposals[i].getKind() == CompletionProposal.TYPE_REF) {
 					appendRequiredType(completionBuffer, requiredProposals[i], trigger, positions);
 				} else if (requiredProposals[i].getKind() == CompletionProposal.TYPE_IMPORT) {
-					completionBuffer.append(createReplacement(requiredProposals[i], (char) 0, positions));
+					appendImportProposal(completionBuffer, requiredProposals[i], proposal.getKind());
 				} else if (requiredProposals[i].getKind() == CompletionProposal.METHOD_IMPORT) {
-					completionBuffer.append(createReplacement(requiredProposals[i], (char) 0, positions));
+					appendImportProposal(completionBuffer, requiredProposals[i], proposal.getKind());
 				} else if (requiredProposals[i].getKind() == CompletionProposal.FIELD_IMPORT) {
-					completionBuffer.append(createReplacement(requiredProposals[i], (char) 0, positions));
+					appendImportProposal(completionBuffer, requiredProposals[i], proposal.getKind());
 				} else {
 					/*
 					 * In 3.3 we only support the above required proposals, see
@@ -286,26 +286,27 @@ public class CompletionProposalReplacementProvider {
 	}
 
 	private StringBuilder appendParameterList(StringBuilder buffer, String[] typeArguments, List<Integer> positions, boolean onlyAppendArguments) {
-		final char LESS= '<';
-		final char GREATER= '>';
-		if (!onlyAppendArguments) {
-			buffer.append(LESS);
+		if (typeArguments != null && typeArguments.length > 0) {
+			final char LESS= '<';
+			final char GREATER= '>';
+			if (!onlyAppendArguments) {
+				buffer.append(LESS);
+			}
+			StringBuffer separator= new StringBuffer(3);
+			separator.append(COMMA);
+	
+			for (int i= 0; i != typeArguments.length; i++) {
+				if (i != 0)
+					buffer.append(separator);
+	
+				positions.add(offset - prefix.length() + buffer.length());
+				positions.add(typeArguments[i].length());
+				buffer.append(typeArguments[i]);
+			}
+	
+			if (!onlyAppendArguments)
+				buffer.append(GREATER);
 		}
-		StringBuffer separator= new StringBuffer(3);
-		separator.append(COMMA);
-
-		for (int i= 0; i != typeArguments.length; i++) {
-			if (i != 0)
-				buffer.append(separator);
-
-			positions.add(offset - prefix.length() + buffer.length());
-			positions.add(typeArguments[i].length());
-			buffer.append(typeArguments[i]);
-		}
-
-		if (!onlyAppendArguments)
-			buffer.append(GREATER);
-
 		return buffer;
 	}
 
@@ -343,6 +344,83 @@ public class CompletionProposalReplacementProvider {
 		char ch = prefix.charAt(index);
 		return ch != '<' && ch != '\n';
 
+	}
+	
+	private StringBuilder appendImportProposal(StringBuilder buffer, CompletionProposal proposal, int coreKind) {
+		int proposalKind= proposal.getKind();
+		String qualifiedTypeName= null;
+		char[] qualifiedType= null;
+ 		if (proposalKind == CompletionProposal.TYPE_IMPORT) {
+ 			qualifiedType= proposal.getSignature();
+ 	 		qualifiedTypeName= String.valueOf(Signature.toCharArray(qualifiedType));
+ 		} else if (proposalKind == CompletionProposal.METHOD_IMPORT || proposalKind == CompletionProposal.FIELD_IMPORT) {
+            qualifiedType= Signature.getTypeErasure(proposal.getDeclarationSignature());
+            qualifiedTypeName= String.valueOf(Signature.toCharArray(qualifiedType));
+		} else {
+			/*
+			 * In 3.3 we only support the above import proposals, see
+			 * CompletionProposal#getRequiredProposals()
+			 */
+			 Assert.isTrue(false);
+		}
+
+// 		/* Add imports if the preference is on. */
+// 		fImportRewrite= createImportRewrite();
+// 		if (fImportRewrite != null) {
+//	 		if (proposalKind == CompletionProposal.TYPE_IMPORT) {
+//	 			String simpleType= fImportRewrite.addImport(qualifiedTypeName, fImportContext);
+//		 		if (fParentProposalKind == CompletionProposal.METHOD_REF)
+//		 			return simpleType + "."; //$NON-NLS-1$
+// 			} else {
+//				String res= fImportRewrite.addStaticImport(qualifiedTypeName, String.valueOf(fProposal.getName()), proposalKind == CompletionProposal.FIELD_IMPORT, fImportContext);
+//				int dot= res.lastIndexOf('.');
+//				if (dot != -1) {
+//					String typeName= fImportRewrite.addImport(res.substring(0, dot), fImportContext);
+//					return typeName + '.';
+//				}
+//			}
+//	 		return ""; //$NON-NLS-1$
+//	 	}
+
+		// Case where we don't have an import rewrite (see allowAddingImports)
+
+		if (compilationUnit != null && isImplicitImport(Signature.getQualifier(qualifiedTypeName), compilationUnit)) {
+			/* No imports for implicit imports. */
+
+			if (proposal.getKind() == CompletionProposal.TYPE_IMPORT && coreKind == CompletionProposal.FIELD_REF)
+				return buffer; //$NON-NLS-1$
+			qualifiedTypeName= String.valueOf(Signature.getSignatureSimpleName(qualifiedType));
+		}
+		buffer.append(qualifiedTypeName);
+		buffer.append('.');
+		return buffer;
+	}
+
+	private static boolean isImplicitImport(String qualifier, ICompilationUnit cu) {
+		if ("java.lang".equals(qualifier)) {  //$NON-NLS-1$
+			return true;
+		}
+		String packageName= cu.getParent().getElementName();
+		if (qualifier.equals(packageName)) {
+			return true;
+		}
+		String typeName= JavaCore.removeJavaLikeExtension(cu.getElementName());
+		String mainTypeName= concatenateName(packageName, typeName);
+		return qualifier.equals(mainTypeName);
+	}
+	
+	private static String concatenateName(String name1, String name2) {
+		StringBuffer buf= new StringBuffer();
+		if (name1 != null && name1.length() > 0) {
+			buf.append(name1);
+		}
+		if (name2 != null && name2.length() > 0) {
+			if (buf.length() > 0) {
+				buf.append('.');
+			}
+			buf.append(name2);
+		}
+		return buf.toString();
 	}
 
 //	private boolean isSmartTrigger(char trigger) {
