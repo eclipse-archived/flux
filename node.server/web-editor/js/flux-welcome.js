@@ -1,4 +1,4 @@
-/*global $*/
+/*global io alert $*/
 define(function (require) {
 
 	var socketio = require("socketio");
@@ -119,11 +119,17 @@ define(function (require) {
 			socket.emit('connectToChannel', {
 				'channel' : username
 			}, function(answer) {
-				socket.emit('getProjectsRequest', {
-					username: username,
-					callback_id: 0
-				});
-
+				console.log('connectToChannel', answer);
+				if (answer.connectedToChannel) {
+					return socket.emit('getProjectsRequest', {
+						username: username,
+						callback_id: 0
+					});
+				} else {
+					if (answer.error) {
+						alert("Flux connection couldn't be established. \n"+answer.error);
+					}
+				}
 			});
 		}
 	});

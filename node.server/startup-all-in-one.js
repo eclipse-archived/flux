@@ -24,7 +24,7 @@ var homepage = '/client/index.html';
 var pathResolve = require('path').resolve;
 
 var authentication = require('./authentication');
-
+var SUPER_USER = authentication.SUPER_USER;
 var passport = authentication.passport;
 
 app.use(express.cookieParser());
@@ -110,10 +110,10 @@ MongoClient.connect("mongodb://localhost:27017/flight-db", function(err, db) {
 	repository = new Repository();
 
 	var RestRepository = require('./repository-rest-api.js').RestRepository;
-	var restrepository = new RestRepository(app, repository); //TODO: Authentication
+	var restrepository = new RestRepository(app, repository);
 
 	var MessagesRepository = require('./repository-message-api.js').MessagesRepository;
-	var messagesrepository = new MessagesRepository(repository); //TODO: Authentication
+	var messagesrepository = new MessagesRepository(repository);
 
 	var client_io = require('socket.io-client');
 
@@ -125,8 +125,9 @@ MongoClient.connect("mongodb://localhost:27017/flight-db", function(err, db) {
 		console.log('client socket connected');
 
 		client_socket.emit('connectToChannel', {
-			'channel' : 'internal'
+			'channel' : SUPER_USER
 		}, function(answer) {
+			console.log('connectToChannel answer', answer);
 			if (answer.connectedToChannel) {
 				repository.setNotificationSender.call(repository, client_socket);
 				messagesrepository.setSocket.call(messagesrepository, client_socket);

@@ -299,6 +299,37 @@ passport.use(new GitHubStrategy({
   }
 ));
 
+/**
+ * Check whether a given socket has the authorization needed to
+ * join a channel. The callback will be called with a error message
+ * explaining the failure if the check fails and a falsy value otherwise.
+ */
+function checkChannelJoin(socket, requestData, callback) {
+	console.log('Join channel request: ', requestData);
+	var channel = requestData.channel;
+	if (!channel) {
+		console.log('REJECT: channel not specified');
+		return callback('Channel not specified');
+	}
+	var handshakeData = socket.handshake;
+	if (!handshakeData) {
+		console.log('REJECT: no handshakeData');
+		return callback('No handshakeData in the socket');
+	}
+	var user = handshakeData.fluxUser;
+	if (!user) {
+		console.log('REJECT: no fluxUser');
+		return callback('No fluxUser info in handshakeData');
+	}
+	if (user===SUPER_USER || user===channel) {
+		console.log('ACCEPT "'+user+'" to join "'+channel+'"');
+		return callback(); //OK!
+	} else {
+		console.log('REJECT "'+user+'" to join "'+channel+'"');
+		return callback('"'+user+'" is not allowed to join channel "'+channel+"'");
+	}
+}
+
 //////////////////// export ///////////////////
 
 exports.ensureAuthenticated = ensureAuthenticated;
@@ -306,3 +337,5 @@ exports.socketIoHandshake = socketIoHandshake;
 exports.session = session;
 exports.passport = passport;
 exports.asSuperUser = asSuperUser;
+exports.checkChannelJoin = checkChannelJoin;
+exports.SUPER_USER = SUPER_USER;
