@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *     Pivotal Software Inc. - Copied in Flux project
+ *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
 import java.util.Arrays;
@@ -7,7 +18,7 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.Signature;
 
 /**
- * Utilities for Signature operations.
+ * Utilities for Signature operations. Copied from JDT UI <code>org.eclipse.jdt.internal.corext.template.java.SignatureUtil</code>
  *
  * @see Signature
  * @since 3.1

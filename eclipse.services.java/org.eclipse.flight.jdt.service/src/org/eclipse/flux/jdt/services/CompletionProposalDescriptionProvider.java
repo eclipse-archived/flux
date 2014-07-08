@@ -1,5 +1,15 @@
+/*******************************************************************************
+ * Copyright (c) 2005, 2014 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *     Pivotal Software, Inc. - adopted for Flux
+ *******************************************************************************/
 package org.eclipse.flux.jdt.services;
-
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.jdt.core.CompletionContext;
@@ -8,12 +18,9 @@ import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.Signature;
 
 /**
- * Provides labels for java content assist proposals. The functionality is
- * similar to the one provided by {@link org.eclipse.jdt.ui.JavaElementLabels},
- * but based on signatures and {@link CompletionProposal}s.
+ * Provides string labels for java content assist proposals. The functionality is essentially JDT UI org.eclipse.jdt.ui.text.java.CompletionProposalLabelProvider
+ * adopted for Flux messages JSON serialization
  *
- * @see Signature
- * @since 3.1
  */
 public class CompletionProposalDescriptionProvider {
 
@@ -24,8 +31,6 @@ public class CompletionProposalDescriptionProvider {
 
 	/**
 	 * The completion context.
-	 *
-	 * @since 3.2
 	 */
 	private CompletionContext fContext;
 
@@ -104,7 +109,6 @@ public class CompletionProposalDescriptionProvider {
 	 * @param buffer the buffer to append to
 	 * @param typeProposal the type proposal
 	 * @return the modified <code>buffer</code>
-	 * @since 3.2
 	 */
 	private StringBuilder appendTypeParameterList(StringBuilder buffer, CompletionProposal typeProposal) {
 		// TODO remove once https://bugs.eclipse.org/bugs/show_bug.cgi?id=85293
@@ -134,7 +138,6 @@ public class CompletionProposalDescriptionProvider {
 	 *
 	 * @param typeName the type name to convert
 	 * @return the converted type name
-	 * @since 3.2
 	 */
     private char[] convertToVararg(char[] typeName) {
     	if (typeName == null)
@@ -527,7 +530,6 @@ public class CompletionProposalDescriptionProvider {
 	 *
 	 * @param string string to test
 	 * @return <code>true</code> if the given string starts with "this."
-	 * @since 3.3
 	 */
 	private boolean isThisPrefix(char[] string) {
 		if (string == null || string.length < 5)
