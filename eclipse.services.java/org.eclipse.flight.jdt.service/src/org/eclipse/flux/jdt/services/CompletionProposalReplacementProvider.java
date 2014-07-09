@@ -10,9 +10,12 @@
 *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.core.runtime.Assert;
+import org.eclipse.jdt.core.CompletionContext;
 import org.eclipse.jdt.core.CompletionProposal;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
@@ -23,6 +26,11 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.Signature;
 import org.eclipse.jdt.core.compiler.CharOperation;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.ASTRequestor;
+import org.eclipse.jdt.core.dom.IBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 
 /**
  * Utility to calculate the completion replacement string based on JDT Core
@@ -44,13 +52,15 @@ public class CompletionProposalReplacementProvider {
 	private int offset;
 	private String prefix;
 	private CompletionProposal proposal;
+	private CompletionContext context;
 		
-	public CompletionProposalReplacementProvider(ICompilationUnit compilationUnit, CompletionProposal proposal, int offset, String prefix) {
+	public CompletionProposalReplacementProvider(ICompilationUnit compilationUnit, CompletionProposal proposal, CompletionContext context, int offset, String prefix) {
 		super();
 		this.compilationUnit = compilationUnit;
 		this.offset = offset;
 		this.prefix = prefix;
 		this.proposal = proposal;
+		this.context = context;
 	}
 	
 	
@@ -145,7 +155,7 @@ public class CompletionProposalReplacementProvider {
 	}
 	
 	private boolean isInJavadoc() {
-		return false;
+		return context.isInJavadoc();
 	}
 
 	private void appendReplacementString(StringBuilder buffer, CompletionProposal proposal, List<Integer> positions) {
@@ -281,6 +291,37 @@ public class CompletionProposalReplacementProvider {
 	
 			String[] arguments = new String[parameters.length];
 	
+			ITypeBinding expectedTypeBinding = getExpectedTypeForGenericParameters();
+			if (expectedTypeBinding != null && expectedTypeBinding.isParameterizedType()) {
+				// in this case, the type arguments we propose need to be compatible
+				// with the corresponding type parameters to declared type
+
+				IType expectedType= (IType) expectedTypeBinding.getJavaElement();
+
+				IType[] path= TypeProposalUtils.computeInheritancePath(type, expectedType);
+				if (path == null)
+					// proposed type does not inherit from expected type
+					// the user might be looking for an inner type of proposed type
+					// to instantiate -> do not add any type arguments
+					return new String[0];
+
+				int[] indices= new int[parameters.length];
+				for (int paramIdx= 0; paramIdx < parameters.length; paramIdx++) {
+					indices[paramIdx]= TypeProposalUtils.mapTypeParameterIndex(path, path.length - 1, paramIdx);
+				}
+
+				// for type arguments that are mapped through to the expected type's
+				// parameters, take the arguments of the expected type
+				ITypeBinding[] typeArguments= expectedTypeBinding.getTypeArguments();
+				for (int paramIdx= 0; paramIdx < parameters.length; paramIdx++) {
+					if (indices[paramIdx] != -1) {
+						// type argument is mapped through
+						ITypeBinding binding= typeArguments[indices[paramIdx]];
+						arguments[paramIdx]= computeTypeProposal(binding, parameters[paramIdx]);
+					}
+				}
+			}
+			
 			// for type arguments that are not mapped through to the expected type,
 			// take the lower bound of the type parameter
 			for (int i = 0; i < arguments.length; i++) {
@@ -303,6 +344,26 @@ public class CompletionProposalReplacementProvider {
 			return elementName;
 	}
 
+	private String computeTypeProposal(ITypeBinding binding, ITypeParameter parameter) throws JavaModelException {
+		final String name = TypeProposalUtils.getTypeQualifiedName(binding);
+		if (binding.isWildcardType()) {
+
+			if (binding.isUpperbound()) {
+				// replace the wildcard ? with the type parameter name to get "E extends Bound" instead of "? extends Bound"
+//				String contextName= name.replaceFirst("\\?", parameter.getElementName()); //$NON-NLS-1$
+				// upper bound - the upper bound is the bound itself
+				return binding.getBound().getName();
+			}
+
+			// no or upper bound - use the type parameter of the inserted type, as it may be more
+			// restrictive (eg. List<?> list= new SerializableList<Serializable>())
+			return computeTypeProposal(parameter);
+		}
+
+		// not a wildcard but a type or type variable - this is unambigously the right thing to insert
+		return name;
+	}
+	
 	private StringBuilder appendParameterList(StringBuilder buffer, String[] typeArguments, List<Integer> positions, boolean onlyAppendArguments) {
 		if (typeArguments != null && typeArguments.length > 0) {
 			final char LESS= '<';
@@ -440,12 +501,43 @@ public class CompletionProposalReplacementProvider {
 		}
 		return buf.toString();
 	}
+	
+	private ITypeBinding getExpectedTypeForGenericParameters() {
+		char[][] chKeys= context.getExpectedTypesKeys();
+		if (chKeys == null || chKeys.length == 0)
+			return null;
 
-//	private boolean isSmartTrigger(char trigger) {
-//		return false;
-//	}
-//	
-//	private void handleSmartTrigger(char trigger, int refrenceOffset) {
-//		
-//	}
+		String[] keys= new String[chKeys.length];
+		for (int i= 0; i < keys.length; i++) {
+			keys[i]= String.valueOf(chKeys[0]);
+		}
+
+		final ASTParser parser= ASTParser.newParser(AST.JLS8);
+		parser.setProject(compilationUnit.getJavaProject());
+		parser.setResolveBindings(true);
+		parser.setStatementsRecovery(true);
+
+		final Map<String, IBinding> bindings= new HashMap<String, IBinding>();
+		ASTRequestor requestor= new ASTRequestor() {
+			@Override
+			public void acceptBinding(String bindingKey, IBinding binding) {
+				bindings.put(bindingKey, binding);
+			}
+		};
+		parser.createASTs(new ICompilationUnit[0], keys, requestor, null);
+
+		if (bindings.size() > 0)
+			return (ITypeBinding) bindings.get(keys[0]);
+
+		return null;
+	}
+	
+	//	private boolean isSmartTrigger(char trigger) {
+	//		return false;
+	//	}
+	//	
+	//	private void handleSmartTrigger(char trigger, int refrenceOffset) {
+	//		
+	//	}
+
 }

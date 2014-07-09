@@ -19,6 +19,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.flux.core.AbstractMessageHandler;
 import org.eclipse.flux.core.IMessageHandler;
 import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.jdt.core.CompletionContext;
 import org.eclipse.jdt.core.CompletionProposal;
 import org.eclipse.jdt.core.CompletionRequestor;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -81,6 +82,7 @@ public class ContentAssistService {
 
 	protected JSONArray computeContentAssist(String username, String resourcePath, int offset, String prefix) throws JSONException {
 		final List<CompletionProposal> proposals = new ArrayList<CompletionProposal>();
+		final CompletionContext[] completionContextParam = new CompletionContext[] { null };
 
 		ICompilationUnit liveEditUnit = liveEditUnits.getLiveEditUnit(username, resourcePath);
 		try {
@@ -90,6 +92,13 @@ public class ContentAssistService {
 					public void accept(CompletionProposal proposal) {
 						proposals.add(proposal);
 					}
+
+					@Override
+					public void acceptContext(CompletionContext context) {
+						super.acceptContext(context);
+						completionContextParam[0] = context;
+					}
+					
 				};
 				
 				// Allow completions for unresolved types - since 3.3
@@ -114,11 +123,12 @@ public class ContentAssistService {
 			e.printStackTrace();
 		}
 
-		List<JSONObject> jsonProposals = new ArrayList<JSONObject>(proposals.size());	
+		List<JSONObject> jsonProposals = new ArrayList<JSONObject>(proposals.size());
+		CompletionContext completionContext = completionContextParam[0];
 		for (CompletionProposal proposal : proposals) {
-			JSONObject jsonDescription = getDescription(proposal);
+			JSONObject jsonDescription = getDescription(proposal, completionContext);
 			List<Integer> positionsList = new ArrayList<Integer>();
-			StringBuilder jsonCompletion = new CompletionProposalReplacementProvider(liveEditUnit, proposal, offset, prefix).createReplacement(positionsList);
+			StringBuilder jsonCompletion = new CompletionProposalReplacementProvider(liveEditUnit, proposal, completionContext, offset, prefix).createReplacement(positionsList);
 			
 			JSONObject jsonProposal = new JSONObject();
 			jsonProposal.put("description", jsonDescription);
@@ -177,8 +187,8 @@ public class ContentAssistService {
 		}
 	}
 	
-	protected JSONObject getDescription(CompletionProposal proposal) throws JSONException {
-		CompletionProposalDescriptionProvider provider = new CompletionProposalDescriptionProvider();
+	protected JSONObject getDescription(CompletionProposal proposal, CompletionContext context) throws JSONException {
+		CompletionProposalDescriptionProvider provider = new CompletionProposalDescriptionProvider(context);
 		JSONObject description = new JSONObject();
 		/*
 		 * Add icon field for now. Possibly needs to be moved to a client side

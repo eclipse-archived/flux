@@ -37,13 +37,11 @@ public class CompletionProposalDescriptionProvider {
 	/**
 	 * Creates a new label provider.
 	 */
-	public CompletionProposalDescriptionProvider() {
+	public CompletionProposalDescriptionProvider(CompletionContext context) {
+		super();
+		fContext = context;
 	}
 
-	void setContext(CompletionContext context) {
-		fContext= context;
-	}
-	
 	/**
 	 * Creates and returns a parameter list of the given method or type proposal suitable for
 	 * display. The list does not include parentheses. The lower bound of parameter types is
