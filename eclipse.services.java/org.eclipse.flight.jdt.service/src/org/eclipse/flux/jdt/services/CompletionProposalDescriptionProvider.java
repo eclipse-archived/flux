@@ -594,6 +594,7 @@ public class CompletionProposalDescriptionProvider {
 		buf.append("[");
 		buf.append("{\"value\":\"");
 		buf.append(String.valueOf(proposal.getCompletion()));
+		buf.append("\"}");
 		buf.append("]");
 		return buf;
 	}
