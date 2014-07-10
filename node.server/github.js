@@ -3,7 +3,30 @@ var httpRequest = http.request;
 
 var HOST = 'api.github.com';
 
-//TODO: add a cache to avoid hitting github for every request to verify a token.
+/**
+ * Remember tokens that have been validated and either rejected or accepted recently.
+ */
+var cache = {
+	MAX_AGE: 1000*60*2,
+	entries: {},
+	get: function (token) {
+		var entry = this.entries[token];
+		if (entry) {
+			var age = Date.now() - entry.created;
+			if (age > this.MAX_AGE) {
+				delete this.entries[token];
+				return;
+			}
+			return entry.value;
+		}
+	},
+	put: function (token, value) {
+		this.entries[token] = {
+			created: Date.now(),
+			value: value
+		};
+	}
+};
 
 /**
  * Construct a options object that can be passed to http.request function, to
@@ -21,15 +44,15 @@ function getUserRequest(token) {
 }
 
 /**
- * Verify that a given github token is valid. Calls the callback with
- * a string representing the github user id if token could be validated
- * or otherwise false.
+ * Retrieve github login id associated with token. Calls the callback
+ * with either an error in case of a problem, or (null, userid) otherwise.
  */
-function verify(user, token, callback) {
+function getUser(token, callback) {
 	var req = httpRequest(getUserRequest(token), function (res) {
 		console.log('>>> github response received ===');
 		console.log('STATUS: ' + res.statusCode);
 		console.log('HEADERS: ' + JSON.stringify(res.headers));
+		console.log('<<< github response received ===');
 		res.setEncoding('utf8');
 		var data = "";
 
@@ -44,22 +67,23 @@ function verify(user, token, callback) {
 					if (data) {
 						data = JSON.parse(data);
 						console.log('data = ', data);
-						var actualUser = data.login;
-						if (user!==actualUser) {
-							return callback("Token not authorized for this user: "+user);
+						var user = data.login;
+						if (user) {
+							return callback(null, user);
+						} else {
+							//This shouldn't happen unless some major changes in github rest API.
+							return callback("Unexpected reponse from github login not found in body");
 						}
-						return callback(null, data.login);
 					}
 				} catch (e) {
 					console.error(e);
-					return callback(e, false);
+					return callback(e);
 				}
 			}
 			//other response codes. We don't know how to handle so treat as errors.
-			return callback("status: "+res.statusCode+ "\n"+data);
+			return callback(res);
 		});
 
-		console.log('<<< github response received ===');
 	});
 
 	req.on('error', function (e) {
@@ -69,19 +93,23 @@ function verify(user, token, callback) {
 	req.end();
 }
 
-// Fake implementation:
-//	if (token==='something-secret') {
-//		callback('kdvolder');
-//	} else {
-//		callback(false);
-//	}
+/**
+ * Verify that a given github token is valid. Calls the callback with
+ * a string representing the github user id if token could be validated
+ * or otherwise false.
+ */
+function verify(user, token, callback) {
+	return getUser(token, function (err, authUser) {
+		if (err) {
+			return callback(err);
+		} else if (user===authUser) {
+			return callback(null, user);
+		} else {
+			return callback("Token not authorized for this user: "+user);
+		}
+	});
+}
 
-//	httpRequest(getUserRequest(token), function (res) {
-//		var status = res.statusCode;
-//
-//
-//	});
-//}
 
 exports.verify = verify;
 
