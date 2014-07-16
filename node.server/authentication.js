@@ -14,13 +14,14 @@
 
 //Authentication TODO list
 //  - use https connections
-//  - support client connections for a 'uber' user that is privvy to messages from/to all users
-//    E.g. needed to implement a repositoryService.
-//  - Check whether authenticated user is allowed to send/recieve specific messages
+
+var githubSecret = require('./github-secret');
+var isEnabled = githubSecret.id && githubSecret.secret && true;
+
+exports.isEnabled = isEnabled;
 
 var deref = require('./util/deref');
 
-var githubSecret = require('./github-secret');
 var github = require('./github');
 var GitHubStrategy = require('passport-github').Strategy;
 
@@ -33,7 +34,7 @@ var SUPER_USER = '$super$'; //A special user id that identifies the super user.
                             //Otherwise attackers could create such a user on github and
                             //become the superuser by authenticating as this user.
 
-var SESSION_SECRET = githubSecret.secret; //reuse our github client secret also as session secret.
+var SESSION_SECRET = githubSecret.secret || 'no auth so use whatever'; //reuse our github client secret also as session secret.
 
 var sessionStore = new express.session.MemoryStore(); //TODO: use database
 var session = express.session({
@@ -271,35 +272,42 @@ function asSuperUser(options) {
 	return options;
 }
 
+
+
 ///////////////////////////////////////
 /// Configure passport library
 
-var passport = require('passport');
+var passport = undefined;
 
-passport.serializeUser(function(user, done) {
-  done(null, user);
-});
+//Configuring passport without a secret causes an error.
+if (isEnabled) {
+	passport = require('passport');
+	passport.serializeUser(function(user, done) {
+	  done(null, user);
+	});
 
-passport.deserializeUser(function(obj, done) {
-  done(null, obj);
-});
+	passport.deserializeUser(function(obj, done) {
+	  done(null, obj);
+	});
 
-passport.use(new GitHubStrategy({
-    clientID: githubSecret.id,
-    clientSecret: githubSecret.secret,
-    callbackURL: "/auth/github/callback"
-  },
-  function(accessToken, refreshToken, profile, done) {
-    process.nextTick(function () {
-	  console.log('GH strategy user lookup called');
-      // To keep the example simple, the user's GitHub profile is returned to
-      // represent the logged-in user. In a typical application, you would want
-      // to associate the GitHub account with a user record in your database,
-      // and return that user instead.
-      return done(null, profile);
-    });
-  }
-));
+
+	passport.use(new GitHubStrategy({
+	    clientID: githubSecret.id,
+	    clientSecret: githubSecret.secret,
+	    callbackURL: "/auth/github/callback"
+	  },
+	  function(accessToken, refreshToken, profile, done) {
+	    process.nextTick(function () {
+		  console.log('GH strategy user lookup called');
+	      // To keep the example simple, the user's GitHub profile is returned to
+	      // represent the logged-in user. In a typical application, you would want
+	      // to associate the GitHub account with a user record in your database,
+	      // and return that user instead.
+	      return done(null, profile);
+	    });
+	  }
+	));
+}
 
 /**
  * Check whether a given socket has the authorization needed to
@@ -332,6 +340,13 @@ function checkChannelJoin(socket, requestData, callback) {
 	}
 }
 
+/**
+ * Dummy implementation of checkChannelJoin used when authentication is disabled.
+ */
+function dummyCheckChannelJoin(socket, requestData, callback) {
+	return callback(); //OK!
+}
+
 //////////////////// export ///////////////////
 
 exports.ensureAuthenticated = ensureAuthenticated;
@@ -339,6 +354,6 @@ exports.socketIoHandshake = socketIoHandshake;
 exports.session = session;
 exports.passport = passport;
 exports.asSuperUser = asSuperUser;
-exports.checkChannelJoin = checkChannelJoin;
+exports.checkChannelJoin = isEnabled ? checkChannelJoin : dummyCheckChannelJoin;
 exports.SUPER_USER = SUPER_USER;
-exports.isEnabled = githubSecret.id && githubSecret.secret && true;
+exports.isEnabled = isEnabled;

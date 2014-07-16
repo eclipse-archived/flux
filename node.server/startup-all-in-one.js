@@ -32,10 +32,10 @@ app.use(express.cookieParser());
 app.use(express.bodyParser());
 app.use(express.methodOverride());
 app.use(authentication.session);
-app.use(passport.initialize());
-app.use(passport.session());
 
 if (ENABLE_AUTH) {
+	app.use(passport.initialize());
+	app.use(passport.session());
 	app.use('/client', authentication.ensureAuthenticated);
 }
 
@@ -48,7 +48,6 @@ if (ENABLE_AUTH) {
 }
 
 function redirectHome(req, res) {
-	var user = userName(req) || 'defaultuser';
 	var target = URI(homepage).query({user: userName(req)}).toString();
 	console.log('redirecting: '+target);
 	res.redirect(target);
@@ -56,8 +55,8 @@ function redirectHome(req, res) {
 
 if (ENABLE_AUTH) {
 	app.get('/auth/github/callback',
-	  passport.authenticate('github', { failureRedirect: '/auth/github' }),
-	  redirectHome
+		passport.authenticate('github', { failureRedirect: '/auth/github' }),
+		redirectHome
 	);
 }
 

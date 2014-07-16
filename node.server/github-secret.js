@@ -17,7 +17,15 @@ var path = require('path');
 
 var SECRETS_FILE = path.resolve('github-secret.json');
 
-var haveSecrets = fs.statSync(SECRETS_FILE).isFile();
+function isFile(f) {
+	try {
+		return fs.statSync(f).isFile();
+	} catch (e) {
+		return false;
+	}
+}
+
+var haveSecrets = isFile(SECRETS_FILE);
 
 if (haveSecrets) {
 	//Don't try to catch errors. This is deliberate.
