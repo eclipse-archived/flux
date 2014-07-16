@@ -41,14 +41,15 @@ app.use("/client", express['static'](__dirname + '/web-editor'));
 
 app.get('/auth/github', passport.authenticate('github'));
 
-app.get('/auth/github/callback',
-  passport.authenticate('github', { failureRedirect: '/auth/github' }),
-  function(req, res) {
-	console.log('callback received, userName = '+userName(req));
+function redirectHome(req, res) {
 	var target = URI(homepage).query({user: userName(req)}).toString();
 	console.log('redirecting: '+target);
 	res.redirect(URI(homepage).query({user: userName(req)}).toString());
-  }
+}
+
+app.get('/auth/github/callback',
+  passport.authenticate('github', { failureRedirect: '/auth/github' }),
+  redirectHome
 );
 
 ////////////////////////////////////////////////////////
@@ -62,11 +63,7 @@ function userName(req) {
 	return req && req.user && req.user.username;
 }
 
-app.get("/",
-	function (req, res) {
-		res.redirect(homepage);
-	}
-);
+app.get("/", redirectHome);
 
 ////////////////////////////////////////////////////////
 
@@ -79,7 +76,7 @@ console.log('Express server started on port ' + port);
 // create and configure socket.io
 var io = require('socket.io').listen(server);
 io.set('transports', ['websocket']);
-io.set('log level', 1); //makes too much noise otherwise
+io.set('log level', 1); //socket.io makes too much noise otherwise
 
 io.set('authorization', authentication.socketIoHandshake);
 

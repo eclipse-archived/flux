@@ -184,14 +184,14 @@ MessagesRepository.prototype.getResourceResponse = function(data) {
 			if (!resourceExists) {
 				this.repository.createResource(username, projectName, resource, content, hash, timestamp, type, function(error, result) {
 					if (error !== null) {
-						console.log('Error creating repository resource: ' + projectName + "/" + resource + " - " + data.timestamp);
+						console.log('Error creating repository resource: ' + projectName + "/" + resource + " - " + data.timestamp, error);
 					}
 				});
 			}
 			else {
 				this.repository.updateResource(username, projectName, resource, content, hash, timestamp, function(error, result) {
 					if (error !== null) {
-						console.log('Error updating repository resource: ' + projectName + "/" + resource + " - " + timestamp);
+						console.log('Error updating repository resource: ' + projectName + "/" + resource + ":" + resource.timestamp + " - " + timestamp, error);
 					}
 				});
 			}
@@ -219,6 +219,8 @@ MessagesRepository.prototype.resourceChanged = function(data) {
 					'hash' : hash
 				});
 			}
+		} else {
+			console.error(err);
 		}
 	}.bind(this));
 };
