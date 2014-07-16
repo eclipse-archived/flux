@@ -24,6 +24,7 @@ var homepage = '/client/index.html';
 var pathResolve = require('path').resolve;
 
 var authentication = require('./authentication');
+var ENABLE_AUTH = authentication.isEnabled;
 var SUPER_USER = authentication.SUPER_USER;
 var passport = authentication.passport;
 
@@ -34,23 +35,31 @@ app.use(authentication.session);
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use('/client', authentication.ensureAuthenticated);
+if (ENABLE_AUTH) {
+	app.use('/client', authentication.ensureAuthenticated);
+}
+
 app.use(app.router);
 app.use("/client/js/URIjs", express['static'](__dirname + '/node_modules/URIjs/src'));
 app.use("/client", express['static'](__dirname + '/web-editor'));
 
-app.get('/auth/github', passport.authenticate('github'));
-
-function redirectHome(req, res) {
-	var target = URI(homepage).query({user: userName(req)}).toString();
-	console.log('redirecting: '+target);
-	res.redirect(URI(homepage).query({user: userName(req)}).toString());
+if (ENABLE_AUTH) {
+	app.get('/auth/github', passport.authenticate('github'));
 }
 
-app.get('/auth/github/callback',
-  passport.authenticate('github', { failureRedirect: '/auth/github' }),
-  redirectHome
-);
+function redirectHome(req, res) {
+	var user = userName(req) || 'defaultuser';
+	var target = URI(homepage).query({user: userName(req)}).toString();
+	console.log('redirecting: '+target);
+	res.redirect(target);
+}
+
+if (ENABLE_AUTH) {
+	app.get('/auth/github/callback',
+	  passport.authenticate('github', { failureRedirect: '/auth/github' }),
+	  redirectHome
+	);
+}
 
 ////////////////////////////////////////////////////////
 // Register http end points
@@ -78,7 +87,9 @@ var io = require('socket.io').listen(server);
 io.set('transports', ['websocket']);
 io.set('log level', 1); //socket.io makes too much noise otherwise
 
-io.set('authorization', authentication.socketIoHandshake);
+if (ENABLE_AUTH) {
+	io.set('authorization', authentication.socketIoHandshake);
+}
 
 // create and configure services
 var MessageCore = require('./messages-core.js').MessageCore;

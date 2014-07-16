@@ -191,7 +191,7 @@ MessagesRepository.prototype.getResourceResponse = function(data) {
 			else {
 				this.repository.updateResource(username, projectName, resource, content, hash, timestamp, function(error, result) {
 					if (error !== null) {
-						console.log('Error updating repository resource: ' + projectName + "/" + resource + ":" + resource.timestamp + " - " + timestamp, error);
+						console.log('Error updating repository resource: ' + projectName + "/" + resource + " - " + timestamp, error);
 					}
 				});
 			}

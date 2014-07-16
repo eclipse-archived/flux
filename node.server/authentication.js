@@ -341,3 +341,4 @@ exports.passport = passport;
 exports.asSuperUser = asSuperUser;
 exports.checkChannelJoin = checkChannelJoin;
 exports.SUPER_USER = SUPER_USER;
+exports.isEnabled = githubSecret.id && githubSecret.secret && true;
