@@ -10,6 +10,8 @@
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
 
+/*global require*/
+
 //Authentication TODO list
 //  - use https connections
 //  - support client connections for a 'uber' user that is privvy to messages from/to all users
