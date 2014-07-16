@@ -10,8 +10,6 @@
 *******************************************************************************/
 package org.eclipse.flux.core;
 
-import io.socket.SocketIOException;
-
 import java.util.Collection;
 import java.util.HashSet;
 
@@ -31,9 +29,7 @@ import org.eclipse.flux.core.internal.CloudSyncResourceListener;
 import org.eclipse.flux.core.internal.messaging.SocketIOMessagingConnector;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
-import org.osgi.service.log.LogService;
 import org.osgi.service.prefs.BackingStoreException;
-import org.osgi.util.tracker.ServiceTracker;
 
 /**
  * @author Martin Lippert
