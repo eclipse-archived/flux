@@ -156,7 +156,7 @@ define("orion/editor/contentAssist", [ //$NON-NLS-0$
 	
 			// now handle prefixes
 			// if there is a non-empty selection, then replace it,
-			// if overwrite is truthy, then also replace the prefix
+			// if replace is truthy, then also replace the prefix
 			var view = this.textView;
 			var sel = view.getSelection();
 			var start = Math.min(sel.start, sel.end), mapStart = start;
@@ -167,7 +167,7 @@ define("orion/editor/contentAssist", [ //$NON-NLS-0$
 				mapEnd = model.mapOffset(mapEnd);
 				model = model.getBaseModel();
 			}
-			if (proposal.overwrite) {
+			if (proposal.replace) {
 				start = this.getPrefixStart(model, mapStart);
 			}
 
