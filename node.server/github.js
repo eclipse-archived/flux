@@ -5,9 +5,10 @@ var HOST = 'api.github.com';
 
 /**
  * Remember tokens that have been validated and either rejected or accepted recently.
+ * This to avoid hammering github api with requests for the same thing over and over.
  */
 var cache = {
-	MAX_AGE: 1000*60*2,
+	MAX_AGE: 1000*60*20, /* 20 minutes, then we'll check again */
 	entries: {},
 	get: function (token) {
 		var entry = this.entries[token];
@@ -17,12 +18,13 @@ var cache = {
 				delete this.entries[token];
 				return;
 			}
-			return entry.value;
+			return entry;
 		}
 	},
-	put: function (token, value) {
+	put: function (token, err, value) {
 		this.entries[token] = {
 			created: Date.now(),
+			error: err,
 			value: value
 		};
 	}
@@ -47,7 +49,7 @@ function getUserRequest(token) {
  * Retrieve github login id associated with token. Calls the callback
  * with either an error in case of a problem, or (null, userid) otherwise.
  */
-function getUser(token, callback) {
+function _getUser(token, callback) {
 	var req = httpRequest(getUserRequest(token), function (res) {
 		console.log('>>> github response received ===');
 		console.log('STATUS: ' + res.statusCode);
@@ -81,6 +83,7 @@ function getUser(token, callback) {
 				}
 			}
 			//other response codes. We don't know how to handle so treat as errors.
+			console.log("error response from github: ", res.statusCode);
 			return callback(res);
 		});
 
@@ -91,6 +94,31 @@ function getUser(token, callback) {
 		callback(e);
 	});
 	req.end();
+}
+
+/**
+ * Cache-enabled version of _getUser
+ */
+function getUser(token, callback) {
+	var cacheEntry = cache.get(token);
+	if (cacheEntry) {
+		console.log('returning cached response ',cacheEntry);
+		return callback(cacheEntry.error, cacheEntry.value);
+	}
+	//Not yet in cache
+	return _getUser(token, function (err, user) {
+		if (err) {
+			//Only cache if this is a clear 'not authorized' response
+			if (err.statusCode==401) {
+				console.log('Token rejected by github');
+				cache.put(token, err.statusCode);
+			}
+		} else {
+			console.log('github says token belongs to ', user);
+			cache.put(token, err, user);
+		}
+		return callback(err, user);
+	});
 }
 
 /**
