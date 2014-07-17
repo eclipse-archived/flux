@@ -62,21 +62,33 @@ eclipse.FluxEditor = (function() {
 			port: port
 		});
 		
+		this.broadcastSocket = io.connect(host, {
+			port: port
+		});
+		
 		this._resourceUrl = null;
 		
 		var self = this;
 		
 		this.socket.on('connect', function() {
-//			while (user && !self._connectedToChannel) {
-				self.socket.emit('connectToChannel', {
-					'channel' : user
-				}, function(answer) {
-					if (answer.connectedToChannel) {
-						self._connectedToChannel = true;
-						console.log("EDITOR Connected to FLUX channel: " + user);
-					}
-				});
-//			}
+			self.socket.emit('connectToChannel', {
+				'channel' : user
+			}, function(answer) {
+				if (answer.connectedToChannel) {
+					self._connectedToChannel = true;
+					console.log("Editor connected to FLUX channel: " + user);
+				}
+			});
+		});
+		
+		this.broadcastSocket.on('connect', function() {
+			self.broadcastSocket.emit('connectToChannel', {
+				'channel' : 'internal'
+			}, function(answer) {
+				if (answer.connectedToChannel) {
+					console.log("Editor connected to FLUX Broadcast channel");
+				}
+			});
 		});
 		
 		this.socket.on('getResourceResponse', function(data) {
@@ -141,24 +153,9 @@ eclipse.FluxEditor = (function() {
 			});
 		});
 	
-		this.socket.on('getLiveResourcesRequest', function(data) {
-			self._getResourceData().then(function(resourceMetadata) {
-				if (data.username === resourceMetadata.username) {
-						
-					self.sendMessage('getLiveResourcesResponse', {
-						'callback_id'        : data.callback_id,
-						'requestSenderID'    : data.requestSenderID,
-						'liveEditUnits'      : [{
-							'username'           : resourceMetadata.username,
-							'project'            : resourceMetadata.project,
-							'resource'           : resourceMetadata.resource,
-							'savePointTimestamp' : resourceMetadata.timestamp,
-							'savePointHash'      : resourceMetadata.hash
-						}]
-					});
-				}
-			});
-		});
+		this.socket.on('getLiveResourcesRequest', this._handleLiveResourcesRequest.bind(this));
+		
+		this.broadcastSocket.on('getLiveResourcesRequest', this._handleLiveResourcesRequest.bind(this));
 		
 		this.socket.on('resourceStored', function(data) {
 			var location = self._rootLocation + data.project + '/' + data.resource;
@@ -440,6 +437,29 @@ eclipse.FluxEditor = (function() {
 		
 		endEdit: function(resourceUrl) {
 			this._setEditorInput(null, null);
+		},
+		
+		_handleLiveResourcesRequest: function(data) {
+			this._getResourceData().then(function(resourceMetadata) {
+				if ((!data.username || data.username === resourceMetadata.username)
+					&& (!data.projectRegEx || new RegExp(data.projectRegEx).test(resourceMetadata.project))
+					&& (!data.resourceRegEx || new RegExp(data.resourceRegEx).test(resourceMetadata.resource))) {
+						
+					var liveEditUnits = {};
+					liveEditUnits[resourceMetadata.project] = [{
+						'resource'           : resourceMetadata.resource,
+						'savePointTimestamp' : resourceMetadata.hash,
+						'savePointHash'      : resourceMetadata.timestamp
+					}];
+					
+					this.sendMessage('getLiveResourcesResponse', {
+						'callback_id'        : data.callback_id,
+						'requestSenderID'    : data.requestSenderID,
+						'username'           : resourceMetadata.username,
+						'liveEditUnits'      : liveEditUnits
+					});
+				}
+			}.bind(this));
 		},
 				
 	};

@@ -50,7 +50,7 @@ flux.OpenDeclaration = (function() {
 				}, function(answer) {
 					if (answer.connectedToChannel) {
 						self._connectedToChannel = true;
-						console.log("EDITOR Connected to FLUX channel: " + user);
+						console.log("OpenDeclaration connected to FLUX channel: " + user);
 					}
 				});
 //			}
