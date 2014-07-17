@@ -53,15 +53,25 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 	};
 
 	var socket = io.connect();
+	
+	var braodcastSocket = io.connect();
 
 	socket.on('connect', function() {
-		connected();
+		connected(username);
 	});
 
 	socket.on('disconnect', function() {
 		disconnected();
 	});
 
+	braodcastSocket.on('connect', function() {
+		connected('internal');
+	});
+
+	braodcastSocket.on('disconnect', function() {
+		disconnected();
+	});
+	
 	var javaContentAssistProvider = new mJavaContentAssist.JavaContentAssistProvider(socket);
 	javaContentAssistProvider.setSocket(socket);
 
@@ -271,10 +281,10 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 	var lastSavePointHash = '';
 	var lastSavePointTimestamp = 0;
 
-	function connected() {
+	function connected(userId) {
 		if (username) {
 			socket.emit('connectToChannel', {
-				'channel' : username
+				'channel' : userId
 			}, function(answer) {
 			});
 		}
@@ -454,22 +464,34 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 	});
 
 	socket.on('getLiveResourcesRequest', function(data) {
-		if (data.username === username && data.callback_id !== undefined) {
-			if (data.project === undefined || data.project === project) {
-				socket.emit('getLiveResourcesResponse', {
-					'callback_id'        : data.callback_id,
-					'requestSenderID'    : data.requestSenderID,
-					'liveEditUnits'      : [{
-						'username'           : username,
-						'project'            : project,
-						'resource'           : resource,
-						'savePointTimestamp' : lastSavePointTimestamp,
-						'savePointHash'      : lastSavePointHash
-					}]
-				});
-			}
+		if (data.username === username && data.callback_id) {
+			sendLiveResourcesResponse(socket, data);
 		}
 	});
+	
+	braodcastSocket.on('getLiveResourcesRequest', function(data) {
+		if (data.callback_id) {
+			sendLiveResourcesResponse(braodcastSocket, data);
+		}
+	});
+	
+	function sendLiveResourcesResponse(socket, request) {
+		if ((!request.projectRegEx || new RegExp(request.projectRegEx).test(project)) 
+				&& (!request.resourceRegEx || new RegExp(request.resourceRegEx).test(resource))) {
+			var liveEditUnits = {};
+			liveEditUnits[project] = [{
+				'resource'           : resource,
+				'savePointTimestamp' : lastSavePointTimestamp,
+				'savePointHash'      : lastSavePointHash
+			}];
+			socket.emit('getLiveResourcesResponse', {
+				'callback_id'        : request.callback_id,
+				'requestSenderID'    : request.requestSenderID,
+				'username'           : username,
+				'liveEditUnits'      : liveEditUnits
+			});
+		}
+	}
 
 	function sendModelChanged(evt) {
 		var changeData = {
