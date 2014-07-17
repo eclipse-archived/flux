@@ -463,20 +463,14 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 		}
 	});
 
-	socket.on('getLiveResourcesRequest', function(data) {
-		if (data.username === username && data.callback_id) {
-			sendLiveResourcesResponse(socket, data);
-		}
-	});
+	socket.on('getLiveResourcesRequest', sendLiveResourcesResponse.bind(socket));
 	
-	braodcastSocket.on('getLiveResourcesRequest', function(data) {
-		if (data.callback_id) {
-			sendLiveResourcesResponse(braodcastSocket, data);
-		}
-	});
+	braodcastSocket.on('getLiveResourcesRequest', sendLiveResourcesResponse.bind(braodcastSocket));
 	
-	function sendLiveResourcesResponse(socket, request) {
-		if ((!request.projectRegEx || new RegExp(request.projectRegEx).test(project)) 
+	function sendLiveResourcesResponse(request) {
+		if (request.callback_id
+				&& (!request.username || request.username === username)
+				&& (!request.projectRegEx || new RegExp(request.projectRegEx).test(project)) 
 				&& (!request.resourceRegEx || new RegExp(request.resourceRegEx).test(resource))) {
 			var liveEditUnits = {};
 			liveEditUnits[project] = [{
@@ -484,7 +478,7 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 				'savePointTimestamp' : lastSavePointTimestamp,
 				'savePointHash'      : lastSavePointHash
 			}];
-			socket.emit('getLiveResourcesResponse', {
+			this.emit('getLiveResourcesResponse', {
 				'callback_id'        : request.callback_id,
 				'requestSenderID'    : request.requestSenderID,
 				'username'           : username,
