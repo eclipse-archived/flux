@@ -11,8 +11,12 @@
 package org.eclipse.flux.core;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -50,6 +54,16 @@ public class LiveEditCoordinator {
 			}
 		};
 		messagingConnector.addMessageHandler(modelChangedHandler);
+		
+		// Listen to the internal broadcast channel to send out info about current live edit units
+		IMessageHandler liveUnits = new AbstractMessageHandler("getLiveResourcesRequest") {
+			@Override
+			public void handleMessage(String messageType, JSONObject message) {
+				sendLiveUnits(message);
+			}
+		};
+		Activator.getDefault().getInternalMessagingConnector().addMessageHandler(liveUnits);
+
 	}
 	
 	protected void startLiveUnit(JSONObject message) {
@@ -109,6 +123,21 @@ public class LiveEditCoordinator {
 			}
 		}
 		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	protected void sendLiveUnits(JSONObject message) {
+		try {
+			String username = message.has("username") ? message.getString("username") : null;
+			String requestSenderID = message.getString("requestSenderID");
+			String projectRegEx = message.has("projectRegEx") ? message.getString("projectRegEx") : null;
+			String resourceRegEx = message.has("resourceRegEx") ? message.getString("resourceRegEx") : null;
+			int callbackID = message.getInt("callback_id");
+			for (ILiveEditConnector connector : liveEditConnectors) {
+				connector.liveEditors(requestSenderID, callbackID, username, projectRegEx, resourceRegEx);
+			}
+		} catch (JSONException e) {
 			e.printStackTrace();
 		}
 	}
@@ -191,6 +220,47 @@ public class LiveEditCoordinator {
 		for (ILiveEditConnector connector : this.liveEditConnectors) {
 			if (!connector.getConnectorID().equals(responseOriginID)) {
 				connector.liveEditingStartedResponse(requestSenderID, callbackID, username, projectName, resourcePath, savePointHash, savePointTimestamp, content);
+			}
+		}
+	}
+	
+	public void sendLiveResourcesResponse(String requestSenderID,
+			int callbackID, String username,
+			Map<String, List<ResourceData>> liveUnits) {
+		// Don't send anything if there is nothing to send
+		if (liveUnits.isEmpty()) {
+			return;
+		}
+		try {
+			JSONObject message = new JSONObject();
+			message.put("requestSenderID", requestSenderID);
+			message.put("callback_id", callbackID);
+			message.put("username", username);
+			JSONObject liveEditUnits = new JSONObject();
+			for (Map.Entry<String, List<ResourceData>> entry : liveUnits.entrySet()) {
+				liveEditUnits.put(entry.getKey(), new JSONArray(entry.getValue()));
+			}
+			message.put("liveEditUnits", liveEditUnits);
+
+			// Send via the 'internal' broadcast channel
+			Activator.getDefault().getInternalMessagingConnector()
+					.send("getLiveResourcesResponse", message);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public static class ResourceData extends JSONObject {
+
+		public ResourceData(String path, String hash, long timestamp) {
+			super();
+			try {
+				put("resource", path);
+				put("hash", hash);
+				put("timestamp", timestamp);
+			} catch (JSONException e) {
+				e.printStackTrace();
 			}
 		}
 	}

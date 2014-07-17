@@ -10,8 +10,13 @@
 *******************************************************************************/
 package org.eclipse.flux.ui.integration.handlers;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Pattern;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.eclipse.core.filebuffers.FileBuffers;
@@ -33,6 +38,7 @@ import org.eclipse.flux.core.ConnectedProject;
 import org.eclipse.flux.core.ILiveEditConnector;
 import org.eclipse.flux.core.IRepositoryListener;
 import org.eclipse.flux.core.LiveEditCoordinator;
+import org.eclipse.flux.core.LiveEditCoordinator.ResourceData;
 import org.eclipse.flux.core.Repository;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
@@ -188,6 +194,12 @@ public class LiveEditConnector {
 					String savePointHash, long savePointTimestamp, String content) {
 				handleRemoteLiveContent(requestSenderID, callbackID, username, projectName, resourcePath, savePointHash, savePointTimestamp, content);
 			}
+
+			@Override
+			public void liveEditors(String requestSenderID, int callbackID,
+					String username, String projectRegEx, String resourceRegEx) {
+				handleLiveEditors(requestSenderID, callbackID, username, projectRegEx, resourceRegEx);
+			}
 		};
 		this.liveEditCoordinator.addLiveEditConnector(liveEditConnector);
 		
@@ -264,6 +276,33 @@ public class LiveEditConnector {
 			if (!liveUnitHash.equals(hash)) {
 				this.liveEditCoordinator.sendLiveEditStartedResponse(LIVE_EDIT_CONNECTOR_ID, requestSenderID, callbackID, username, projectName, relativeResourcePath, hash, timestamp, content);
 			}
+		}
+	}
+	
+	private void handleLiveEditors(String requestSenderID, int callbackID, String username, String projectRegEx, String resourceRegEx) {
+		if (username == null || this.repository.getUsername().equals(username)) {
+			Map<String, List<ResourceData>> editUnits = new HashMap<String, List<ResourceData>>();
+			for (Map.Entry<String, IDocument> entry : documentMappings.entrySet()) {
+				String resourcePath = entry.getKey();
+				String projectName = resourcePath.substring(0, resourcePath.indexOf('/'));
+				String relativeResourcePath = resourcePath.substring(projectName.length() + 1);
+				
+				if ((projectRegEx == null || Pattern.matches(projectRegEx, projectName))
+						&& (resourceRegEx == null || Pattern.matches(resourceRegEx, relativeResourcePath))) {
+				
+					ConnectedProject connectedProject = repository.getProject(projectName);
+					final String hash = connectedProject.getHash(relativeResourcePath);
+					final long timestamp = connectedProject.getTimestamp(relativeResourcePath);
+					
+					List<ResourceData> resources = editUnits.get(projectName);
+					if (resources == null) {
+						resources = new ArrayList<ResourceData>();
+						editUnits.put(projectName, resources);
+					}
+					resources.add(new ResourceData(relativeResourcePath, hash, timestamp));
+				}
+			}
+			this.liveEditCoordinator.sendLiveResourcesResponse(requestSenderID, callbackID, repository.getUsername(), editUnits);
 		}
 	}
 
@@ -476,5 +515,5 @@ public class LiveEditConnector {
 			}
 		}
 	}
-
+	
 }

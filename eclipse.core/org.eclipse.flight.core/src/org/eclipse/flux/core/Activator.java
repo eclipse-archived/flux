@@ -46,6 +46,7 @@ public class Activator implements BundleActivator {
 	private static Activator plugin;
 
 	private IMessagingConnector messagingConnector;
+	private IMessagingConnector internalMessagingConnector;
 	private Repository repository;
 	private LiveEditCoordinator liveEditCoordinator;
 	
@@ -57,6 +58,8 @@ public class Activator implements BundleActivator {
 		// TODO: change this username property to a preference and add authentication
 		
 		messagingConnector = new SocketIOMessagingConnector(username);
+		internalMessagingConnector = new SocketIOMessagingConnector("internal"); //$NON-NLS-1$
+		
 		repository = new Repository(messagingConnector, username);
 		liveEditCoordinator = new LiveEditCoordinator(messagingConnector);
 		
@@ -191,6 +194,10 @@ public class Activator implements BundleActivator {
 	
 	public LiveEditCoordinator getLiveEditCoordinator() {
 		return liveEditCoordinator;
+	}
+
+	public IMessagingConnector getInternalMessagingConnector() {
+		return internalMessagingConnector;
 	}
 
 }
