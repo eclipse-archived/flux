@@ -77,7 +77,7 @@
   npm install
   ```
   
-  Then you can star the node.js server application:
+  Then you can start the node.js server application:
   
   ```
   npm start
