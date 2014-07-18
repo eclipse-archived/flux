@@ -59,8 +59,6 @@ public class Activator implements BundleActivator {
 		// TODO: change this username and token to preference and create some UI to set it
 		
 		messagingConnector = new SocketIOMessagingConnector(username, token);
-		// TODO: this won't work if server authentication is enabled.
-		internalMessagingConnector = new SocketIOMessagingConnector("$super$", null);
 		
 		repository = new Repository(messagingConnector, username);
 		liveEditCoordinator = new LiveEditCoordinator(messagingConnector);
@@ -200,10 +198,6 @@ public class Activator implements BundleActivator {
 
 	public static void log(Throwable ex) {
 		ex.printStackTrace();
-	}
-
-	public synchronized IMessagingConnector getInternalMessagingConnector() {
-		return internalMessagingConnector;
 	}
 
 }

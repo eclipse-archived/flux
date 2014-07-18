@@ -17,7 +17,6 @@ import io.socket.SocketIOException;
 
 import java.net.MalformedURLException;
 
-import javax.inject.Inject;
 import javax.net.ssl.SSLContext;
 
 import org.eclipse.core.runtime.IProgressMonitor;

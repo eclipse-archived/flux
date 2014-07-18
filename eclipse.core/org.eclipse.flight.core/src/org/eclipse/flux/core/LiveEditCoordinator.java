@@ -62,7 +62,7 @@ public class LiveEditCoordinator {
 				sendLiveUnits(message);
 			}
 		};
-		Activator.getDefault().getInternalMessagingConnector().addMessageHandler(liveUnits);
+		Activator.getDefault().getMessagingConnector().addMessageHandler(liveUnits);
 
 	}
 	
@@ -243,7 +243,7 @@ public class LiveEditCoordinator {
 			message.put("liveEditUnits", liveEditUnits);
 
 			// Send via the 'internal' broadcast channel
-			Activator.getDefault().getInternalMessagingConnector()
+			Activator.getDefault().getMessagingConnector()
 					.send("getLiveResourcesResponse", message);
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block

@@ -225,7 +225,7 @@ function addLogging(shaker) {
 			if (accepted) {
 				console.log('User authenticated: ', hsd.fluxUser);
 			} else {
-				console.log('Autentication REJECTED: ',err);
+				console.log('Autentication REJECTED: ',err, hsd);
 			}
 			return accept(err, accepted);
 		});
@@ -277,7 +277,7 @@ function asSuperUser(options) {
 ///////////////////////////////////////
 /// Configure passport library
 
-var passport = undefined;
+var passport = null;
 
 //Configuring passport without a secret causes an error.
 if (isEnabled) {
