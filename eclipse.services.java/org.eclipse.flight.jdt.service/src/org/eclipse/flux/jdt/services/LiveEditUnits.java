@@ -82,6 +82,12 @@ public class LiveEditUnits {
 			public void liveEditingStartedResponse(String requestSenderID, int callbackID, String username, String projectName, String resourcePath, String savePointHash, long savePointTimestamp, String content) {
 				updateLiveUnit(requestSenderID, callbackID, username, projectName, resourcePath, savePointHash, savePointTimestamp, content);
 			}
+
+			@Override
+			public void liveEditors(String requestSenderID, int callbackID,
+					String username, String projectRegEx, String resourceRefEx) {
+				// Do nothing since JDT service is not a host for editors
+			}
 		};
 		liveEditCoordinator.addLiveEditConnector(liveEditConnector);
 
@@ -178,22 +184,25 @@ public class LiveEditUnits {
 
 	protected void startupLiveUnits(JSONObject message) {
 		try {
-			JSONArray liveUnits = message.getJSONArray("liveEditUnits");
-			for (int i = 0; i < liveUnits.length(); i++) {
-				JSONObject liveUnit = liveUnits.getJSONObject(i);
+			String username = message.getString("username");			
+			JSONObject liveUnits = message.getJSONObject("liveEditUnits");
+			for (String projectName : JSONObject.getNames(liveUnits)) {
+				JSONArray resources = liveUnits.getJSONArray(projectName);
+				
+				for (int i = 0; i < resources.length(); i++) {
+					JSONObject liveUnit = resources.getJSONObject(i);
+					
+					String resource = liveUnit.getString("resource");
+					long timestamp = liveUnit.getLong("savePointTimestamp");
+					String hash = liveUnit.getString("savePointHash");
+					
+					String resourcePath = projectName + "/" + resource;
+					if (repository.getUsername().equals(username) && !liveEditUnits.containsKey(resourcePath)) {
+						startLiveUnit(null, 0, username, resourcePath, hash, timestamp);
+					}
 
-				String username = liveUnit.getString("username");
-				String projectName = liveUnit.getString("project");
-				String resource = liveUnit.getString("resource");
-				long timestamp = liveUnit.getLong("savePointTimestamp");
-				String hash = liveUnit.getString("savePointHash");
-
-				String resourcePath = projectName + "/" + resource;
-				if (repository.getUsername().equals(username) && !liveEditUnits.containsKey(resourcePath)) {
-					startLiveUnit(null, 0, username, resourcePath, hash, timestamp);
+					this.liveEditCoordinator.sendLiveEditStartedMessage(LIVE_EDIT_CONNECTOR_ID, username, projectName, resource, hash, timestamp);
 				}
-
-				this.liveEditCoordinator.sendLiveEditStartedMessage(LIVE_EDIT_CONNECTOR_ID, username, projectName, resource, hash, timestamp);
 			}
 		} catch (JSONException e) {
 			e.printStackTrace();
