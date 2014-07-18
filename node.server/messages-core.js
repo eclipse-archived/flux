@@ -136,7 +136,16 @@ MessageCore.prototype.configureRequest = function(socket, messageName) {
 };
 
 MessageCore.prototype.configureResponse = function(socket, sockets, messageName) {
+	//TODO: auth checking of response messages.
+	//  As it is, I beleave it might be possible for malicious client to send fake resonses
+	//  to any socket they have previously received a message from. This is probably an issue.
 	socket.on(messageName, function(data) {
-		sockets.socket(data.requestSenderID).emit(messageName, data);
+		authentication.checkMessageSend(socket, data, function (err) {
+			if (err) {
+				console.log("Message rejected: ", err);
+				return;
+			}
+			sockets.socket(data.requestSenderID).emit(messageName, data);
+		});
 	});
 };

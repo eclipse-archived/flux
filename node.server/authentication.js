@@ -344,23 +344,23 @@ function checkChannelJoin(socket, requestData, callback) {
  * Checks wether a given socket client is allowed to send given message.
  */
 function checkMessageSend(socket, data, callback) {
-	var destination = data.username;
+	var pertainsTo = data.username;
 	var handshakeData = socket.handshake;
 	if (!handshakeData) {
 		console.log('REJECT MESSAGE: no handshakeData');
 		return callback('No handshakeData in the socket');
 	}
-	var user = handshakeData.fluxUser;
-	console.log('checking message '+user+' ==> '+destination);
-	if (!user) {
+	var socketUser = handshakeData.fluxUser;
+	//console.log('checking message '+user+' ==> '+destination);
+	if (!socketUser) {
 		console.log('REJECT MESSAGE: no fluxUser');
 		return callback('No fluxUser info in handshakeData');
 	}
-	if (user===SUPER_USER || user===destination) {
+	if (socketUser===SUPER_USER || socketUser===pertainsTo) {
 		return callback(); //ok
 	} else {
-		console.log('REJECT MESSAGE from '+user+' to '+destination);
-		return callback('REJECT message from '+user+' to '+destination);
+		console.log('REJECT MESSAGE from '+socketUser+' pertaining to '+pertainsTo);
+		return callback('REJECT message from '+socketUser+' pertaining to '+pertainsTo);
 	}
 }
 
