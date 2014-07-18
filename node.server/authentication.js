@@ -341,9 +341,33 @@ function checkChannelJoin(socket, requestData, callback) {
 }
 
 /**
+ * Checks wether a given socket client is allowed to send given message.
+ */
+function checkMessageSend(socket, data, callback) {
+	var destination = data.username;
+	var handshakeData = socket.handshake;
+	if (!handshakeData) {
+		console.log('REJECT MESSAGE: no handshakeData');
+		return callback('No handshakeData in the socket');
+	}
+	var user = handshakeData.fluxUser;
+	console.log('checking message '+user+' ==> '+destination);
+	if (!user) {
+		console.log('REJECT MESSAGE: no fluxUser');
+		return callback('No fluxUser info in handshakeData');
+	}
+	if (user===SUPER_USER || user===destination) {
+		return callback(); //ok
+	} else {
+		console.log('REJECT MESSAGE from '+user+' to '+destination);
+		return callback('REJECT message from '+user+' to '+destination);
+	}
+}
+
+/**
  * Dummy implementation of checkChannelJoin used when authentication is disabled.
  */
-function dummyCheckChannelJoin(socket, requestData, callback) {
+function dummyCheck(socket, data, callback) {
 	return callback(); //OK!
 }
 
@@ -354,6 +378,7 @@ exports.socketIoHandshake = socketIoHandshake;
 exports.session = session;
 exports.passport = passport;
 exports.asSuperUser = asSuperUser;
-exports.checkChannelJoin = isEnabled ? checkChannelJoin : dummyCheckChannelJoin;
+exports.checkChannelJoin = isEnabled ? checkChannelJoin : dummyCheck;
 exports.SUPER_USER = SUPER_USER;
 exports.isEnabled = isEnabled;
+exports.checkMessageSend = isEnabled ? checkMessageSend : dummyCheck;

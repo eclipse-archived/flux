@@ -98,28 +98,40 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 
 MessageCore.prototype.configureBroadcast = function(socket, messageName) {
 	socket.on(messageName, function(data) {
-		if (data.username !== undefined) {
-			socket.broadcast.to(data.username).emit(messageName, data);
-		}
-		if (data.username !== '*') {
-			//Everyone including SUPER_USER is connected to '*'.
-			//So don't send message again.
-			socket.broadcast.to(SUPER_USER).emit(messageName, data);
-		}
+		authentication.checkMessageSend(socket, data, function (err) {
+			if (err) {
+				console.log("Message rejected: ", err);
+				return;
+			}
+			if (data.username !== undefined) {
+				socket.broadcast.to(data.username).emit(messageName, data);
+			}
+			if (data.username !== '*') {
+				//Everyone including SUPER_USER is connected to '*'.
+				//So don't send message again.
+				socket.broadcast.to(SUPER_USER).emit(messageName, data);
+			}
+		});
 	});
 };
 
 MessageCore.prototype.configureRequest = function(socket, messageName) {
 	socket.on(messageName, function(data) {
-		data.requestSenderID = socket.id;
-		if (data.username !== undefined) {
-			socket.broadcast.to(data.username).emit(messageName, data);
-		}
-		if (data.username !== '*') {
-			//Everyone including SUPER_USER is connected to '*'.
-			//So don't send message again.
-			socket.broadcast.to(SUPER_USER).emit(messageName, data);
-		}
+		authentication.checkMessageSend(socket, data, function (err) {
+			if (err) {
+				console.log("Message rejected: ", err);
+				return;
+			}
+			data.requestSenderID = socket.id;
+			if (data.username !== undefined) {
+				socket.broadcast.to(data.username).emit(messageName, data);
+			}
+			if (data.username !== '*') {
+				//Everyone including SUPER_USER is connected to '*'.
+				//So don't send message again.
+				socket.broadcast.to(SUPER_USER).emit(messageName, data);
+			}
+		});
 	});
 };
 
