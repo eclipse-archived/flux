@@ -54,24 +54,14 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 
 	var socket = io.connect();
 	
-	var braodcastSocket = io.connect();
-
 	socket.on('connect', function() {
-		connected(username);
+		connected();
 	});
 
 	socket.on('disconnect', function() {
 		disconnected();
 	});
 
-	braodcastSocket.on('connect', function() {
-		connected('internal');
-	});
-
-	braodcastSocket.on('disconnect', function() {
-		disconnected();
-	});
-	
 	var javaContentAssistProvider = new mJavaContentAssist.JavaContentAssistProvider(socket);
 	javaContentAssistProvider.setSocket(socket);
 
@@ -281,10 +271,10 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 	var lastSavePointHash = '';
 	var lastSavePointTimestamp = 0;
 
-	function connected(userId) {
+	function connected() {
 		if (username) {
 			socket.emit('connectToChannel', {
-				'channel' : userId
+				'channel' : username
 			}, function(answer) {
 			});
 		}
@@ -463,30 +453,25 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 		}
 	});
 
-	socket.on('getLiveResourcesRequest', sendLiveResourcesResponse.bind(socket));
-	
-	braodcastSocket.on('getLiveResourcesRequest', sendLiveResourcesResponse.bind(braodcastSocket));
-	
-	function sendLiveResourcesResponse(request) {
-		if (request.callback_id
-				&& (!request.username || request.username === username)
-				&& (!request.projectRegEx || new RegExp(request.projectRegEx).test(project)) 
-				&& (!request.resourceRegEx || new RegExp(request.resourceRegEx).test(resource))) {
+	socket.on('getLiveResourcesRequest', function(data) {
+		if (data.callback_id
+				&& (!data.projectRegEx || new RegExp(data.projectRegEx).test(project)) 
+				&& (!data.resourceRegEx || new RegExp(data.resourceRegEx).test(resource))) {
 			var liveEditUnits = {};
 			liveEditUnits[project] = [{
 				'resource'           : resource,
 				'savePointTimestamp' : lastSavePointTimestamp,
 				'savePointHash'      : lastSavePointHash
 			}];
-			this.emit('getLiveResourcesResponse', {
-				'callback_id'        : request.callback_id,
-				'requestSenderID'    : request.requestSenderID,
+			socket.emit('getLiveResourcesResponse', {
+				'callback_id'        : data.callback_id,
+				'requestSenderID'    : data.requestSenderID,
 				'username'           : username,
 				'liveEditUnits'      : liveEditUnits
 			});
 		}
-	}
-
+	});
+	
 	function sendModelChanged(evt) {
 		var changeData = {
 			'username' : username,

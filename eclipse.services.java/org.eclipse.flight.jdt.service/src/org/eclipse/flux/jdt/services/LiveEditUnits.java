@@ -149,6 +149,7 @@ public class LiveEditUnits {
 			JSONObject message = new JSONObject();
 			message.put("username", repository.getUsername());
 			message.put("callback_id", GET_LIVE_RESOURCES_CALLBACK);
+			message.put("resourceRegEx", ".*\\.java|.*\\.class");
 			messagingConnector.send("getLiveResourcesRequest", message);
 		} catch (JSONException e) {
 			e.printStackTrace();

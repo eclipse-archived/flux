@@ -62,7 +62,7 @@ public class LiveEditCoordinator {
 				sendLiveUnits(message);
 			}
 		};
-		Activator.getDefault().getMessagingConnector().addMessageHandler(liveUnits);
+		messagingConnector.addMessageHandler(liveUnits);
 
 	}
 	

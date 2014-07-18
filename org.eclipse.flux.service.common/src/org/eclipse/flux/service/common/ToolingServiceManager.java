@@ -441,6 +441,7 @@ final public class ToolingServiceManager {
 			JSONObject message = new JSONObject();
 			message.put("callback_id", cleanupCallbackId);
 			message.put("resourceRegEx", fileFiltersRegEx);
+			message.put("username", "*");
 			socket.emit("getLiveResourcesRequest", message);
 		} catch (JSONException e) {
 			e.printStackTrace();
