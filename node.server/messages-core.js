@@ -76,6 +76,7 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 				// sending a 'connectToChannel' message? If so they could
 				// bypass the check.
 				socket.join(channel);
+				socket.join('*');
 				fn({
 					'connectedToChannel' : true
 				});
@@ -85,6 +86,7 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 
 	socket.on('disconnectFromChannel', function(data, fn) {
 		socket.leave(data.channel);
+		socket.leave('*');
 		if (fn) {
 			fn({
 				'disconnectedFromChannel' : true
@@ -99,7 +101,11 @@ MessageCore.prototype.configureBroadcast = function(socket, messageName) {
 		if (data.username !== undefined) {
 			socket.broadcast.to(data.username).emit(messageName, data);
 		}
-		socket.broadcast.to(SUPER_USER).emit(messageName, data);
+		if (data.username !== '*') {
+			//Everyone including SUPER_USER is connected to '*'.
+			//So don't send message again.
+			socket.broadcast.to(SUPER_USER).emit(messageName, data);
+		}
 	});
 };
 
@@ -109,7 +115,11 @@ MessageCore.prototype.configureRequest = function(socket, messageName) {
 		if (data.username !== undefined) {
 			socket.broadcast.to(data.username).emit(messageName, data);
 		}
-		socket.broadcast.to(SUPER_USER).emit(messageName, data);
+		if (data.username !== '*') {
+			//Everyone including SUPER_USER is connected to '*'.
+			//So don't send message again.
+			socket.broadcast.to(SUPER_USER).emit(messageName, data);
+		}
 	});
 };
 
