@@ -126,7 +126,7 @@ function authenticateSuperUser(user, token) {
  */
 function tokenHandshake(handshakeData, accept) {
 	return getUserToken(handshakeData, function (user, token) {
-		console.log('token = ', token.substring(0,4)+'...');
+		console.log('token = ', token && (token.substring(0,4)+'...'));
 		if (!token) {
 			//console.log('No token');
 			return accept('No x-flux-user-token header', false);
