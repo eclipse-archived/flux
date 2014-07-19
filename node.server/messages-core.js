@@ -11,6 +11,9 @@
 *******************************************************************************/
 /*global require console exports process __dirname*/
 
+var authentication = require('./authentication');
+var SUPER_USER = authentication.SUPER_USER;
+
 var MessageCore = function() {};
 exports.MessageCore = MessageCore;
 
@@ -60,15 +63,30 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 	});
 
 	socket.on('connectToChannel', function(data, fn) {
-		// TODO: is user allowed to join this user space?
-		socket.join(data.channel);
-		fn({
-			'connectedToChannel' : true
+		var channel = data.channel;
+		authentication.checkChannelJoin(socket, data, function (err) {
+			if (err) {
+				return fn({
+					error: err,
+					connectedToChannel: false
+				});
+			} else {
+				//TODO: we have checked that user is allowed to join channel.
+				// but... is it possible for clients to join channel without
+				// sending a 'connectToChannel' message? If so they could
+				// bypass the check.
+				socket.join(channel);
+				socket.join('*');
+				fn({
+					'connectedToChannel' : true
+				});
+			}
 		});
 	});
 
 	socket.on('disconnectFromChannel', function(data, fn) {
 		socket.leave(data.channel);
+		socket.leave('*');
 		if (fn) {
 			fn({
 				'disconnectedFromChannel' : true
@@ -80,25 +98,54 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 
 MessageCore.prototype.configureBroadcast = function(socket, messageName) {
 	socket.on(messageName, function(data) {
-		if (data.username !== undefined) {
-			socket.broadcast.to(data.username).emit(messageName, data);
-		}
-		socket.broadcast.to('internal').emit(messageName, data);
+		authentication.checkMessageSend(socket, data, function (err) {
+			if (err) {
+				console.log("Message rejected: ", err);
+				return;
+			}
+			if (data.username !== undefined) {
+				socket.broadcast.to(data.username).emit(messageName, data);
+			}
+			if (data.username !== '*') {
+				//Everyone including SUPER_USER is connected to '*'.
+				//So don't send message again.
+				socket.broadcast.to(SUPER_USER).emit(messageName, data);
+			}
+		});
 	});
 };
 
 MessageCore.prototype.configureRequest = function(socket, messageName) {
 	socket.on(messageName, function(data) {
-		data.requestSenderID = socket.id;
-		if (data.username !== undefined) {
-			socket.broadcast.to(data.username).emit(messageName, data);
-		}
-		socket.broadcast.to('internal').emit(messageName, data);
+		authentication.checkMessageSend(socket, data, function (err) {
+			if (err) {
+				console.log("Message rejected: ", err);
+				return;
+			}
+			data.requestSenderID = socket.id;
+			if (data.username !== undefined) {
+				socket.broadcast.to(data.username).emit(messageName, data);
+			}
+			if (data.username !== '*') {
+				//Everyone including SUPER_USER is connected to '*'.
+				//So don't send message again.
+				socket.broadcast.to(SUPER_USER).emit(messageName, data);
+			}
+		});
 	});
 };
 
 MessageCore.prototype.configureResponse = function(socket, sockets, messageName) {
+	//TODO: auth checking of response messages.
+	//  As it is, I beleave it might be possible for malicious client to send fake resonses
+	//  to any socket they have previously received a message from. This is probably an issue.
 	socket.on(messageName, function(data) {
-		sockets.socket(data.requestSenderID).emit(messageName, data);
+		authentication.checkMessageSend(socket, data, function (err) {
+			if (err) {
+				console.log("Message rejected: ", err);
+				return;
+			}
+			sockets.socket(data.requestSenderID).emit(messageName, data);
+		});
 	});
 };

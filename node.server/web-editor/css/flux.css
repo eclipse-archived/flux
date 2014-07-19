@@ -1,0 +1,12 @@
+.username {
+	color: blue;
+}
+.project .name {
+	font-weight: bold;
+}
+.resource,.project {
+	margin-left: 25px;
+}
+.resource {
+	display: block;
+}

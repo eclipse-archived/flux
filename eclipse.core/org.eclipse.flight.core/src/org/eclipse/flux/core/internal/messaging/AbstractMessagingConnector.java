@@ -76,5 +76,11 @@ public abstract class AbstractMessagingConnector implements IMessagingConnector 
 			}
 		}
 	}
+	
+	/** 
+	 * Connectors that suport authentication will ensure that the userName can only connect to
+	 * the flux bus if the user has been authorized to do so.
+	 */
+	public abstract String getUserName();
 
 }

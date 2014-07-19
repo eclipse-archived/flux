@@ -1,2 +1,6 @@
 bin/
 *.class
+node_modules/
+/node.server/plugable-fs/github-fs/secret.json
+/node.server/github-secret.json
+

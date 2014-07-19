@@ -20,17 +20,17 @@ exports.MessagesRepository = MessagesRepository;
 
 MessagesRepository.prototype.setSocket = function(clientsocket) {
 	this.socket = clientsocket;
-	
+
 	clientsocket.on('getProjectsRequest', this.getProjects.bind(this));
 	clientsocket.on('getProjectRequest', this.getProject.bind(this));
 	clientsocket.on('getResourceRequest', this.getResource.bind(this));
-	
+
 	clientsocket.on('getProjectResponse', this.getProjectResponse.bind(this));
 	clientsocket.on('getResourceResponse', this.getResourceResponse.bind(this));
-	
+
 	clientsocket.on('projectConnected', this.projectConnected.bind(this));
 	clientsocket.on('projectDisconnected', this.projectDisconnected.bind(this));
-	
+
 	clientsocket.on('resourceChanged', this.resourceChanged.bind(this));
 	clientsocket.on('resourceCreated', this.resourceCreated.bind(this));
 	clientsocket.on('resourceDeleted', this.resourceDeleted.bind(this));
@@ -92,7 +92,7 @@ MessagesRepository.prototype.getResource = function(data) {
 MessagesRepository.prototype.projectConnected = function(data) {
 	var projectName = data.project;
 	var username = data.username;
-	
+
 	this.repository.hasProject(username, projectName, function(error, projectExists) {
 		if (error === null && !projectExists) {
 			this.repository.createProject(username, projectName, function(error, result) {
@@ -117,7 +117,7 @@ MessagesRepository.prototype.projectConnected = function(data) {
 	}.bind(this));
 };
 
-MessagesRepository.prototype.projectDisconnected = function(data) {	
+MessagesRepository.prototype.projectDisconnected = function(data) {
 };
 
 MessagesRepository.prototype.getProjectResponse = function(data) {
@@ -125,23 +125,23 @@ MessagesRepository.prototype.getProjectResponse = function(data) {
 	var username = data.username;
 	var files = data.files;
 	var deleted = data.deleted;
-	
+
 	this.repository.hasProject(username, projectName, function(err, projectExists) {
 		if (projectExists) {
-			
+
 			var i;
 			for (i = 0; i < files.length; i += 1) {
 				this.repository.getResourceInfo(username, projectName, files[i].path, files[i].type, files[i].timestamp,
 					files[i].hash, this._getProjectResponseCheckResource.bind(this));
 			}
-		
+
 			if (deleted !== undefined) {
 				for (i = 0; i < deleted.length; i += 1) {
 					this.repository.deleteResource(username, projectName, deleted[i].path, deleted[i].timestamp,
 						this._getProjectResponseDeletedResult.bind(this));
 				}
 			}
-			
+
 		}
 	}.bind(this));
 };
@@ -168,7 +168,7 @@ MessagesRepository.prototype._getProjectResponseCheckResource = function(err, re
 MessagesRepository.prototype._getProjectResponseDeletedResult = function(err, result) {
 	if (err !== null) {
 		console.log('did not delete resource: ' + result.projectName + "/" + result.deletedResource + " - deleted at: " + result.deletedTimestamp);
-	}	
+	}
 };
 
 MessagesRepository.prototype.getResourceResponse = function(data) {
@@ -179,20 +179,20 @@ MessagesRepository.prototype.getResourceResponse = function(data) {
 	var timestamp = data.timestamp;
 	var hash = data.hash;
 	var content = data.content;
-	
+
 	this.repository.hasResource(username, projectName, resource, function(err, resourceExists) {
 		if (err === null) {
 			if (!resourceExists) {
 				this.repository.createResource(username, projectName, resource, content, hash, timestamp, type, function(error, result) {
 					if (error !== null) {
-						console.log('Error creating repository resource: ' + projectName + "/" + resource + " - " + data.timestamp);
+						console.log('Error creating repository resource: ' + projectName + "/" + resource + " - " + data.timestamp, error);
 					}
 				});
 			}
 			else {
 				this.repository.updateResource(username, projectName, resource, content, hash, timestamp, function(error, result) {
 					if (error !== null) {
-						console.log('Error updating repository resource: ' + projectName + "/" + resource + " - " + timestamp);
+						console.log('Error updating repository resource: ' + projectName + "/" + resource + " - " + timestamp, error);
 					}
 				});
 			}
@@ -207,7 +207,7 @@ MessagesRepository.prototype.resourceChanged = function(data) {
 	var timestamp = data.timestamp;
 	var hash = data.hash;
 	var type = "file";
-	
+
 	this.repository.getResourceInfo(username, projectName, resource, type, timestamp, hash, function(err, resourceInfo) {
 		if (err === null) {
 			if (!resourceInfo.exists || resourceInfo.needsUpdate) {
@@ -221,6 +221,8 @@ MessagesRepository.prototype.resourceChanged = function(data) {
 					'hash' : hash
 				});
 			}
+		} else {
+			console.error(err);
 		}
 	}.bind(this));
 };
@@ -232,7 +234,7 @@ MessagesRepository.prototype.resourceCreated = function(data) {
 	var timestamp = data.timestamp;
 	var hash = data.hash;
 	var type = data.type;
-	
+
 	this.repository.hasResource(username, projectName, resource, function(err, resourceExists) {
 		if (err === null && !resourceExists) {
 			this.socket.emit('getResourceRequest', {
@@ -252,7 +254,7 @@ MessagesRepository.prototype.resourceDeleted = function(data) {
 	var projectName = data.project;
 	var resource = data.resource;
 	var timestamp = data.timestamp;
-	
+
 	this.repository.hasResource(username, projectName, resource, function(err, resourceExists) {
 		if (err === null && resourceExists) {
 			this.repository.deleteResource(username, projectName, resource, timestamp, function(error, result) {

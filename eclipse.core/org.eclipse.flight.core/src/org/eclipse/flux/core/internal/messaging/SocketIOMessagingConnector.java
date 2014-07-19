@@ -19,6 +19,11 @@ import java.net.MalformedURLException;
 
 import javax.net.ssl.SSLContext;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.flux.core.Activator;
 import org.eclipse.flux.core.IMessagingConnector;
 import org.json.JSONObject;
 
@@ -26,6 +31,8 @@ import org.json.JSONObject;
  * @author Martin Lippert
  */
 public class SocketIOMessagingConnector extends AbstractMessagingConnector implements IMessagingConnector {
+
+	protected static final long INITIAL_DELAY = 0;
 
 	static {
 		javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(new javax.net.ssl.HostnameVerifier() {
@@ -37,17 +44,21 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 
 	private SocketIO socket;
 	private String host;
-
+	
 	private transient boolean connectedToUserspace;
 	private transient boolean connected;
+	private String username;
 	
-	public SocketIOMessagingConnector(final String username) {
+	public SocketIOMessagingConnector(final String username, final String token) {
+		this.username = username;
 		host = System.getProperty("flux-host", "http://localhost:3000");
 
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
-			socket = new SocketIO(host);
+			socket = createSocket(username, token);
 			socket.connect(new IOCallback() {
+
+				private long delay = INITIAL_DELAY;
 
 				@Override
 				public void onMessage(JSONObject arg0, IOAcknowledge arg1) {
@@ -59,20 +70,33 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 
 				@Override
 				public void onError(SocketIOException ex) {
-					ex.printStackTrace();
-					
-					try {
-						socket = new SocketIO(host);
-						socket.connect(this);
-					} catch (MalformedURLException e) {
-						e.printStackTrace();
-					}
+					final IOCallback self = this;
+					Activator.log(ex);
+					new Job("Reconnect web-socket") {
+						@Override
+						protected IStatus run(IProgressMonitor arg0) {
+							try {
+								socket = createSocket(username, token);
+								socket.connect(self);
+							} catch (MalformedURLException e) {
+								e.printStackTrace();
+							}
+							return Status.OK_STATUS;
+						}
+					}.schedule(reconnectDelay());
+				}
+
+				private long reconnectDelay() {
+					long r = this.delay;
+					this.delay = (long)((this.delay+1000)*1.1);
+					return r;
 				}
 
 				@Override
 				public void onConnect() {
 					try {
 						connected = true;
+						delay = INITIAL_DELAY;
 						
 						JSONObject message = new JSONObject();
 						message.put("channel", username);
@@ -116,6 +140,15 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 		}
 	}
 
+	private SocketIO createSocket(String username, String token) throws MalformedURLException {
+		SocketIO socket = new SocketIO(host);
+		if (token!=null) {
+			socket.addHeader("X-flux-user-name", username);
+			socket.addHeader("X-flux-user-token", token);
+		}
+		return socket;
+	}
+
 	@Override
 	public void send(String messageType, JSONObject message) {
 		socket.emit(messageType, message);
@@ -126,4 +159,8 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 		return connected && connectedToUserspace;
 	}
 	
+	@Override
+	public String getUserName() {
+		return username;
+	}
 }

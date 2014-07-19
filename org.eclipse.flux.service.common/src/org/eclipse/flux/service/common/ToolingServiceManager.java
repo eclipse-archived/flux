@@ -47,6 +47,8 @@ import org.json.JSONObject;
  */
 final public class ToolingServiceManager {
 	
+	private static final String SUPER_USER = "$super$";
+	
 	/**
 	 * Service Manager is active
 	 */
@@ -186,7 +188,7 @@ final public class ToolingServiceManager {
 				public void onConnect() {
 					try {
 						JSONObject message = new JSONObject();
-						message.put("channel", "internal");
+						message.put("channel", SUPER_USER);
 						socket.emit("connectToChannel", new IOAcknowledge() {
 
 							public void ack(Object... answer) {
@@ -441,6 +443,7 @@ final public class ToolingServiceManager {
 			JSONObject message = new JSONObject();
 			message.put("callback_id", cleanupCallbackId);
 			message.put("resourceRegEx", fileFiltersRegEx);
+			message.put("username", "*");
 			socket.emit("getLiveResourcesRequest", message);
 		} catch (JSONException e) {
 			e.printStackTrace();

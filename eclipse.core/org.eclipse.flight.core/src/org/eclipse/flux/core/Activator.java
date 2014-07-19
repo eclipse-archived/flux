@@ -54,11 +54,11 @@ public class Activator implements BundleActivator {
 	public void start(BundleContext context) throws Exception {
 		plugin = this;
 		
-		String username = System.getProperty("flux-username", "defaultuser");
-		// TODO: change this username property to a preference and add authentication
+		String username = System.getProperty("flux.user.name", "defaultuser");
+		String token = System.getProperty("flux.user.token");
+		// TODO: change this username and token to preference and create some UI to set it
 		
-		messagingConnector = new SocketIOMessagingConnector(username);
-		internalMessagingConnector = new SocketIOMessagingConnector("internal"); //$NON-NLS-1$
+		messagingConnector = new SocketIOMessagingConnector(username, token);
 		
 		repository = new Repository(messagingConnector, username);
 		liveEditCoordinator = new LiveEditCoordinator(messagingConnector);
@@ -196,8 +196,8 @@ public class Activator implements BundleActivator {
 		return liveEditCoordinator;
 	}
 
-	public IMessagingConnector getInternalMessagingConnector() {
-		return internalMessagingConnector;
+	public static void log(Throwable ex) {
+		ex.printStackTrace();
 	}
 
 }

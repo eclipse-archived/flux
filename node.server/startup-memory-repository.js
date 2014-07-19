@@ -13,6 +13,7 @@
 
 // create and configure express
 var express = require('express');
+var authentication = require('./authentication');
 var app = express();
 
 var host = process.env.VCAP_APP_HOST || 'localhost';
@@ -25,9 +26,9 @@ var server = app.listen(port, host);
 console.log('Express server started on port ' + port);
 
 var client_io = require('socket.io-client');
-var client_socket = client_io.connect(messagingHost, {
+var client_socket = client_io.connect(messagingHost, authentication.asSuperUser({
 	port : messagingPort
-});
+}));
 
 var Repository = require('./repository-inmemory.js').Repository;
 var repository = new Repository();
@@ -40,7 +41,7 @@ var messagesrepository = new MessagesRepository(repository);
 
 client_socket.on('connect', function() {
 	console.log('client socket connected');
-	
+
 	repository.setNotificationSender.call(repository, client_socket);
 	messagesrepository.setSocket.call(messagesrepository, client_socket);
 });

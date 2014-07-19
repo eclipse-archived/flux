@@ -125,6 +125,37 @@
      - Use context menu 'Flux >> Connect' to connect it to Flux.
      - open a resource in the web-editor at a url like the following:
          http://localhost:3000/client/html/editor.html#defaultuser/test-project/src/flux/test/Main.java
+         
+## Authentication
+
+The prototype supports user authentication via github using oauth. Some setup is required to make it work.
+
+### Github Client ID and Secret
+
+Get a github client ID and secret [here](https://github.com/settings/applications/new
+Save these credentials in a file called "github-secret.json". When you start the server
+it will look for this file in your current working directory. Authentication will be enabled
+if the file is found.
+
+### Authenticating the Web Client
+
+Open the page at http://localhost:3000/ you should be automatically redirected to github to sign on.
+After that the client will be in an authenticated session tied to the user-id you logged in as.
+
+### Authenticating the Eclipse / Java Client
+
+The Eclipse client currently is not able to use oauth (oauth is more geared towards browser-based
+applications). Instead it uses a github user-id and github "Personal Access Token" to authenticate. 
+There's the server verifies the validity of the token vai github rest API. 
+
+You provide these credentials, as system properties when running the 
+Eclipse/Java process. For example:
+
+    -Dflux.user.name=kdvolder
+    -Dflux.user.token=<get-your-own>
+
+You can generate (and revoke) tokens [here](https://github.com/settings/applications).
+Click the 'Generate New Token' button next to 'Personal Access Tokens'.
 
 ## Status
 

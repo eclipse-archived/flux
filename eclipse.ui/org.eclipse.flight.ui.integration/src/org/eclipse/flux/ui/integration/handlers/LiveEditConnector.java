@@ -279,31 +279,39 @@ public class LiveEditConnector {
 		}
 	}
 	
-	private void handleLiveEditors(String requestSenderID, int callbackID, String username, String projectRegEx, String resourceRegEx) {
-		if (username == null || this.repository.getUsername().equals(username)) {
-			Map<String, List<ResourceData>> editUnits = new HashMap<String, List<ResourceData>>();
-			for (Map.Entry<String, IDocument> entry : documentMappings.entrySet()) {
-				String resourcePath = entry.getKey();
-				String projectName = resourcePath.substring(0, resourcePath.indexOf('/'));
-				String relativeResourcePath = resourcePath.substring(projectName.length() + 1);
-				
-				if ((projectRegEx == null || Pattern.matches(projectRegEx, projectName))
-						&& (resourceRegEx == null || Pattern.matches(resourceRegEx, relativeResourcePath))) {
-				
-					ConnectedProject connectedProject = repository.getProject(projectName);
-					final String hash = connectedProject.getHash(relativeResourcePath);
-					final long timestamp = connectedProject.getTimestamp(relativeResourcePath);
-					
-					List<ResourceData> resources = editUnits.get(projectName);
-					if (resources == null) {
-						resources = new ArrayList<ResourceData>();
-						editUnits.put(projectName, resources);
-					}
-					resources.add(new ResourceData(relativeResourcePath, hash, timestamp));
+	private void handleLiveEditors(String requestSenderID, int callbackID,
+			String username, String projectRegEx, String resourceRegEx) {
+		Map<String, List<ResourceData>> editUnits = new HashMap<String, List<ResourceData>>();
+		for (Map.Entry<String, IDocument> entry : documentMappings.entrySet()) {
+			String resourcePath = entry.getKey();
+			String projectName = resourcePath.substring(0,
+					resourcePath.indexOf('/'));
+			String relativeResourcePath = resourcePath.substring(projectName
+					.length() + 1);
+
+			if ((projectRegEx == null || Pattern.matches(projectRegEx,
+					projectName))
+					&& (resourceRegEx == null || Pattern.matches(resourceRegEx,
+							relativeResourcePath))) {
+
+				ConnectedProject connectedProject = repository
+						.getProject(projectName);
+				final String hash = connectedProject
+						.getHash(relativeResourcePath);
+				final long timestamp = connectedProject
+						.getTimestamp(relativeResourcePath);
+
+				List<ResourceData> resources = editUnits.get(projectName);
+				if (resources == null) {
+					resources = new ArrayList<ResourceData>();
+					editUnits.put(projectName, resources);
 				}
+				resources.add(new ResourceData(relativeResourcePath, hash,
+						timestamp));
 			}
-			this.liveEditCoordinator.sendLiveResourcesResponse(requestSenderID, callbackID, repository.getUsername(), editUnits);
 		}
+		this.liveEditCoordinator.sendLiveResourcesResponse(requestSenderID,
+				callbackID, repository.getUsername(), editUnits);
 	}
 
 	protected void handleRemoteLiveContent(String requestSenderID, int callbackID, final String username, final String projectName, final String resource,
