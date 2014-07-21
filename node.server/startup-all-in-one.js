@@ -17,6 +17,7 @@ var express = require('express');
 var mongo = require('mongodb');
 var app = express();
 var passport = require('passport');
+var pathResolve = require('path').resolve;
 
 var host = process.env.VCAP_APP_HOST || 'localhost';
 var port = process.env.VCAP_APP_PORT || '3000';
@@ -42,6 +43,7 @@ if (ENABLE_AUTH) {
 app.use(app.router);
 app.use("/client/js/URIjs", express['static'](__dirname + '/node_modules/URIjs/src'));
 app.use("/client", express['static'](__dirname + '/web-editor'));
+app.use("/orion-plugin",  express['static'](pathResolve(__dirname, '../flux.orion.integration')));
 
 if (ENABLE_AUTH) {
 	app.get('/auth/github', passport.authenticate('github'));
