@@ -41,7 +41,7 @@ Pre-conditions: Flux node server and eclipse application are up and running
 1. Import flux.orion.integration project into your workspace on OrionHub (https://orionhub.org)
 2. Launch the project created above as a web-site (https://wiki.eclipse.org/Orion/Documentation/User_Guide/Getting_started#Launching_your_project_as_a_website)
 3. Check out Orion Client code from GitHub from the forked repository https://github.com/BoykoAlex/orion.client 
-3. Launch Orion Node JS application from a subfolder of the locartion where Orion Client code has been cloned
+3. Launch Orion Node JS application from _<Orion Client folder>/modules/orionode_ folder
 4. Open localhost:8081 in the browser (your locally launched Orion)
 5. Navigate to Settings -> Plugins, (http://localhost:8081/settings/settings.html#,category=plugins)
 6. Click on Install (top-right corner of the list of installed plugins)
