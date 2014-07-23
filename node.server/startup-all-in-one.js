@@ -44,6 +44,7 @@ app.use(app.router);
 app.use("/client/js/URIjs", express['static'](__dirname + '/node_modules/URIjs/src'));
 app.use("/client", express['static'](__dirname + '/web-editor'));
 app.use("/orion-plugin",  express['static'](pathResolve(__dirname, '../flux.orion.integration')));
+app.use("/", express['static'](pathResolve(__dirname, 'flux-static')));
 
 if (ENABLE_AUTH) {
 	app.get('/auth/github', passport.authenticate('github'));
@@ -57,7 +58,7 @@ function redirectHome(req, res) {
 
 if (ENABLE_AUTH) {
 	app.get('/auth/github/callback',
-		passport.authenticate('github', { failureRedirect: '/auth/github' }),
+		passport.authenticate('github', { failureRedirect: '/login.html' }),
 		redirectHome
 	);
 }
@@ -144,4 +145,9 @@ MongoClient.connect("mongodb://localhost:27017/flight-db", function(err, db) {
 		});
 	});
 
+});
+
+require('./start-orion-node')({
+	port: 3001,
+	fluxPlugin: "http://"+host+":"+port+"/orion-plugin/flux.html"
 });

@@ -13,11 +13,12 @@
 <script src="OpenDeclaration.js"></script>
 	<script type="text/javascript">
 	/*global window console eclipse orion*/
+	
 		window.onload = function() {
-			var host = "localhost";
-			var port = 3000;
-			var user = 'defaultuser';
-			var base = "flux://" + host + ":" + port + "/" + user + "/";
+			var user = 'defaultuser'; //TODO: can't refer user anywhere in this code!
+			var host = location.hostname;
+			var port = location.port || 80;
+			var base = "flux://" + host + ":" + port + "/";
 			
 			var contentTypes = ["application/javascript", "text/plain" ];
 			
@@ -27,6 +28,7 @@
 				'Description' : "Flux Integration",
 				'top' : base,
 				'pattern' : base,
+				'login' : 'http://'+host+':'+port+'/login.html'
 			};
 						
 			var provider = new orion.PluginProvider(headers);			
