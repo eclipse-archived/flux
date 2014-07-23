@@ -1,13 +1,19 @@
 /*******************************************************************************
  * @license
  * Copyright (c) 2014 Pivotal Software Inc. and others.
- * All rights reserved. This program and the accompanying materials are made 
- * available under the terms of the Eclipse Public License v1.0 
- * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
- * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
- * 
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html).
+ *
  * Contributors: Pivotal Software Inc. - initial API and implementation
  ******************************************************************************/
+/*global define console CryptoJS */
+define(function(require) {
+
+var Deferred = require('orion/Deferred');
+var io = require('lib/socket.io');
+require('lib/sha1'); //Not AMD defines 'CryptoJS global
 
 function assignAncestry(parents, childrenDepthMap, depth) {
 	var child, parentLocation, parent;
@@ -71,14 +77,14 @@ function _cleanSaves(resource) {
 		}
 		delete saves[resource.Location];
 	}
-	
+
 }
 
 /**
- * An implementation of the file service that understands the Orion 
+ * An implementation of the file service that understands the Orion
  * server file API. This implementation is suitable for invocation by a remote plugin.
  */
-eclipse.FluxFileSystem= (function() {
+var FluxFileSystem = (function() {
 	/**
 	 * @class Provides operations on files, folders, and projects.
 	 * @name FileServiceImpl
@@ -90,9 +96,9 @@ eclipse.FluxFileSystem= (function() {
 		this.socket = io.connect(host, {
 			port: port
 		});
-		
+
 		var self = this;
-		
+
 		this.socket.on('connect', function() {
 //			while (user && !self._connectedToChannel) {
 				self.socket.emit('connectToChannel', {
@@ -105,30 +111,30 @@ eclipse.FluxFileSystem= (function() {
 				});
 //			}
 		});
-		
+
 		this.socket.on('getProjectsResponse', function(data) {
 			if (data.username === user) {
-				self._handleMessage(data);				
+				self._handleMessage(data);
 			}
 		});
-		
+
 		this.socket.on('getProjectResponse', function(data) {
 			if (data.username === user) {
-				self._handleMessage(data);				
+				self._handleMessage(data);
 			}
 		});
-		
+
 		this.socket.on('getResourceResponse', function(data) {
 			if (data.username === user) {
-				self._handleMessage(data);				
+				self._handleMessage(data);
 			}
 		});
-			
+
 		this.socket.on('resourceStored', function(data) {
 			if (data.username === user) {
 				var resource = self._createOrionResource(data);
 				var parentPath = resource.Location.substr(0, resource.Location.lastIndexOf('/'));
-				
+
 				self._findFromLocation(parentPath).then(function(parent) {
 					var foundResource = parent._childrenCache ? parent._childrenCache[resource.Name] : null;
 					if (foundResource) {
@@ -151,9 +157,9 @@ eclipse.FluxFileSystem= (function() {
 					}
 				});
 			}
-			self._handleMessage(data);				
+			self._handleMessage(data);
 		});
-		
+
 		this.socket.on('getResourceRequest', function(data) {
 			if (data.username === user) {
 				var resource = self._createOrionResource(data);
@@ -162,7 +168,7 @@ eclipse.FluxFileSystem= (function() {
 					&& cachedSave.hash === resource.ETag
 					&& cachedSave.timestamp === resource.LocalTimeStamp
 					&& cachedSave.username === data.username) {
-					
+
 					self.sendMessage("getResourceResponse", {
 						'callback_id' : data.callback_id,
 						'requestSenderID' : data.requestSenderID,
@@ -172,18 +178,18 @@ eclipse.FluxFileSystem= (function() {
 						'timestamp' : cachedSave.timestamp,
 						'type' : cachedSave.type,
 						'hash' : cachedSave.hash,
-						'content' : cachedSave.content 						
+						'content' : cachedSave.content
 					});
 				}
-				self._handleMessage(data);				
+				self._handleMessage(data);
 			}
 		});
-		
+
 		this.socket.on("resourceCreated", function(data) {
 //			console.log("resourceCreated: " + JSON.stringify(data));
 		});
 	}
-	
+
 
 	FluxFileSystem.prototype = /**@lends eclipse.FluxFileSystem.prototype */
 	{
@@ -191,7 +197,7 @@ eclipse.FluxFileSystem= (function() {
 			if (!location) {
 				location = "/";
 			} else {
-				location = location.replace(this._rootLocation, "");				
+				location = location.replace(this._rootLocation, "");
 			}
 			var indexOfDelimiter = location.indexOf('/');
 			var project = indexOfDelimiter < 0 ? location : location.substr(0, indexOfDelimiter);
@@ -232,7 +238,7 @@ eclipse.FluxFileSystem= (function() {
 			return false;
 		},
 		_createParents: function(entry) {
-			var deferred = new orion.Deferred();
+			var deferred = new Deferred();
 			var result = [];
 			var rootFullPath = this._root.fullPath;
 
@@ -257,7 +263,7 @@ eclipse.FluxFileSystem= (function() {
 			}
 			return deferred;
 		},
-		
+
 		/**
 		 * Obtains the children of a remote resource
 		 * @param location The location of the item to obtain children for
@@ -284,7 +290,7 @@ eclipse.FluxFileSystem= (function() {
 		loadWorkspaces: function() {
 			return this.loadWorkspace();
 		},
-		
+
 		_createOrionProject: function(data) {
 			var file, name, lastIndexOfSlash, isFile, childrenDepthMap = {}, j, depth;
 			var result = {
@@ -292,7 +298,7 @@ eclipse.FluxFileSystem= (function() {
 					ReadOnly: false,
 					SymLink: false,
 					Hidden: false,
-					Archive: false,
+					Archive: false
 				},
 				Name: data.project,
 				Directory: true,
@@ -302,7 +308,7 @@ eclipse.FluxFileSystem= (function() {
 				Children: [],
 				ChildrenLocation: data.project + '/',
 				_childrenCache: {},
-				Id: data.project,
+				Id: data.project
 			};
 			var entries = [ result ];
 
@@ -326,14 +332,14 @@ eclipse.FluxFileSystem= (function() {
 						ReadOnly: false,
 						SymLink: false,
 						Hidden: false,
-						Archive: false,
+						Archive: false
 					},
 					Name: name,
 					Directory: !isFile,
 					ETag: file.hash,
 					LocalTimeStamp: file.timestamp,
 					Location: file.path,
-					Id: name,
+					Id: name
 //					ContentType: "text/plain",
 				});
 			}
@@ -356,23 +362,23 @@ eclipse.FluxFileSystem= (function() {
 			}
 			return result;
 		},
-		
+
 		_getProject: function(projectName) {
-			var projectRequest = new orion.Deferred();
+			var projectRequest = new Deferred();
 			var self = this;
 			this.sendMessage(
-				"getProjectRequest", 
+				"getProjectRequest",
 				{
-					'username' : user, 
+					'username' : user,
 					'project': projectName
 				}, function(data) {
 					var project = self._createOrionProject(data);
 					projectRequest.resolve(project);
 				}
-			);			
+			);
 			return projectRequest;
 		},
-		
+
 		/**
 		 * Loads the workspace with the given id and sets it to be the current
 		 * workspace for the IDE. The workspace is created if none already exists.
@@ -382,23 +388,23 @@ eclipse.FluxFileSystem= (function() {
 		loadWorkspace: function(location) {
 			return this.getWorkspace(location);
 		},
-		
+
 		getWorkspace: function(location) {
-			var deferred = new orion.Deferred();
-			
+			var deferred = new Deferred();
+
 			if (this._workspace) {
 				deferred.resolve(this._workspace);
 				return deferred;
 			}
-			
+
 			var self = this;
-			
+
 			var workspace = {
 				Attributes: {
 					ReadOnly: false,
 					SymLink: false,
 					Hidden: false,
-					Archive: false,
+					Archive: false
 				},
 				Name: "",
 				Directory: true,
@@ -409,7 +415,7 @@ eclipse.FluxFileSystem= (function() {
 				Children: [],
 				_childrenCache: []
 			};
-					
+
 			var projectsResponseHandler = function(data) {
 				var requests = [];
 				if (data.projects) {
@@ -419,7 +425,7 @@ eclipse.FluxFileSystem= (function() {
 					}
 				}
 				if (requests.length > 0) {
-					orion.Deferred.all(requests).then(function(results) {
+					Deferred.all(requests).then(function(results) {
 						workspace.Children = results;
 						for (var i in results) {
 							results[i].Parents = [];
@@ -432,21 +438,21 @@ eclipse.FluxFileSystem= (function() {
 					});
 				} else {
 					self._workspace = workspace;
-					deferred.resolve(self._workspace);					
+					deferred.resolve(self._workspace);
 				}
 			};
-				
+
 			this.socket.once("getProjectsResponse", projectsResponseHandler);
-			
+
 			this.sendMessage("getProjectsRequest", { 'username' : user });
-			
+
 			return deferred;
 		},
-		
+
 		_findFromLocation: function(location) {
 			var self = this;
 			return this.getWorkspace().then(function(workspace) {
-				var result = workspace;	
+				var result = workspace;
 				var relativeLocation = location.replace(self._rootLocation, "");
 				if (relativeLocation) {
 					var path = relativeLocation.split('/');
@@ -457,14 +463,14 @@ eclipse.FluxFileSystem= (function() {
 				return result;
 			});
 		},
-		
+
 		createResource: function(location, type, contents) {
-			var deferred = new orion.Deferred();
+			var deferred = new Deferred();
 			var normalizedPath = this._normalizeLocation(location);
 			var hash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
 			var timestamp = Date.now();
 			var self = this;
-			
+
 			this._findFromLocation(location).then(function(resource) {
 				if (resource) {
 					deferred.reject("The resource \'" + location + "\' already exists!");
@@ -477,7 +483,7 @@ eclipse.FluxFileSystem= (function() {
 						'type': type,
 						'timestamp' : timestamp
 					};
-								
+
 					saves[location] = {
 						'username' : user,
 						'project' : normalizedPath.project,
@@ -488,15 +494,15 @@ eclipse.FluxFileSystem= (function() {
 						'content' : contents ? contents : "",
 						'deferred' : deferred
 					};
-						
-					self.sendMessage("resourceCreated", data);								
+
+					self.sendMessage("resourceCreated", data);
 				}
-				
+
 			});
-			
+
 			return deferred;
 		},
-		
+
 		/**
 		 * Adds a project to a workspace.
 		 * @param {String} url The workspace location
@@ -506,7 +512,7 @@ eclipse.FluxFileSystem= (function() {
 		 */
 		createProject: function(url, projectName, serverPath, create) {
 			var self = this;
-			var deferred = new orion.Deferred();
+			var deferred = new Deferred();
 			this.getWorkspace(url).then(function(workspace) {
 				if (workspace._childrenCache && workspace._childrenCache[projectName]) {
 					deferred.reject("Project with name \'" + projectName + "\' already exists!");
@@ -519,7 +525,7 @@ eclipse.FluxFileSystem= (function() {
 							ReadOnly: false,
 							SymLink: false,
 							Hidden: false,
-							Archive: false,
+							Archive: false
 						},
 						Name: projectName,
 						Directory: true,
@@ -530,7 +536,7 @@ eclipse.FluxFileSystem= (function() {
 						ChildrenLocation: location + '/',
 						Parents: [ workspace ],
 						_childrenCache: {},
-						Id: projectName,
+						Id: projectName
 					};
 					if (!workspace._childrenCache) {
 						workspace._childrenCache = {};
@@ -549,7 +555,7 @@ eclipse.FluxFileSystem= (function() {
 			});
 			return deferred;
 		},
-		
+
 		/**
 		 * Creates a folder.
 		 * @param {String} parentLocation The location of the parent folder
@@ -559,7 +565,7 @@ eclipse.FluxFileSystem= (function() {
 		createFolder: function(parentLocation, folderName) {
 			return this.createResource(parentLocation + '/' + folderName, 'folder');
 		},
-		
+
 		/**
 		 * Create a new file in a specified location. Returns a deferred that will provide
 		 * The new file object when ready.
@@ -568,9 +574,9 @@ eclipse.FluxFileSystem= (function() {
 		 * @return {Object} A deferred that will provide the new file object
 		 */
 		createFile: function(parentLocation, fileName) {
-			return this.createResource(parentLocation + '/' + fileName, 'file');			
+			return this.createResource(parentLocation + '/' + fileName, 'file');
 		},
-		
+
 		/**
 		 * Deletes a file, directory, or project.
 		 * @param {String} location The location of the file or directory to delete.
@@ -614,9 +620,9 @@ eclipse.FluxFileSystem= (function() {
 		 * @param {String} [name] The name of the destination file or directory in the case of a rename
 		 */
 		copyFile: function(sourceLocation, targetLocation, name) {
-			throw "Copy file not supported";	
+			throw "Copy file not supported";
 		},
-		
+
 		_createOrionResource: function(data) {
 			var resourceUrl = data.resource;
 			if (resourceUrl) {
@@ -631,14 +637,14 @@ eclipse.FluxFileSystem= (function() {
 					ReadOnly: false,
 					SymLink: false,
 					Hidden: false,
-					Archive: false,
+					Archive: false
 				},
 				Name: name,
 				Directory: !isFile,
 				ETag: data.hash,
 				LocalTimeStamp: data.timestamp,
 				Location: resourceUrl,
-				ContentType: "text/plain",
+				ContentType: "text/plain"
 			};
 			entry.Location = this._rootLocation + entry.Location;
 			if (entry.Directory) {
@@ -646,33 +652,33 @@ eclipse.FluxFileSystem= (function() {
 			}
 			return entry;
 		},
-		
+
 		/**
 		 * Returns the contents or metadata of the file at the given location.
 		 *
 		 * @param {String} location The location of the file to get contents for
-		 * @param {Boolean} [isMetadata] If defined and true, returns the file metadata, 
+		 * @param {Boolean} [isMetadata] If defined and true, returns the file metadata,
 		 *   otherwise file contents are returned
 		 * @return A deferred that will be provided with the contents or metadata when available
 		 */
-		read: function(location, isMetadata) {			
+		read: function(location, isMetadata) {
 			if (isMetadata) {
 				return this._findFromLocation(location);
 			}
-			
-			var normalizedPath = this._normalizeLocation(location);			
-			var deferred = new orion.Deferred();
+
+			var normalizedPath = this._normalizeLocation(location);
+			var deferred = new Deferred();
 			this.sendMessage(
 				"getResourceRequest",
 				{
-					'username' : user, 
+					'username' : user,
 					'project' : normalizedPath.project,
-					'resource' : normalizedPath.path,
+					'resource' : normalizedPath.path
 				}, function(data) {
 					deferred.resolve(data.content);
-				} 
+				}
 			);
-			
+
 			return deferred;
 		},
 		/**
@@ -680,15 +686,15 @@ eclipse.FluxFileSystem= (function() {
 		 *
 		 * @param {String} location The location of the file to set contents for
 		 * @param {String|Object} contents The content string, or metadata object to write
-		 * @param {String|Object} args Additional arguments used during write operation (i.e. ETag) 
+		 * @param {String|Object} args Additional arguments used during write operation (i.e. ETag)
 		 * @return A deferred for chaining events after the write completes with new metadata object
-		 */		
+		 */
 		write: function(location, contents, args) {
-			var deferred = new orion.Deferred();
+			var deferred = new Deferred();
 			var normalizedPath = this._normalizeLocation(location);
 			var hash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
 			var timestamp = Date.now();
-			
+
 			saves[location] = {
 				'username' : user,
 				'project' : normalizedPath.project,
@@ -698,7 +704,7 @@ eclipse.FluxFileSystem= (function() {
 				'content' : contents,
 				'deferred' : deferred
 			};
-			
+
 			this.sendMessage("resourceChanged", {
 				'username' : user,
 				'project' : normalizedPath.project,
@@ -706,7 +712,7 @@ eclipse.FluxFileSystem= (function() {
 				'hash' : hash,
 				'timestamp' : timestamp
 			});
-			
+
 			return deferred;
 		},
 		/**
@@ -715,7 +721,7 @@ eclipse.FluxFileSystem= (function() {
 		 * @param {String} targetLocation The location of the folder to import into
 		 * @param {Object} options An object specifying the import parameters
 		 * @return A deferred for chaining events after the import completes
-		 */		
+		 */
 		remoteImport: function(targetLocation, options) {
 			throw "Remote Import not supported";
 		},
@@ -725,7 +731,7 @@ eclipse.FluxFileSystem= (function() {
 		 * @param {String} sourceLocation The location of the folder to export from
 		 * @param {Object} options An object specifying the export parameters
 		 * @return A deferred for chaining events after the export completes
-		 */		
+		 */
 		remoteExport: function(sourceLocation, options) {
 			throw "Remote Export not supported";
 		}
@@ -733,3 +739,7 @@ eclipse.FluxFileSystem= (function() {
 
 	return FluxFileSystem;
 }());
+
+return FluxFileSystem;
+
+}); //define

@@ -3,79 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>FluxPlugin</title>
-<script src="orion/Deferred.js"></script>
-<script src="orion/plugin.js"></script>
-<script src="lib/socket.io.js"></script>
-<script src="lib/sha1.js"></script>
-<script src="lib/require.js"></script>
-<script src="FluxEditor.js"></script>
-<script src="FluxFileSystem.js"></script>
-<script src="OpenDeclaration.js"></script>
-	<script type="text/javascript">
-	/*global window console eclipse orion*/
-	
-		window.onload = function() {
-			var user = 'defaultuser'; //TODO: can't refer user anywhere in this code!
-			var host = location.hostname;
-			var port = location.port || 80;
-			var base = "flux://" + host + ":" + port + "/";
-			
-			var contentTypes = ["application/javascript", "text/plain" ];
-			
-			var headers = {
-				'Name' : "Flux",
-				'Version' : "0.1",
-				'Description' : "Flux Integration",
-				'top' : base,
-				'pattern' : base,
-				'login' : 'http://'+host+':'+port+'/login.html'
-			};
-						
-			var provider = new orion.PluginProvider(headers);			
-
-			var fileService = new eclipse.FluxFileSystem(host, port, user, base);
-			provider.registerService("orion.core.file", fileService, headers);
-			
-			var editorService = new eclipse.FluxEditor(host, port, user, base);
-			
-			provider.registerService([
-					"orion.edit.validator",
-					"orion.edit.live"
-				],
-				editorService,
-				{
-					'pattern' : base + ".*"
-				}
-			);
-			provider.registerService([
-					"orion.edit.model",
-					"orion.edit.contentAssist"
-				],
-				editorService,
-				{
-					'contentType' : contentTypes
-				}
-			);
-			
-			var openDeclaration = new flux.OpenDeclaration(host, port, user, base);
-			provider.registerService("orion.edit.command",
-				openDeclaration,
-				{
-					'name': "Navigate to Definition",
-					'id': "org.eclipse.flux.navigateToDefintion",
-					/* 'img': "", */
-					'key': [ 114 ], /* F3 key */
-					/* 'validationProperties': [], */
-					'contentType': [ "text/x-java-source" ],
-					/* 'nls' : "", */
-					/* 'nameKey' : "", */
-					/* 'tooltipKey': "" */
-				}
-			);
-			
-			provider.connect();
-		};
-	</script>
+  
+  <script data-main="flux.js" src="lib/require.js"></script>
 </head>
 <body></body>
 </html>

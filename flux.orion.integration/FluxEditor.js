@@ -1,20 +1,25 @@
 /*******************************************************************************
  * @license
  * Copyright (c) 2014 Pivotal Software Inc. and others.
- * All rights reserved. This program and the accompanying materials are made 
- * available under the terms of the Eclipse Public License v1.0 
- * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
- * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
- * 
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html).
+ *
  * Contributors: Pivotal Software Inc. - initial API and implementation
  ******************************************************************************/
 
-/*global window eclipse:true orion FileReader Blob*/
+
+
+/*global define CryptoJS */
 /*jslint forin:true devel:true*/
 
+define(function (require) {
 
-/** @namespace The global container for eclipse APIs. */
-var eclipse = eclipse || {};
+require('lib/sha1'); //Not AMD defines 'CryptoJS global variable.
+
+var io = require('lib/socket.io');
+var Deferred = require('orion/Deferred');
 
 var callbacksCache = {};
 var user;
@@ -46,10 +51,10 @@ function createResourceMetadata(data) {
 }
 
 /**
- * An implementation of the file service that understands the Orion 
+ * An implementation of the file service that understands the Orion
  * server file API. This implementation is suitable for invocation by a remote plugin.
  */
-eclipse.FluxEditor = (function() {
+var FluxEditor = (function() {
 	/**
 	 * @class Provides operations on files, folders, and projects.
 	 * @name FileServiceImpl
@@ -61,11 +66,11 @@ eclipse.FluxEditor = (function() {
 		this.socket = io.connect(host, {
 			port: port
 		});
-		
+
 		this._resourceUrl = null;
-		
+
 		var self = this;
-		
+
 		this.socket.on('connect', function() {
 			self.socket.emit('connectToChannel', {
 				'channel' : user
@@ -76,26 +81,26 @@ eclipse.FluxEditor = (function() {
 				}
 			});
 		});
-		
+
 		this.socket.on('getResourceResponse', function(data) {
-			self._handleMessage(data);				
+			self._handleMessage(data);
 		});
-		
+
 		this.socket.on('getMetadataResponse', function(data) {
-			self._handleMessage(data);				
+			self._handleMessage(data);
 		});
-		
+
 		this.socket.on('contentassistresponse', function(data) {
-			self._handleMessage(data);				
+			self._handleMessage(data);
 		});
 
 		this.socket.on('liveResourceStartedResponse', function(data) {
 			self._getResourceData().then(function(resourceMetadata) {
-				if (data.username === resourceMetadata.username 
-					&& data.project === resourceMetadata.project 
-					&& data.resource === resourceMetadata.resource 
+				if (data.username === resourceMetadata.username
+					&& data.project === resourceMetadata.project
+					&& data.resource === resourceMetadata.resource
 					&& data.callback_id !== undefined
-					&& resourceMetadata.timestamp === data.savePointTimestamp 
+					&& resourceMetadata.timestamp === data.savePointTimestamp
 					&& resourceMetadata.hash === data.savePointHash) {
 					resourceMetadata._queueMuteRequest();
 					self._editorContext.setText(data.liveContent).then(function() {
@@ -108,21 +113,21 @@ eclipse.FluxEditor = (function() {
 				console.log(err);
 			});
 		});
-	
+
 		this.socket.on('liveResourceStarted', function(data) {
-			orion.Deferred.all([self._getResourceData(), self._editorContext.getText()]).then(function(results) {
+			Deferred.all([self._getResourceData(), self._editorContext.getText()]).then(function(results) {
 				var resourceMetadata = results[0];
 				var contents = results[1];
 				if (resourceMetadata
 					&& data.username === resourceMetadata.username
-					&& data.project === resourceMetadata.project 
-					&& data.resource === resourceMetadata.resource 
+					&& data.project === resourceMetadata.project
+					&& data.resource === resourceMetadata.resource
 					&& data.callback_id !== undefined
 					&& data.hash === resourceMetadata.hash
 					&& data.timestamp === resourceMetadata.timestamp) {
-						
+
 					var livehash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
-					
+
 					if (livehash !== data.hash) {
 						self.sendMessage('liveResourceStartedResponse', {
 							'callback_id'        : data.callback_id,
@@ -134,23 +139,23 @@ eclipse.FluxEditor = (function() {
 							'savePointHash'      : resourceMetadata.hash,
 							'liveContent'        : contents
 						});
-					}		
+					}
 				}
 			});
 		});
-	
+
 		this.socket.on('getLiveResourcesRequest', function(data) {
 			self._getResourceData().then(function(resourceMetadata) {
 				if ((!data.projectRegEx || new RegExp(data.projectRegEx).test(resourceMetadata.project))
 					&& (!data.resourceRegEx || new RegExp(data.resourceRegEx).test(resourceMetadata.resource))) {
-						
+
 					var liveEditUnits = {};
 					liveEditUnits[resourceMetadata.project] = [{
 						'resource'           : resourceMetadata.resource,
 						'savePointTimestamp' : resourceMetadata.hash,
 						'savePointHash'      : resourceMetadata.timestamp
 					}];
-					
+
 					self.sendMessage('getLiveResourcesResponse', {
 						'callback_id'        : data.callback_id,
 						'requestSenderID'    : data.requestSenderID,
@@ -160,7 +165,7 @@ eclipse.FluxEditor = (function() {
 				}
 			});
 		});
-		
+
 		this.socket.on('resourceStored', function(data) {
 			var location = self._rootLocation + data.project + '/' + data.resource;
 			if (self._resourceUrl === location) {
@@ -168,16 +173,16 @@ eclipse.FluxEditor = (function() {
 				self._editorContext.markClean();
 			}
 		});
-		
+
 		this.socket.on('liveResourceChanged', function(data) {
 			self._getResourceData().then(function(resourceMetadata) {
-				if (data.username === resourceMetadata.username 
-					&& data.project === resourceMetadata.project 
+				if (data.username === resourceMetadata.username
+					&& data.project === resourceMetadata.project
 					&& data.resource === resourceMetadata.resource
 					&& self._editorContext) {
-						
+
 					var text = data.addedCharacters !== undefined ? data.addedCharacters : "";
-					
+
 					resourceMetadata._queueMuteRequest();
 					self._editorContext.setText(text, data.offset, data.offset + data.removedCharCount).then(function() {
 						resourceMetadata._dequeueMuteRequest();
@@ -187,21 +192,21 @@ eclipse.FluxEditor = (function() {
 				}
 			});
 		});
-		
+
 		this.socket.on('liveMetadataChanged', function (data) {
 			self._getResourceData().then(function(resourceMetadata) {
-				if (resourceMetadata.username === data.username 
-					&& resourceMetadata.project === data.project 
+				if (resourceMetadata.username === data.username
+					&& resourceMetadata.project === data.project
 					&& resourceMetadata.resource === data.resource
 					&& data.problems !== undefined) {
-					
+
 					resourceMetadata.liveMarkers = [];
 					var i;
 					for(i = 0; i < data.problems.length; i++) {
 //						var lineOffset = editor.getModel().getLineStart(data.problems[i].line - 1);
-		
+
 //						console.log(lineOffset);
-		
+
 						resourceMetadata.liveMarkers[i] = {
 							'description' : data.problems[i].description,
 //							'line' : data.problems[i].line,
@@ -215,11 +220,11 @@ eclipse.FluxEditor = (function() {
 					}
 				}
 				self._handleMessage(data);
-			});			
+			});
 		});
-		
+
 	}
-	
+
 
 	FluxEditor.prototype = /**@lends eclipse.FluxEditor.prototype */
 	{
@@ -227,7 +232,7 @@ eclipse.FluxEditor = (function() {
 			if (!location) {
 				location = "/";
 			} else {
-				location = location.replace(this._rootLocation, "");				
+				location = location.replace(this._rootLocation, "");
 			}
 			var indexOfDelimiter = location.indexOf('/');
 			var project = indexOfDelimiter < 0 ? location : location.substr(0, indexOfDelimiter);
@@ -267,13 +272,13 @@ eclipse.FluxEditor = (function() {
 			}
 			return false;
 		},
-		
+
 		_isFluxResource: function(resourceUrl) {
 			return resourceUrl && resourceUrl.indexOf(this._rootLocation) === 0;
 		},
-		
+
 		_getResourceData: function() {
-			var request = new orion.Deferred();
+			var request = new Deferred();
 			var self = this;
 			if (self._resourceMetadata) {
 				request.resolve(self._resourceMetadata);
@@ -282,7 +287,7 @@ eclipse.FluxEditor = (function() {
 				this.sendMessage("getResourceRequest", {
 					'username' : user,
 					'project' : normalizedLocation.project,
-					'resource' : normalizedLocation.path,
+					'resource' : normalizedLocation.path
 				}, function(data) {
 					var location = self._rootLocation + data.project + '/' + data.resource;
 					if (self._resourceUrl === location) {
@@ -295,7 +300,7 @@ eclipse.FluxEditor = (function() {
 			}
 			return request;
 		},
-		
+
 		_setEditorInput: function(resourceUrl, editorContext) {
 			var self = this;
 			if (this._resourceUrl !== resourceUrl) {
@@ -307,9 +312,9 @@ eclipse.FluxEditor = (function() {
 				}
 				if (this._isFluxResource(resourceUrl)) {
 					this._resourceUrl = resourceUrl;
-					editSession = new orion.Deferred();
+					editSession = new Deferred();
 					this._editorContext = editorContext;
-					
+
 					this._getResourceData().then(function(resourceMetadata) {
 						self.sendMessage('liveResourceStarted', {
 							'callback_id' : 0,
@@ -318,13 +323,13 @@ eclipse.FluxEditor = (function() {
 							'resource' : resourceMetadata.resource,
 							'hash' : resourceMetadata.hash,
 							'timestamp' : resourceMetadata.timestamp
-						});	
-					});				
+						});
+					});
 				}
 			}
 			return editSession;
 		},
-		
+
 		onModelChanging: function(evt) {
 			console.log("Editor changing: " + JSON.stringify(evt));
 			var self = this;
@@ -336,16 +341,16 @@ eclipse.FluxEditor = (function() {
 						'resource' : resourceMetadata.resource,
 						'offset' : evt.start,
 						'removedCharCount' : evt.removedCharCount,
-						'addedCharacters' : evt.text,
+						'addedCharacters' : evt.text
 					};
-			
+
 					self.sendMessage('liveResourceChanged', changeData);
 				}
 			});
 		},
-		
+
 		computeContentAssist: function(editorContext, options) {
-			var request = new orion.Deferred();
+			var request = new Deferred();
 			var self = this;
 			this._getResourceData().then(function(resourceMetadata) {
 				self.sendMessage("contentassistrequest", {
@@ -361,10 +366,10 @@ eclipse.FluxEditor = (function() {
 						data.proposals.forEach(function(proposal) {
 							var name;
 							var description;
-							if (proposal.description 
-								&& proposal.description.segments 
+							if (proposal.description
+								&& proposal.description.segments
 								&& (Array.isArray && Array.isArray(proposal.description.segments) || proposal.description.segments instanceof Array)) {
-								
+
 								if (proposal.description.segments.length >= 2) {
 									name = proposal.description.segments[0].value;
 									description = proposal.description.segments[1].value;
@@ -396,13 +401,13 @@ eclipse.FluxEditor = (function() {
 			});
 			return request;
 		},
-		
+
 		computeProblems: function(editorContext, options) {
 			console.log("Validator (Problems): " + JSON.stringify(options));
 			var self = this;
-			var problemsRequest = new orion.Deferred();
+			var problemsRequest = new Deferred();
 //			this._setEditorInput(options.title, editorContext);
-				
+
 			this._getResourceData().then(function(resourceMetadata) {
 				if (self._resourceUrl === options.title) {
 					self.sendMessage("getMetadataRequest", {
@@ -413,9 +418,9 @@ eclipse.FluxEditor = (function() {
 						if (data.username === resourceMetadata.username
 							&& data.project === resourceMetadata.project
 							&& data.resource === resourceMetadata.resource) {
-								
+
 							resourceMetadata.markers = [];
-							for(var i = 0; i < data.metadata.length; i++) {				
+							for(var i = 0; i < data.metadata.length; i++) {
 								resourceMetadata.markers[i] = {
 									'description' : data.metadata[i].description,
 									'severity' : data.metadata[i].severity,
@@ -428,22 +433,26 @@ eclipse.FluxEditor = (function() {
 					});
 				} else {
 					problemsRequest.reject();
-				}	
+				}
 			});
 
 			return problemsRequest;
 		},
-		
+
 		startEdit: function(editorContext, options) {
 			var url = options ? options.title : null;
 			return this._setEditorInput(url, editorContext);
 		},
-		
+
 		endEdit: function(resourceUrl) {
 			this._setEditorInput(null, null);
-		},
-		
+		}
+
 	};
 
 	return FluxEditor;
 }());
+
+return FluxEditor;
+
+}); //define

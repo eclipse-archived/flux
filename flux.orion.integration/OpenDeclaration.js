@@ -1,20 +1,21 @@
 /*******************************************************************************
  * @license
  * Copyright (c) 2014 Pivotal Software Inc. and others.
- * All rights reserved. This program and the accompanying materials are made 
- * available under the terms of the Eclipse Public License v1.0 
- * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
- * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
- * 
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html).
+ *
  * Contributors: Pivotal Software Inc. - initial API and implementation
  ******************************************************************************/
 
-/*global window eclipse:true orion FileReader Blob*/
-/*jslint forin:true devel:true*/
+/*global define window console */
 
+define(function (require) {
 
-/** @namespace The global container for Flux APIs. */
-var flux = flux || {};
+var io = require('lib/socket.io');
+var Deferred = require('orion/Deferred');
+
 var callbacksCache = {};
 var user;
 
@@ -26,7 +27,7 @@ function generateCallbackId() {
 /**
  * An implementation of the navigate to definition action
  */
-flux.OpenDeclaration = (function() {
+var OpenDeclaration = (function() {
 	/**
 	 * @class Provides operations on files, folders, and projects.
 	 * @name FileServiceImpl
@@ -38,11 +39,11 @@ flux.OpenDeclaration = (function() {
 		this.socket = io.connect(host, {
 			port: port
 		});
-		
+
 		this._resourceUrl = null;
-		
+
 		var self = this;
-		
+
 		this.socket.on('connect', function() {
 //			while (user && !self._connectedToChannel) {
 				self.socket.emit('connectToChannel', {
@@ -55,13 +56,13 @@ flux.OpenDeclaration = (function() {
 				});
 //			}
 		});
-		
+
 		this.socket.on('navigationresponse', function(data) {
-			self._handleMessage(data);				
+			self._handleMessage(data);
 		});
-				
+
 	}
-	
+
 
 	OpenDeclaration.prototype = /**@lends flux.NavigateAction.prototype */
 	{
@@ -69,7 +70,7 @@ flux.OpenDeclaration = (function() {
 			if (!location) {
 				location = "/";
 			} else {
-				location = location.replace(this._rootLocation, "");				
+				location = location.replace(this._rootLocation, "");
 			}
 			var indexOfDelimiter = location.indexOf('/');
 			var project = indexOfDelimiter < 0 ? location : location.substr(0, indexOfDelimiter);
@@ -109,14 +110,14 @@ flux.OpenDeclaration = (function() {
 			}
 			return false;
 		},
-		
+
 		_isFluxResource: function(resourceUrl) {
 			return resourceUrl && resourceUrl.indexOf(this._rootLocation) === 0;
 		},
-		
+
 		execute: function(editorContext, options) {
 			var self = this;
-			var request = new orion.Deferred();
+			var request = new Deferred();
 			var normalizedLocation = self._normalizeLocation(options.input);
 			editorContext.getSelection().then(function(selection) {
 				self.sendMessage("navigationrequest", {
@@ -129,10 +130,10 @@ flux.OpenDeclaration = (function() {
 					if (data.navigation) {
 						if (data.navigation.project === data.project
 							&& data.navigation.resource === data.resource) {
-							
+
 							if (data.navigation.offset) {
-								editorContext.setSelection(data.navigation.offset, 
-									data.navigation.offset + (data.navigation.length ? data.navigation.length : 0), 
+								editorContext.setSelection(data.navigation.offset,
+									data.navigation.offset + (data.navigation.length ? data.navigation.length : 0),
 									true).then(function() {
 										request.resolve();
 								});
@@ -147,9 +148,13 @@ flux.OpenDeclaration = (function() {
 				});
 			});
 			return request;
-		},
-				
+		}
+
 	};
 
 	return OpenDeclaration;
 }());
+
+return OpenDeclaration;
+
+}); // define
