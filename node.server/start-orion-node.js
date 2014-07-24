@@ -11,96 +11,97 @@
 *******************************************************************************/
 
 /*global require console module exports __dirname*/
-// exports a function to create and start orion-node instance on some port
-module.exports = function (options) {
 
-	var port = options.port || 3001;
-	var fluxPlugin = options.fluxPlugin;
+var isDir = require('./util/fileutil').isDir;
+var pathResolve = require('path').resolve;
 
-	var pathResolve = require('path').resolve;
-	// TODO: should use require('orion') and declare dependency via package.json
-	//   but for now we need to use Alex's clone of orion.client.
-	var createOrion = require('../../orion.client/modules/orionode');
-	var fsStat= require('fs').statSync;
-	var fsMkdir= require('fs').mkdirSync;
-	var express = require('express');
+// is orion clone where we expect it?
+var haveOrionClone = isDir(pathResolve(__dirname, '../../orion.client'));
 
-	console.log("Orion module loaded: ", createOrion);
+if (haveOrionClone) {
+	// exports a function to create and start orion-node instance on some port
+	module.exports = function (options) {
 
-	var workspaceDir = pathResolve(__dirname, ".workspace");
+		var port = options.port || 3001;
+		var fluxPlugin = options.fluxPlugin;
 
-	//make sure the workspaceDir exists.
-	function isDir(p) {
-		try {
-			return fsStat(p).isDirectory();
-		} catch (e) {
-			return false;
+		// TODO: should use require('orion') and declare dependency via package.json
+		//   but for now we need to use Alex's clone of orion.client.
+		var createOrion = require('../../orion.client/modules/orionode');
+		var fsStat= require('fs').statSync;
+		var fsMkdir= require('fs').mkdirSync;
+		var express = require('express');
+
+		var workspaceDir = pathResolve(__dirname, ".workspace");
+
+		if (!isDir(workspaceDir)) {
+			fsMkdir(workspaceDir);
 		}
-	}
 
-	if (!isDir(workspaceDir)) {
-		fsMkdir(workspaceDir);
-	}
-
-	// set up all parameters for startServer
-	var params = {
-		port: port,
-		workspaceDir: workspaceDir,
-		passwordFile: null,
-		password: null,
-		configParams: {},
-		dev: null,
-		log: null
-	};
-
-	var orion = createOrion(params);
-
-	var app = express();
-	app.use(app.router); //our router first so we can override stuff from orion-node
-
-	if (fluxPlugin) {
-		var defaultPlugins = {
-				//Copied from defaults.pref in orion-node
-				"/plugins":{
-					"plugins/fileClientPlugin.html":true,
-					"plugins/jslintPlugin.html":true,
-					"edit/content/imageViewerPlugin.html":true,
-					"edit/content/jsonEditorPlugin.html":true,
-					"plugins/webEditingPlugin.html":true,
-					"plugins/languages/arduino/arduinoPlugin.html":true,
-					"plugins/languages/c/cPlugin.html":true,
-					"plugins/languages/cpp/cppPlugin.html":true,
-					"plugins/languages/java/javaPlugin.html":true,
-					"plugins/languages/lua/luaPlugin.html":true,
-					"plugins/languages/php/phpPlugin.html":true,
-					"plugins/languages/python/pythonPlugin.html":true,
-					"plugins/languages/ruby/rubyPlugin.html":true,
-					"plugins/languages/xml/xmlPlugin.html":true,
-					"plugins/languages/xquery/xqueryPlugin.html":true,
-					"plugins/languages/yaml/yamlPlugin.html":true,
-					"plugins/pageLinksPlugin.html":true,
-					"webtools/plugins/webToolsPlugin.html":true,
-					"javascript/plugins/javascriptPlugin.html":true,
-					"shell/plugins/shellPagePlugin.html":true,
-					"plugins/nodePlugin.html":true,
-					"search/plugins/searchPagePlugin.html":true
-				},
-				"/settingsContainer":{
-					"categories":{
-						"showUserSettings":false,
-						"showGitSettings":false
-					}
-				}
+		// set up all parameters for startServer
+		var params = {
+			port: port,
+			workspaceDir: workspaceDir,
+			passwordFile: null,
+			password: null,
+			configParams: {},
+			dev: null,
+			log: null
 		};
-		defaultPlugins["/plugins"][fluxPlugin] = true;
-		defaultPlugins = JSON.stringify(defaultPlugins, null, "   ");
 
-		app.get("/defaults.pref", function (req, res) {
-			res.send(defaultPlugins);
-		});
-	}
+		var orion = createOrion(params);
 
-	app.use(orion);
-	app.listen(params.port);
-};
+		var app = express();
+		app.use(app.router); //our router first so we can override stuff from orion-node
 
+		if (fluxPlugin) {
+			var defaultPlugins = {
+					//Copied from defaults.pref in orion-node
+					"/plugins":{
+						"plugins/fileClientPlugin.html":true,
+						"plugins/jslintPlugin.html":true,
+						"edit/content/imageViewerPlugin.html":true,
+						"edit/content/jsonEditorPlugin.html":true,
+						"plugins/webEditingPlugin.html":true,
+						"plugins/languages/arduino/arduinoPlugin.html":true,
+						"plugins/languages/c/cPlugin.html":true,
+						"plugins/languages/cpp/cppPlugin.html":true,
+						"plugins/languages/java/javaPlugin.html":true,
+						"plugins/languages/lua/luaPlugin.html":true,
+						"plugins/languages/php/phpPlugin.html":true,
+						"plugins/languages/python/pythonPlugin.html":true,
+						"plugins/languages/ruby/rubyPlugin.html":true,
+						"plugins/languages/xml/xmlPlugin.html":true,
+						"plugins/languages/xquery/xqueryPlugin.html":true,
+						"plugins/languages/yaml/yamlPlugin.html":true,
+						"plugins/pageLinksPlugin.html":true,
+						"webtools/plugins/webToolsPlugin.html":true,
+						"javascript/plugins/javascriptPlugin.html":true,
+						"shell/plugins/shellPagePlugin.html":true,
+						// "plugins/nodePlugin.html":true, // doesn't work at the moment needs socket.io added to the server
+						"search/plugins/searchPagePlugin.html":true
+					},
+					"/settingsContainer":{
+						"categories":{
+							"showUserSettings":false,
+							"showGitSettings":false
+						}
+					}
+			};
+			//Add the flux plugin to these defaults.
+			defaultPlugins["/plugins"][fluxPlugin] = true;
+			defaultPlugins = JSON.stringify(defaultPlugins, null, "   ");
+
+			app.get("/defaults.pref", function (req, res) {
+				res.send(defaultPlugins);
+			});
+		}
+
+		app.use(orion);
+		app.listen(params.port);
+	};
+} else { // no orion clone
+	module.exports = function () {
+		console.log("Couldn't find clone of orion.client repo. \nNot starting orion node!");
+	};
+}
