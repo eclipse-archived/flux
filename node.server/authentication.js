@@ -44,6 +44,11 @@ var session = express.session({
 
 var URIjs = require('URIjs');
 
+//A mock user object used instead of a 'real' user in authentication disabled mode
+var defaultUser = {
+	username: 'defaultuser'
+};
+
 /**
  * socket.io handshake handler that authenticates connection based on express session
  * cookie. This method is used to implicitly authenticate connections estabilshed from
@@ -382,3 +387,4 @@ exports.checkChannelJoin = isEnabled ? checkChannelJoin : dummyCheck;
 exports.SUPER_USER = SUPER_USER;
 exports.isEnabled = isEnabled;
 exports.checkMessageSend = isEnabled ? checkMessageSend : dummyCheck;
+exports.defaultUser = defaultUser;

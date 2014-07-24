@@ -46,14 +46,14 @@ app.use("/client", express['static'](__dirname + '/web-editor'));
 app.use("/orion-plugin",  express['static'](pathResolve(__dirname, '../flux.orion.integration')));
 app.use("/", express['static'](pathResolve(__dirname, 'flux-static')));
 
-if (ENABLE_AUTH) {
-	app.get('/auth/github', passport.authenticate('github'));
-}
-
 function redirectHome(req, res) {
 	var target = URI(homepage).query({user: userName(req)}).toString();
 	console.log('redirecting: '+target);
 	res.redirect(target);
+}
+
+if (ENABLE_AUTH) {
+	app.get('/auth/github', passport.authenticate('github'));
 }
 
 if (ENABLE_AUTH) {
@@ -75,6 +75,23 @@ function userName(req) {
 }
 
 app.get("/", redirectHome);
+
+app.get("/user",
+	function (req, res) {
+		var authUser = req.user;
+		if (!ENABLE_AUTH) {
+			authUser = authentication.defaultUser;
+		}
+		if (authUser) {
+			res.set('Content-Type', 'application/json');
+			res.send(JSON.stringify(authUser));
+		} else {
+			res.status(404);
+			res.set('Content-Type', 'application/json');
+			res.send(JSON.stringify({error: "Not logged in"}));
+		}
+	}
+);
 
 ////////////////////////////////////////////////////////
 
