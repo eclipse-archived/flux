@@ -36,13 +36,11 @@ Orion's **orion.edit.validator** plug-in extension has been used for that. The m
  
 ## Running the prototype
 
-Pre-conditions: Flux node server and eclipse application are up and running
+Pre-conditions: eclipse application up and running
 	
 1. Check out Orion Client code from GitHub from the forked repository https://github.com/BoykoAlex/orion.client 
-2. Launch Orion Node JS application from _<Orion Client folder>/modules/orionode_ folder by executing _"npm install"_ and then _"npm start"_ commands
-3. Open localhost:8081 in the browser (your locally launched Orion)
-4. Navigate to Settings -> Plugins, (http://localhost:8081/settings/settings.html#,category=plugins)
-5. Click on Install (top-right corner of the list of installed plugins)
-6. Enter plugin URL http://localhost:3000/orion-plugin/flux.html in the popped up web widget and click submit.
+2. Make sure the clone of this repo is placed alongside the 'flux' repo (i.e. a sibling in the file system).
+3. Start flux as usual (i.e. 'npm start' from the 'node.server' directory).
+4. Open localhost:3001 in the browser (a locally launched Orion, started by the flux start script)
   
 
