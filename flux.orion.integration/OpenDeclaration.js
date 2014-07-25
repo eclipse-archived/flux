@@ -9,15 +9,15 @@
  * Contributors: Pivotal Software Inc. - initial API and implementation
  ******************************************************************************/
 
-/*global define window console */
+/*global define console */
 
 define(function (require) {
 
 var io = require('lib/socket.io');
 var Deferred = require('orion/Deferred');
+var authorize = require('authorize');
 
 var callbacksCache = {};
-var user;
 
 var counter = 1;
 function generateCallbackId() {
@@ -32,40 +32,40 @@ var OpenDeclaration = (function() {
 	 * @class Provides operations on files, folders, and projects.
 	 * @name FileServiceImpl
 	 */
-	function OpenDeclaration(host, port, userId, root) {
+	function OpenDeclaration(host, port, root) {
 		this._rootLocation = root;
-		user = userId;
-
-		this.socket = io.connect(host, {
-			port: port
-		});
-
-		this._resourceUrl = null;
-
-		var self = this;
-
-		this.socket.on('connect', function() {
-//			while (user && !self._connectedToChannel) {
-				self.socket.emit('connectToChannel', {
-					'channel' : user
-				}, function(answer) {
-					if (answer.connectedToChannel) {
-						self._connectedToChannel = true;
-						console.log("OpenDeclaration connected to FLUX channel: " + user);
-					}
-				});
-//			}
-		});
-
-		this.socket.on('navigationresponse', function(data) {
-			self._handleMessage(data);
-		});
-
+		this._host = host;
+		this._port = port;
 	}
-
 
 	OpenDeclaration.prototype = /**@lends flux.NavigateAction.prototype */
 	{
+		_createSocket: function (user) {
+			this.socket = io.connect(this._host, {
+				port: this._port
+			});
+
+			this._resourceUrl = null;
+
+			var self = this;
+
+			this.socket.on('connect', function() {
+	//			while (user && !self._connectedToChannel) {
+					self.socket.emit('connectToChannel', {
+						'channel' : user
+					}, function(answer) {
+						if (answer.connectedToChannel) {
+							self._connectedToChannel = true;
+							console.log("OpenDeclaration connected to FLUX channel: " + user);
+						}
+					});
+	//			}
+			});
+
+			this.socket.on('navigationresponse', function(data) {
+				self._handleMessage(data);
+			});
+		},
 		_normalizeLocation : function(location) {
 			if (!location) {
 				location = "/";
@@ -115,13 +115,13 @@ var OpenDeclaration = (function() {
 			return resourceUrl && resourceUrl.indexOf(this._rootLocation) === 0;
 		},
 
-		execute: function(editorContext, options) {
+		execute: authorize(function(editorContext, options) {
 			var self = this;
 			var request = new Deferred();
 			var normalizedLocation = self._normalizeLocation(options.input);
 			editorContext.getSelection().then(function(selection) {
 				self.sendMessage("navigationrequest", {
-					'username': user,
+					'username': self.user,
 					'project': normalizedLocation.project,
 					'resource': normalizedLocation.path,
 					'offset': selection.start,
@@ -148,7 +148,7 @@ var OpenDeclaration = (function() {
 				});
 			});
 			return request;
-		}
+		})
 
 	};
 

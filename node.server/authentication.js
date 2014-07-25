@@ -10,7 +10,7 @@
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
 
-/*global require*/
+/*global require exports console process*/
 
 //Authentication TODO list
 //  - use https connections

@@ -44,10 +44,10 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 
 	var provider = new PluginProvider(headers);
 
-	var fileService = new FluxFileSystem(host, port, base); //TODO: user removed
+	var fileService = new FluxFileSystem(host, port, base);
 	provider.registerService("orion.core.file", fileService, headers);
 
-	var editorService = new FluxEditor(host, port, base); //TODO: user removed
+	var editorService = new FluxEditor(host, port, base);
 
 	provider.registerService([
 			"orion.edit.validator",
@@ -67,22 +67,21 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 			'contentType' : contentTypes
 		}
 	);
-//TODO: fix these for authentication and put them back in:
-//	var openDeclaration = new OpenDeclaration(host, port, base); //TODO: user removed
-//	provider.registerService("orion.edit.command",
-//		openDeclaration,
-//		{
-//			'name': "Navigate to Definition",
-//			'id': "org.eclipse.flux.navigateToDefintion",
-//			/* 'img': "", */
-//			'key': [ 114 ], /* F3 key */
-//			/* 'validationProperties': [], */
-//			'contentType': [ "text/x-java-source" ]
-//			/* 'nls' : "", */
-//			/* 'nameKey' : "", */
-//			/* 'tooltipKey': "" */
-//		}
-//	);
+	var openDeclaration = new OpenDeclaration(host, port, base);
+	provider.registerService("orion.edit.command",
+		openDeclaration,
+		{
+			'name': "Navigate to Definition",
+			'id': "org.eclipse.flux.navigateToDefintion",
+			/* 'img': "", */
+			'key': [ 114 ], /* F3 key */
+			/* 'validationProperties': [], */
+			'contentType': [ "text/x-java-source" ]
+			/* 'nls' : "", */
+			/* 'nameKey' : "", */
+			/* 'tooltipKey': "" */
+		}
+	);
 
 	provider.connect();
 

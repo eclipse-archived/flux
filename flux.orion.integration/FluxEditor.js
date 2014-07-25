@@ -61,7 +61,6 @@ var FluxEditor = (function() {
 	 * @name FileServiceImpl
 	 */
 	function FluxEditor(host, port, root) {
-		var userId = 'defaultuser'; //TODO: fix this
 		this._rootLocation = root;
 		this._port = port;
 		this._host = host;
