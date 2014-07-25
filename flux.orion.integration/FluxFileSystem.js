@@ -15,6 +15,51 @@ var Deferred = require('orion/Deferred');
 var io = require('lib/socket.io');
 require('lib/sha1'); //Not AMD defines 'CryptoJS global
 
+var when = require('when');
+var rest = require('rest');
+var mime = require('rest/interceptor/mime'); //JSON support
+var client = rest.wrap(mime);
+
+/**
+ * Wraps a request handler method with authentication logic.
+ * Any method that uses this.socket or this.user must be
+ * wrapped to ensure socket and user are set before its
+ * method body executes.
+ * <p>
+ * This wrapper is only meant to be applied to methods that
+ * return a Promise/Deferred. This is necessary because
+ * authorization failures are signaled by a rejected promise.
+ */
+function authorize(methodBody) {
+	return function () {
+		var self = this;
+		var params = arguments;
+		if (self.user) {
+			//already authententicated
+			return methodBody.apply(self, arguments);
+		} else {
+			return getUser().then(function (user) {
+				self.user = user;
+				self._createSocket(self.user);
+				return methodBody.apply(self, params);
+			});
+		}
+	};
+}
+
+function getUser() {
+	return client('/user').then(function (response) {
+		if (response.status.code!=200) {
+			//TODO: could check status code more precisely.
+			// Here we treat anything that's not ok as
+			// authentication failure and signal it as such
+			// to orion.
+			return when.reject({status: 401});
+		}
+		return response.entity.username;
+	});
+}
+
 function assignAncestry(parents, childrenDepthMap, depth) {
 	var child, parentLocation, parent;
 	if (childrenDepthMap[depth]) {
@@ -60,12 +105,8 @@ function generateCallbackId() {
 	return counter++;
 }
 
-/** @namespace The global container for eclipse APIs. */
-var eclipse = eclipse || {};
-
 var callbacksCache = {};
 var saves = {};
-var user;
 
 function _cleanSaves(resource) {
 	var cachedSave = saves[resource.Location];
@@ -89,110 +130,113 @@ var FluxFileSystem = (function() {
 	 * @class Provides operations on files, folders, and projects.
 	 * @name FileServiceImpl
 	 */
-	function FluxFileSystem(host, port, userId, root) {
+	function FluxFileSystem(host, port, root) {
 		this._rootLocation = root;
-		user = userId;
-
-		this.socket = io.connect(host, {
-			port: port
-		});
-
-		var self = this;
-
-		this.socket.on('connect', function() {
-//			while (user && !self._connectedToChannel) {
-				self.socket.emit('connectToChannel', {
-					'channel' : user
-				}, function(answer) {
-					if (answer.connectedToChannel) {
-						self._connectedToChannel = true;
-						console.log("FileSystem connected to FLUX channel: " + user);
-					}
-				});
-//			}
-		});
-
-		this.socket.on('getProjectsResponse', function(data) {
-			if (data.username === user) {
-				self._handleMessage(data);
-			}
-		});
-
-		this.socket.on('getProjectResponse', function(data) {
-			if (data.username === user) {
-				self._handleMessage(data);
-			}
-		});
-
-		this.socket.on('getResourceResponse', function(data) {
-			if (data.username === user) {
-				self._handleMessage(data);
-			}
-		});
-
-		this.socket.on('resourceStored', function(data) {
-			if (data.username === user) {
-				var resource = self._createOrionResource(data);
-				var parentPath = resource.Location.substr(0, resource.Location.lastIndexOf('/'));
-
-				self._findFromLocation(parentPath).then(function(parent) {
-					var foundResource = parent._childrenCache ? parent._childrenCache[resource.Name] : null;
-					if (foundResource) {
-						if (foundResource.LocalTimeStamp < resource.LocalTimeStamp) {
-							foundResource.LocalTimeStamp = resource.LocalTimeStamp;
-							foundResource.ETag = resource.ETag;
-						}
-						_cleanSaves(foundResource);
-					} else {
-						if (!parent.Children) {
-							parent.Children = [];
-						}
-						parent.Children.push(resource);
-						if (!parent._childrenCache) {
-							parent._childrenCache = {};
-						}
-						parent._childrenCache[resource.Name] = resource;
-						resource.Parents = [ parent ];
-						_cleanSaves(resource);
-					}
-				});
-			}
-			self._handleMessage(data);
-		});
-
-		this.socket.on('getResourceRequest', function(data) {
-			if (data.username === user) {
-				var resource = self._createOrionResource(data);
-				var cachedSave = saves[resource.Location];
-				if (cachedSave
-					&& cachedSave.hash === resource.ETag
-					&& cachedSave.timestamp === resource.LocalTimeStamp
-					&& cachedSave.username === data.username) {
-
-					self.sendMessage("getResourceResponse", {
-						'callback_id' : data.callback_id,
-						'requestSenderID' : data.requestSenderID,
-						'username' : cachedSave.username,
-						'project' : cachedSave.project,
-						'resource' : cachedSave.resource,
-						'timestamp' : cachedSave.timestamp,
-						'type' : cachedSave.type,
-						'hash' : cachedSave.hash,
-						'content' : cachedSave.content
-					});
-				}
-				self._handleMessage(data);
-			}
-		});
-
-		this.socket.on("resourceCreated", function(data) {
-//			console.log("resourceCreated: " + JSON.stringify(data));
-		});
+		this._port = port;
+		this._host = host;
 	}
-
 
 	FluxFileSystem.prototype = /**@lends eclipse.FluxFileSystem.prototype */
 	{
+		_createSocket: function (user) {
+			this.socket = io.connect(this._host, {
+				port: this._port
+			});
+
+			var self = this;
+
+			this.socket.on('connect', function() {
+	//			while (user && !self._connectedToChannel) {
+					self.socket.emit('connectToChannel', {
+						'channel' : user
+					}, function(answer) {
+						if (answer.connectedToChannel) {
+							self._connectedToChannel = true;
+							console.log("FileSystem connected to FLUX channel: " + user);
+						}
+					});
+	//			}
+			});
+
+			this.socket.on('getProjectsResponse', function(data) {
+				if (data.username === user) {
+					self._handleMessage(data);
+				}
+			});
+
+			this.socket.on('getProjectResponse', function(data) {
+				if (data.username === user) {
+					self._handleMessage(data);
+				}
+			});
+
+			this.socket.on('getResourceResponse', function(data) {
+				if (data.username === user) {
+					self._handleMessage(data);
+				}
+			});
+
+			this.socket.on('resourceStored', function(data) {
+				if (data.username === user) {
+					var resource = self._createOrionResource(data);
+					var parentPath = resource.Location.substr(0, resource.Location.lastIndexOf('/'));
+
+					self._findFromLocation(parentPath).then(function(parent) {
+						var foundResource = parent._childrenCache ? parent._childrenCache[resource.Name] : null;
+						if (foundResource) {
+							if (foundResource.LocalTimeStamp < resource.LocalTimeStamp) {
+								foundResource.LocalTimeStamp = resource.LocalTimeStamp;
+								foundResource.ETag = resource.ETag;
+							}
+							_cleanSaves(foundResource);
+						} else {
+							if (!parent.Children) {
+								parent.Children = [];
+							}
+							parent.Children.push(resource);
+							if (!parent._childrenCache) {
+								parent._childrenCache = {};
+							}
+							parent._childrenCache[resource.Name] = resource;
+							resource.Parents = [ parent ];
+							_cleanSaves(resource);
+						}
+					});
+				}
+				self._handleMessage(data);
+			});
+
+			this.socket.on('getResourceRequest', function(data) {
+				if (data.username === user) {
+					var resource = self._createOrionResource(data);
+					var cachedSave = saves[resource.Location];
+					if (cachedSave
+						&& cachedSave.hash === resource.ETag
+						&& cachedSave.timestamp === resource.LocalTimeStamp
+						&& cachedSave.username === data.username) {
+
+						self.sendMessage("getResourceResponse", {
+							'callback_id' : data.callback_id,
+							'requestSenderID' : data.requestSenderID,
+							'username' : cachedSave.username,
+							'project' : cachedSave.project,
+							'resource' : cachedSave.resource,
+							'timestamp' : cachedSave.timestamp,
+							'type' : cachedSave.type,
+							'hash' : cachedSave.hash,
+							'content' : cachedSave.content
+						});
+					}
+					self._handleMessage(data);
+				}
+			});
+
+			this.socket.on("resourceCreated", function(data) {
+	//			console.log("resourceCreated: " + JSON.stringify(data));
+			});
+
+		}, //createSocket
+
 		_normalizeLocation : function(location) {
 			if (!location) {
 				location = "/";
@@ -363,13 +407,13 @@ var FluxFileSystem = (function() {
 			return result;
 		},
 
-		_getProject: function(projectName) {
+		_getProject: authorize(function(projectName) {
 			var projectRequest = new Deferred();
 			var self = this;
 			this.sendMessage(
 				"getProjectRequest",
 				{
-					'username' : user,
+					'username' : this.user,
 					'project': projectName
 				}, function(data) {
 					var project = self._createOrionProject(data);
@@ -377,7 +421,7 @@ var FluxFileSystem = (function() {
 				}
 			);
 			return projectRequest;
-		},
+		}),
 
 		/**
 		 * Loads the workspace with the given id and sets it to be the current
@@ -389,7 +433,7 @@ var FluxFileSystem = (function() {
 			return this.getWorkspace(location);
 		},
 
-		getWorkspace: function(location) {
+		getWorkspace: authorize(function(location) {
 			var deferred = new Deferred();
 
 			if (this._workspace) {
@@ -444,10 +488,10 @@ var FluxFileSystem = (function() {
 
 			this.socket.once("getProjectsResponse", projectsResponseHandler);
 
-			this.sendMessage("getProjectsRequest", { 'username' : user });
+			this.sendMessage("getProjectsRequest", { 'username' : this.user });
 
 			return deferred;
-		},
+		}),
 
 		_findFromLocation: function(location) {
 			var self = this;
@@ -464,7 +508,7 @@ var FluxFileSystem = (function() {
 			});
 		},
 
-		createResource: function(location, type, contents) {
+		createResource: authorize(function(location, type, contents) {
 			var deferred = new Deferred();
 			var normalizedPath = this._normalizeLocation(location);
 			var hash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
@@ -476,7 +520,7 @@ var FluxFileSystem = (function() {
 					deferred.reject("The resource \'" + location + "\' already exists!");
 				} else {
 					var data = {
-						'username' : user,
+						'username' : self.user,
 						'project' : normalizedPath.project,
 						'resource' : normalizedPath.path,
 						'hash' : hash,
@@ -485,7 +529,7 @@ var FluxFileSystem = (function() {
 					};
 
 					saves[location] = {
-						'username' : user,
+						'username' : self.user,
 						'project' : normalizedPath.project,
 						'resource' : normalizedPath.path,
 						'type': type,
@@ -496,12 +540,12 @@ var FluxFileSystem = (function() {
 					};
 
 					self.sendMessage("resourceCreated", data);
+					//This deferred is not resolved, but that is intentional.
+					// It is resolved later when we get a response back for our message.
 				}
-
 			});
-
 			return deferred;
-		},
+		}),
 
 		/**
 		 * Adds a project to a workspace.
@@ -510,7 +554,7 @@ var FluxFileSystem = (function() {
 		 * @param {String} serverPath The optional path of the project on the server.
 		 * @param {Boolean} create If true, the project is created on the server file system if it doesn't already exist
 		 */
-		createProject: function(url, projectName, serverPath, create) {
+		createProject: authorize(function(url, projectName, serverPath, create) {
 			var self = this;
 			var deferred = new Deferred();
 			this.getWorkspace(url).then(function(workspace) {
@@ -547,14 +591,14 @@ var FluxFileSystem = (function() {
 					}
 					workspace.Children.push(project);
 					self.sendMessage("projectCreated", {
-						'username' : user,
+						'username' : this.user,
 						'project' : projectName
 					});
 					deferred.resolve(project);
 				}
 			});
 			return deferred;
-		},
+		}),
 
 		/**
 		 * Creates a folder.
@@ -581,7 +625,7 @@ var FluxFileSystem = (function() {
 		 * Deletes a file, directory, or project.
 		 * @param {String} location The location of the file or directory to delete.
 		 */
-		deleteFile: function(location) {
+		deleteFile: authorize(function(location) {
 			var self = this;
 			return this._findFromLocation(location).then(function(resource) {
 				if (resource) {
@@ -593,7 +637,7 @@ var FluxFileSystem = (function() {
 					}
 					var normalizedPath = self._normalizeLocation(location);
 					self.sendMessage("resourceDeleted", {
-						'username' : user,
+						'username' : self.user,
 						'project' : normalizedPath.project,
 						'resource' : normalizedPath.path,
 						'timestamp' : Date.now(),
@@ -601,7 +645,7 @@ var FluxFileSystem = (function() {
 					});
 				}
 			});
-		},
+		}),
 
 		/**
 		 * Moves a file or directory.
@@ -661,7 +705,7 @@ var FluxFileSystem = (function() {
 		 *   otherwise file contents are returned
 		 * @return A deferred that will be provided with the contents or metadata when available
 		 */
-		read: function(location, isMetadata) {
+		read: authorize(function(location, isMetadata) {
 			if (isMetadata) {
 				return this._findFromLocation(location);
 			}
@@ -671,7 +715,7 @@ var FluxFileSystem = (function() {
 			this.sendMessage(
 				"getResourceRequest",
 				{
-					'username' : user,
+					'username' : this.user,
 					'project' : normalizedPath.project,
 					'resource' : normalizedPath.path
 				}, function(data) {
@@ -680,7 +724,7 @@ var FluxFileSystem = (function() {
 			);
 
 			return deferred;
-		},
+		}),
 		/**
 		 * Writes the contents or metadata of the file at the given location.
 		 *
@@ -689,14 +733,14 @@ var FluxFileSystem = (function() {
 		 * @param {String|Object} args Additional arguments used during write operation (i.e. ETag)
 		 * @return A deferred for chaining events after the write completes with new metadata object
 		 */
-		write: function(location, contents, args) {
+		write: authorize(function(location, contents, args) {
 			var deferred = new Deferred();
 			var normalizedPath = this._normalizeLocation(location);
 			var hash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
 			var timestamp = Date.now();
 
 			saves[location] = {
-				'username' : user,
+				'username' : this.user,
 				'project' : normalizedPath.project,
 				'resource' : normalizedPath.path,
 				'hash' : hash,
@@ -706,7 +750,7 @@ var FluxFileSystem = (function() {
 			};
 
 			this.sendMessage("resourceChanged", {
-				'username' : user,
+				'username' : this.user,
 				'project' : normalizedPath.project,
 				'resource' : normalizedPath.path,
 				'hash' : hash,
@@ -714,7 +758,7 @@ var FluxFileSystem = (function() {
 			});
 
 			return deferred;
-		},
+		}),
 		/**
 		 * Imports file and directory contents from another server
 		 *

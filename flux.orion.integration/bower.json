@@ -1,0 +1,23 @@
+{
+  "name": "flux.orion.integration",
+  "version": "0.0.1",
+  "homepage": "https://github.com/eclipse/flux",
+  "authors": [
+    "Alex Boyko <aboyko@gopivotal.com>",
+    "Kris De Volder <kdevolder@gopivotal.com>"
+  ],
+  "description": "Orion Plugin to Connect to Flux",
+  "main": "flux.js",
+  "license": "EPL",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "rest": "~1.1.1"
+  }
+}
