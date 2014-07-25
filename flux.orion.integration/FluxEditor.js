@@ -20,10 +20,11 @@ require('lib/sha1'); //Not AMD defines 'CryptoJS global variable.
 
 var io = require('lib/socket.io');
 var Deferred = require('orion/Deferred');
+var authorize = require('authorize');
+
+var editSession; //Does this belong here? should be a propery of FluxEditor object.
 
 var callbacksCache = {};
-var user;
-var editSession;
 
 var counter = 1;
 function generateCallbackId() {
@@ -59,175 +60,181 @@ var FluxEditor = (function() {
 	 * @class Provides operations on files, folders, and projects.
 	 * @name FileServiceImpl
 	 */
-	function FluxEditor(host, port, userId, root) {
+	function FluxEditor(host, port, root) {
+		var userId = 'defaultuser'; //TODO: fix this
 		this._rootLocation = root;
-		user = userId;
-
-		this.socket = io.connect(host, {
-			port: port
-		});
-
-		this._resourceUrl = null;
-
-		var self = this;
-
-		this.socket.on('connect', function() {
-			self.socket.emit('connectToChannel', {
-				'channel' : user
-			}, function(answer) {
-				if (answer.connectedToChannel) {
-					self._connectedToChannel = true;
-					console.log("Editor connected to FLUX channel: " + user);
-				}
-			});
-		});
-
-		this.socket.on('getResourceResponse', function(data) {
-			self._handleMessage(data);
-		});
-
-		this.socket.on('getMetadataResponse', function(data) {
-			self._handleMessage(data);
-		});
-
-		this.socket.on('contentassistresponse', function(data) {
-			self._handleMessage(data);
-		});
-
-		this.socket.on('liveResourceStartedResponse', function(data) {
-			self._getResourceData().then(function(resourceMetadata) {
-				if (data.username === resourceMetadata.username
-					&& data.project === resourceMetadata.project
-					&& data.resource === resourceMetadata.resource
-					&& data.callback_id !== undefined
-					&& resourceMetadata.timestamp === data.savePointTimestamp
-					&& resourceMetadata.hash === data.savePointHash) {
-					resourceMetadata._queueMuteRequest();
-					self._editorContext.setText(data.liveContent).then(function() {
-						resourceMetadata._dequeueMuteRequest();
-					}, function() {
-						resourceMetadata._dequeueMuteRequest();
-					});
-				}
-			}, function(err) {
-				console.log(err);
-			});
-		});
-
-		this.socket.on('liveResourceStarted', function(data) {
-			Deferred.all([self._getResourceData(), self._editorContext.getText()]).then(function(results) {
-				var resourceMetadata = results[0];
-				var contents = results[1];
-				if (resourceMetadata
-					&& data.username === resourceMetadata.username
-					&& data.project === resourceMetadata.project
-					&& data.resource === resourceMetadata.resource
-					&& data.callback_id !== undefined
-					&& data.hash === resourceMetadata.hash
-					&& data.timestamp === resourceMetadata.timestamp) {
-
-					var livehash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
-
-					if (livehash !== data.hash) {
-						self.sendMessage('liveResourceStartedResponse', {
-							'callback_id'        : data.callback_id,
-							'requestSenderID'    : data.requestSenderID,
-							'username'           : data.username,
-							'project'            : data.project,
-							'resource'           : data.resource,
-							'savePointTimestamp' : resourceMetadata.timestamp,
-							'savePointHash'      : resourceMetadata.hash,
-							'liveContent'        : contents
-						});
-					}
-				}
-			});
-		});
-
-		this.socket.on('getLiveResourcesRequest', function(data) {
-			self._getResourceData().then(function(resourceMetadata) {
-				if ((!data.projectRegEx || new RegExp(data.projectRegEx).test(resourceMetadata.project))
-					&& (!data.resourceRegEx || new RegExp(data.resourceRegEx).test(resourceMetadata.resource))) {
-
-					var liveEditUnits = {};
-					liveEditUnits[resourceMetadata.project] = [{
-						'resource'           : resourceMetadata.resource,
-						'savePointTimestamp' : resourceMetadata.hash,
-						'savePointHash'      : resourceMetadata.timestamp
-					}];
-
-					self.sendMessage('getLiveResourcesResponse', {
-						'callback_id'        : data.callback_id,
-						'requestSenderID'    : data.requestSenderID,
-						'username'           : resourceMetadata.username,
-						'liveEditUnits'      : liveEditUnits
-					});
-				}
-			});
-		});
-
-		this.socket.on('resourceStored', function(data) {
-			var location = self._rootLocation + data.project + '/' + data.resource;
-			if (self._resourceUrl === location) {
-				self._resourceMetadata = createResourceMetadata(data);
-				self._editorContext.markClean();
-			}
-		});
-
-		this.socket.on('liveResourceChanged', function(data) {
-			self._getResourceData().then(function(resourceMetadata) {
-				if (data.username === resourceMetadata.username
-					&& data.project === resourceMetadata.project
-					&& data.resource === resourceMetadata.resource
-					&& self._editorContext) {
-
-					var text = data.addedCharacters !== undefined ? data.addedCharacters : "";
-
-					resourceMetadata._queueMuteRequest();
-					self._editorContext.setText(text, data.offset, data.offset + data.removedCharCount).then(function() {
-						resourceMetadata._dequeueMuteRequest();
-					}, function() {
-						resourceMetadata._dequeueMuteRequest();
-					});
-				}
-			});
-		});
-
-		this.socket.on('liveMetadataChanged', function (data) {
-			self._getResourceData().then(function(resourceMetadata) {
-				if (resourceMetadata.username === data.username
-					&& resourceMetadata.project === data.project
-					&& resourceMetadata.resource === data.resource
-					&& data.problems !== undefined) {
-
-					resourceMetadata.liveMarkers = [];
-					var i;
-					for(i = 0; i < data.problems.length; i++) {
-//						var lineOffset = editor.getModel().getLineStart(data.problems[i].line - 1);
-
-//						console.log(lineOffset);
-
-						resourceMetadata.liveMarkers[i] = {
-							'description' : data.problems[i].description,
-//							'line' : data.problems[i].line,
-							'severity' : data.problems[i].severity,
-							'start' : /*(data.problems[i].start - lineOffset) + 1*/ data.problems[i].start,
-							'end' : /*data.problems[i].end - lineOffset*/ data.problems[i].end
-						};
-					}
-					if (self._editorContext) {
-						self._editorContext.showMarkers(resourceMetadata.liveMarkers);
-					}
-				}
-				self._handleMessage(data);
-			});
-		});
-
+		this._port = port;
+		this._host = host;
 	}
 
 
 	FluxEditor.prototype = /**@lends eclipse.FluxEditor.prototype */
 	{
+		_createSocket: function (user) {
+			this.socket = io.connect(
+				this._host, {
+				port: this._port
+			});
+
+			this._resourceUrl = null;
+
+			var self = this;
+
+			this.socket.on('connect', function() {
+				self.socket.emit('connectToChannel', {
+					'channel' : user
+				}, function(answer) {
+					if (answer.connectedToChannel) {
+						self._connectedToChannel = true;
+						console.log("Editor connected to FLUX channel: " + user);
+					}
+				});
+			});
+
+			this.socket.on('getResourceResponse', function(data) {
+				self._handleMessage(data);
+			});
+
+			this.socket.on('getMetadataResponse', function(data) {
+				self._handleMessage(data);
+			});
+
+			this.socket.on('contentassistresponse', function(data) {
+				self._handleMessage(data);
+			});
+
+			this.socket.on('liveResourceStartedResponse', function(data) {
+				self._getResourceData().then(function(resourceMetadata) {
+					if (data.username === resourceMetadata.username &&
+						data.project === resourceMetadata.project &&
+						data.resource === resourceMetadata.resource &&
+						data.callback_id !== undefined &&
+						resourceMetadata.timestamp === data.savePointTimestamp &&
+						resourceMetadata.hash === data.savePointHash
+					) {
+						resourceMetadata._queueMuteRequest();
+						self._editorContext.setText(data.liveContent).then(function() {
+							resourceMetadata._dequeueMuteRequest();
+						}, function() {
+							resourceMetadata._dequeueMuteRequest();
+						});
+					}
+				}, function(err) {
+					console.log(err);
+				});
+			});
+
+			this.socket.on('liveResourceStarted', function(data) {
+				Deferred.all([self._getResourceData(), self._editorContext.getText()]).then(function(results) {
+					var resourceMetadata = results[0];
+					var contents = results[1];
+					if (resourceMetadata &&
+						data.username === resourceMetadata.username &&
+						data.project === resourceMetadata.project &&
+						data.resource === resourceMetadata.resource &&
+						data.callback_id !== undefined &&
+						data.hash === resourceMetadata.hash &&
+						data.timestamp === resourceMetadata.timestamp
+					) {
+						var livehash = CryptoJS.SHA1(contents).toString(CryptoJS.enc.Hex);
+
+						if (livehash !== data.hash) {
+							self.sendMessage('liveResourceStartedResponse', {
+								'callback_id'        : data.callback_id,
+								'requestSenderID'    : data.requestSenderID,
+								'username'           : data.username,
+								'project'            : data.project,
+								'resource'           : data.resource,
+								'savePointTimestamp' : resourceMetadata.timestamp,
+								'savePointHash'      : resourceMetadata.hash,
+								'liveContent'        : contents
+							});
+						}
+					}
+				});
+			});
+
+			this.socket.on('getLiveResourcesRequest', function(data) {
+				self._getResourceData().then(function(resourceMetadata) {
+					if ((!data.projectRegEx || new RegExp(data.projectRegEx).test(resourceMetadata.project))
+						&& (!data.resourceRegEx || new RegExp(data.resourceRegEx).test(resourceMetadata.resource))) {
+
+						var liveEditUnits = {};
+						liveEditUnits[resourceMetadata.project] = [{
+							'resource'           : resourceMetadata.resource,
+							'savePointTimestamp' : resourceMetadata.hash,
+							'savePointHash'      : resourceMetadata.timestamp
+						}];
+
+						self.sendMessage('getLiveResourcesResponse', {
+							'callback_id'        : data.callback_id,
+							'requestSenderID'    : data.requestSenderID,
+							'username'           : resourceMetadata.username,
+							'liveEditUnits'      : liveEditUnits
+						});
+					}
+				});
+			});
+
+			this.socket.on('resourceStored', function(data) {
+				var location = self._rootLocation + data.project + '/' + data.resource;
+				if (self._resourceUrl === location) {
+					self._resourceMetadata = createResourceMetadata(data);
+					self._editorContext.markClean();
+				}
+			});
+
+			this.socket.on('liveResourceChanged', function(data) {
+				self._getResourceData().then(function(resourceMetadata) {
+					if (data.username === resourceMetadata.username
+						&& data.project === resourceMetadata.project
+						&& data.resource === resourceMetadata.resource
+						&& self._editorContext) {
+
+						var text = data.addedCharacters !== undefined ? data.addedCharacters : "";
+
+						resourceMetadata._queueMuteRequest();
+						self._editorContext.setText(text, data.offset, data.offset + data.removedCharCount).then(function() {
+							resourceMetadata._dequeueMuteRequest();
+						}, function() {
+							resourceMetadata._dequeueMuteRequest();
+						});
+					}
+				});
+			});
+
+			this.socket.on('liveMetadataChanged', function (data) {
+				self._getResourceData().then(function(resourceMetadata) {
+					if (resourceMetadata.username === data.username
+						&& resourceMetadata.project === data.project
+						&& resourceMetadata.resource === data.resource
+						&& data.problems !== undefined) {
+
+						resourceMetadata.liveMarkers = [];
+						var i;
+						for(i = 0; i < data.problems.length; i++) {
+	//						var lineOffset = editor.getModel().getLineStart(data.problems[i].line - 1);
+
+	//						console.log(lineOffset);
+
+							resourceMetadata.liveMarkers[i] = {
+								'description' : data.problems[i].description,
+	//							'line' : data.problems[i].line,
+								'severity' : data.problems[i].severity,
+								'start' : /*(data.problems[i].start - lineOffset) + 1*/ data.problems[i].start,
+								'end' : /*data.problems[i].end - lineOffset*/ data.problems[i].end
+							};
+						}
+						if (self._editorContext) {
+							self._editorContext.showMarkers(resourceMetadata.liveMarkers);
+						}
+					}
+					self._handleMessage(data);
+				});
+			});
+
+		},
+
 		_normalizeLocation : function(location) {
 			if (!location) {
 				location = "/";
@@ -285,7 +292,7 @@ var FluxEditor = (function() {
 			} else if (this._resourceUrl) {
 				var normalizedLocation = this._normalizeLocation(this._resourceUrl);
 				this.sendMessage("getResourceRequest", {
-					'username' : user,
+					'username' : this.user,
 					'project' : normalizedLocation.project,
 					'resource' : normalizedLocation.path
 				}, function(data) {
@@ -439,10 +446,10 @@ var FluxEditor = (function() {
 			return problemsRequest;
 		},
 
-		startEdit: function(editorContext, options) {
+		startEdit: authorize(function(editorContext, options) {
 			var url = options ? options.title : null;
 			return this._setEditorInput(url, editorContext);
-		},
+		}),
 
 		endEdit: function(resourceUrl) {
 			this._setEditorInput(null, null);

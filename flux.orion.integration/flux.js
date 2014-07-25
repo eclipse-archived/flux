@@ -58,17 +58,16 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 			'pattern' : base + ".*"
 		}
 	);
+	provider.registerService([
+			"orion.edit.model",
+			"orion.edit.contentAssist"
+		],
+		editorService,
+		{
+			'contentType' : contentTypes
+		}
+	);
 //TODO: fix these for authentication and put them back in:
-//	provider.registerService([
-//			"orion.edit.model",
-//			"orion.edit.contentAssist"
-//		],
-//		editorService,
-//		{
-//			'contentType' : contentTypes
-//		}
-//	);
-//
 //	var openDeclaration = new OpenDeclaration(host, port, base); //TODO: user removed
 //	provider.registerService("orion.edit.command",
 //		openDeclaration,

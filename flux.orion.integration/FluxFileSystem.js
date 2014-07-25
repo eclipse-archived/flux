@@ -13,52 +13,9 @@ define(function(require) {
 
 var Deferred = require('orion/Deferred');
 var io = require('lib/socket.io');
-require('lib/sha1'); //Not AMD defines 'CryptoJS global
+require('lib/sha1'); //Not AMD. Defines 'CryptoJS global.
 
-var when = require('when');
-var rest = require('rest');
-var mime = require('rest/interceptor/mime'); //JSON support
-var client = rest.wrap(mime);
-
-/**
- * Wraps a request handler method with authentication logic.
- * Any method that uses this.socket or this.user must be
- * wrapped to ensure socket and user are set before its
- * method body executes.
- * <p>
- * This wrapper is only meant to be applied to methods that
- * return a Promise/Deferred. This is necessary because
- * authorization failures are signaled by a rejected promise.
- */
-function authorize(methodBody) {
-	return function () {
-		var self = this;
-		var params = arguments;
-		if (self.user) {
-			//already authententicated
-			return methodBody.apply(self, arguments);
-		} else {
-			return getUser().then(function (user) {
-				self.user = user;
-				self._createSocket(self.user);
-				return methodBody.apply(self, params);
-			});
-		}
-	};
-}
-
-function getUser() {
-	return client('/user').then(function (response) {
-		if (response.status.code!=200) {
-			//TODO: could check status code more precisely.
-			// Here we treat anything that's not ok as
-			// authentication failure and signal it as such
-			// to orion.
-			return when.reject({status: 401});
-		}
-		return response.entity.username;
-	});
-}
+var authorize = require('authorize');
 
 function assignAncestry(parents, childrenDepthMap, depth) {
 	var child, parentLocation, parent;
