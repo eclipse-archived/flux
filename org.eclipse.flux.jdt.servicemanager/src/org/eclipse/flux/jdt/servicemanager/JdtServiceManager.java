@@ -10,6 +10,9 @@
 *******************************************************************************/
 package org.eclipse.flux.jdt.servicemanager;
 
+import java.io.File;
+
+import org.eclipse.flux.service.common.HeadlessEclipseServiceLauncher;
 import org.eclipse.flux.service.common.ToolingServiceManager;
 
 /**
@@ -36,9 +39,21 @@ public class JdtServiceManager {
 			host = args[0];
 		}
 		
+		String workspacesFolder = System.getProperty("java.io.tmpdir");
+		if (!workspacesFolder.endsWith(File.separator)) {
+			workspacesFolder += File.separator;
+		}
+		workspacesFolder += "Flux-JDT-Workspaces";
+		File file = new File(workspacesFolder);
+		if (!file.exists()) {
+			file.mkdir();
+		}
+		
 		ToolingServiceManager jdtServiceManager = new ToolingServiceManager(
-				host, new JdtServiceLauncher()).cleanupCallbackId(
-				CLEANUP_JDT_SERVICES_CALLBACK).fileFilters(
+				host, new HeadlessEclipseServiceLauncher(
+						System.getProperty("user.dir") + File.separator + "JdtService", host,
+						workspacesFolder, null))
+				.cleanupCallbackId(CLEANUP_JDT_SERVICES_CALLBACK).fileFilters(
 						JDT_RESOURCE_REGEX);
 		
 		jdtServiceManager.start();

@@ -472,8 +472,21 @@ final public class ToolingServiceManager {
 
 			@Override
 			public void run() {
-				if (!serviceLauncher.startService(user) && handleFailre) {
-					// error stopping the service
+				try {
+					if (!serviceLauncher.startService(user) && handleFailre) {
+						// error stopping the service
+						lock.writeLock().lock();
+						try {
+							currentUsersWithActiveService.remove(user);
+							if (newUsersWithActiveService != null) {
+								newUsersWithActiveService.remove(user);
+							}
+						} finally {
+							lock.writeLock().unlock();
+						}
+					}
+				} catch (Throwable e) {
+					e.printStackTrace();
 					lock.writeLock().lock();
 					try {
 						currentUsersWithActiveService.remove(user);
@@ -494,8 +507,22 @@ final public class ToolingServiceManager {
 
 			@Override
 			public void run() {
-				if (!serviceLauncher.stopService(user) && handleFailure) {
-					// error stopping the service
+				try {
+					if (!serviceLauncher.stopService(user) && handleFailure) {
+						// error stopping the service
+						lock.writeLock().lock();
+						try {
+							if (newUsersWithActiveService == null) {
+								currentUsersWithActiveService.put(user, true);
+							} else {
+								newUsersWithActiveService.put(user, true);
+							}
+						} finally {
+							lock.writeLock().unlock();
+						}
+					}
+				} catch (Throwable e) {
+					e.printStackTrace();
 					lock.writeLock().lock();
 					try {
 						if (newUsersWithActiveService == null) {
