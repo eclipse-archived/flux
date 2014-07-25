@@ -12,38 +12,23 @@
 
 /*global require exports console*/
 
-var fs = require('fs');
-var path = require('path');
+var id = process.env.FLUX_GITHUB_CLIENT_ID;
+var secret = process.env.FLUX_GITHUB_CLIENT_SECRET;
 
-var SECRETS_FILE = path.resolve('github-secret.json');
-
-function isFile(f) {
-	try {
-		return fs.statSync(f).isFile();
-	} catch (e) {
-		return false;
-	}
-}
-
-var haveSecrets = isFile(SECRETS_FILE);
+var haveSecrets = secret && id;
 
 if (haveSecrets) {
 	//Don't try to catch errors. This is deliberate.
 	// If the file exists we will not allow the server to
 	// startup if there are issues reading / parsing it.
-	var data = JSON.parse(fs.readFileSync(SECRETS_FILE, {encoding: 'UTF-8'}));
-	if (!data.id) {
-		throw "No github client-id found in "+SECRETS_FILE;
-	}
-	if (!data.secret) {
-		throw "No github secret found in "+SECRETS_FILE;
-	}
-	exports.id = data.id;
-	exports.secret = data.secret;
+	exports.id = id;
+	exports.secret = secret;
 } else {
-	console.log("User Authentication is DISABLED: file not found: "+SECRETS_FILE);
+	console.log(
+		"User Authentication is DISABLED\n"+
+		"set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET env variables to enable"
+	);
 	//Null credentials tell the server to run without authentication:
 	exports.id = null;
 	exports.secret = null;
 }
-
