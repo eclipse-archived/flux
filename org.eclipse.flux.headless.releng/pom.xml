@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+
+	<artifactId>org.eclipse.flux.headless.releng</artifactId>
+	<packaging>pom</packaging>
+	<name>Flux Headless Build</name>
+
+	<parent>
+		<version>0.1.0-SNAPSHOT</version>
+		<groupId>org.eclipse.flux.group</groupId>
+		<artifactId>org.eclipse.flux.parent</artifactId>
+		<relativePath>../org.eclipse.flux.parent/pom.xml</relativePath>
+	</parent>
+
+	<properties>
+		<tycho-version>0.20.0</tycho-version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<modules>
+		<module>../org.eclipse.flux.headless.product</module>
+		<module>../org.eclipse.flux.headless.feature</module>
+		<module>../eclipse.core/org.eclipse.flight.core</module>
+		<module>../eclipse.services.java/org.eclipse.flight.jdt.service</module>
+	</modules>
+
+
+</project>
