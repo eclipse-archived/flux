@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<artifactId>org.eclipse.flux.headless.product</artifactId>
+	<packaging>eclipse-repository</packaging>
+	<name>Flux Headless Eclipse Product</name>
+
+    <parent>
+		<version>0.1.0-SNAPSHOT</version>
+		<groupId>org.eclipse.flux.group</groupId>
+		<artifactId>org.eclipse.flux.parent</artifactId>
+		<relativePath>../org.eclipse.flux.parent/pom.xml</relativePath>
+	</parent>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-p2-repository-plugin</artifactId>
+				<version>${tycho-version}</version>
+				<configuration>
+					<includeAllDependencies>false</includeAllDependencies>
+					<compress>false</compress>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-p2-director-plugin</artifactId>
+				<version>${tycho-version}</version>
+				<configuration>
+					<formats>
+						<macosx>tar.gz</macosx>
+					</formats>
+					<products>
+						<product>
+							<id>org.eclipse.flux.headless</id>
+						</product>
+					</products>
+				</configuration>
+				<executions>
+					<execution>
+						<id>create-distributions</id>
+						<goals>
+							<goal>materialize-products</goal>
+							<goal>archive-products</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>
