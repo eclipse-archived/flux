@@ -34,29 +34,97 @@ public class JdtServiceManager {
 	 * @param args command line arguments
 	 */
 	public static void main(String[] args) {
-		String host = "http://localhost:3000"; // default Flux server URL
-		if (args.length > 0) {
-			host = args[0];
+		
+		String host = null;
+		String serviceFolderPath = null;
+		String workspaceFolderPath = null;
+		
+		for (int i = 0; i < args.length; i+=2) {
+			if ("-host".equals(args[i])) {
+				if (i < args.length - 2) {
+					host = args[i+1];
+				} else {
+					throw new RuntimeException("Argument value expected after '" + args[i] + "'");
+				}
+			} else if ("-serviceFolder".equals(args[i])) {
+				if (i < args.length - 2) {
+					serviceFolderPath = args[i+1];
+				} else {
+					throw new RuntimeException("Argument value expected after '" + args[i] + "'");
+				}
+			} else if ("-workspacesFolder".equals(args[i])) {
+				if (i < args.length - 2) {
+					workspaceFolderPath = args[i+1];
+				} else {
+					throw new RuntimeException("Argument value expected after '" + args[i] + "'");
+				}
+			} else {
+				throw new RuntimeException("Invalid argument '" + args[i] + "'");
+			}
 		}
 		
-		String workspacesFolder = System.getProperty("java.io.tmpdir");
-		if (!workspacesFolder.endsWith(File.separator)) {
-			workspacesFolder += File.separator;
+		if (host == null) {
+			host = "http://localhost:3000"; // default Flux server URL
 		}
-		workspacesFolder += "Flux-JDT-Workspaces";
-		File file = new File(workspacesFolder);
-		if (!file.exists()) {
-			file.mkdir();
+		
+		if (serviceFolderPath == null) {
+			File serviceFolder = new File(System.getProperty("user.dir"));
+			StringBuilder sb = new StringBuilder(serviceFolder.getParent());
+			sb.append(File.separator);
+			sb.append("org.eclipse.flux.headless.product");
+			sb.append(File.separator);
+			sb.append("target");
+			sb.append(File.separator);
+			sb.append("products");
+			sb.append(File.separator);
+			sb.append("org.eclipse.flux.headless");
+			sb.append(File.separator);
+			sb.append("macosx");
+			sb.append(File.separator);
+			sb.append("cocoa");
+			sb.append(File.separator);
+			sb.append("x86_64");
+			serviceFolderPath = sb.toString();
+		}
+		
+		if (workspaceFolderPath == null) {
+			workspaceFolderPath = serviceFolderPath + File.separator + "workspaces";
+		}
+		
+		File workspaceFolder = new File(workspaceFolderPath);
+		if (workspaceFolder.exists()) {
+//			if (workspaceFolder.isDirectory()) {
+//				deleteFolder(workspaceFolder, false);
+//			} else {
+//				workspaceFolder.delete();
+//			}
+		} else {
+			workspaceFolder.mkdir();
 		}
 		
 		ToolingServiceManager jdtServiceManager = new ToolingServiceManager(
 				host, new HeadlessEclipseServiceLauncher(
-						System.getProperty("user.dir") + File.separator + "JdtService", host,
-						workspacesFolder, null))
+						serviceFolderPath , host,
+						workspaceFolderPath, null))
 				.cleanupCallbackId(CLEANUP_JDT_SERVICES_CALLBACK).fileFilters(
 						JDT_RESOURCE_REGEX);
 		
 		jdtServiceManager.start();
 	}
 
+	public static void deleteFolder(File folder, boolean includeFolder) {
+	    File[] files = folder.listFiles();
+	    if(files!=null) { //some JVMs return null for empty dirs
+	        for(File f: files) {
+	            if(f.isDirectory()) {
+	                deleteFolder(f, true);
+	            } else {
+	                f.delete();
+	            }
+	        }
+	    }
+	    if (includeFolder) {
+	    	folder.delete();
+	    }
+	}
 }

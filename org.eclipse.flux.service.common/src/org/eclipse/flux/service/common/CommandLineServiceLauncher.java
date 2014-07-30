@@ -44,8 +44,19 @@ public abstract class CommandLineServiceLauncher implements IServiceLauncher {
 		if (servicesHandles.containsKey(user)) {
 			return false;
 		}
-		ProcessBuilder processBuilder = new ProcessBuilder().command(getCommand(user)).directory(new File(serviceHomeDirectory));
+		File logFolder = new File(this.serviceHomeDirectory + File.separator + "logs");
+		if (!logFolder.exists()) {
+			logFolder.mkdir();
+		}
+		File outputLog = new File(logFolder.getPath() + File.separator + "output_" + user + ".log");
+		File errorLog = new File(logFolder.getPath() + File.separator + "error_" + user + ".log");
 		try {
+			outputLog.createNewFile();
+			errorLog.createNewFile();
+			ProcessBuilder processBuilder = new ProcessBuilder()
+					.command(getCommand(user))
+					.directory(new File(serviceHomeDirectory))
+					.redirectError(errorLog).redirectOutput(outputLog);
 			Process process = processBuilder.start();
 			servicesHandles.put(user, process);
 			return true;

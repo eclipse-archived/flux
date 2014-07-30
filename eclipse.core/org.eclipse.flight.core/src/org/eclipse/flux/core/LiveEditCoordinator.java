@@ -242,9 +242,7 @@ public class LiveEditCoordinator {
 			}
 			message.put("liveEditUnits", liveEditUnits);
 
-			// Send via the 'internal' broadcast channel
-			Activator.getDefault().getMessagingConnector()
-					.send("getLiveResourcesResponse", message);
+			this.messagingConnector.send("getLiveResourcesResponse", message);
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -257,8 +255,8 @@ public class LiveEditCoordinator {
 			super();
 			try {
 				put("resource", path);
-				put("hash", hash);
-				put("timestamp", timestamp);
+				put("savePointHash", hash);
+				put("savePointTimestamp", timestamp);
 			} catch (JSONException e) {
 				e.printStackTrace();
 			}

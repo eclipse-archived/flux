@@ -53,9 +53,10 @@ public class HeadlessEclipseServiceLauncher extends CommandLineServiceLauncher {
 		List<String> command = new ArrayList<String>();
 		command.add("java");
 		command.add("-jar");
-		command.add(getOsgiJar());
+		command.add("-Dflux-initjdt=true");
 		command.add("-Dflux-host=" + fluxUrl);
 		command.add("-Dflux.user.name=" + user);
+		command.add(getOsgiJar());
 		if (options != null && options.length > 0) {
 			command.addAll(Arrays.asList(options));
 		}
