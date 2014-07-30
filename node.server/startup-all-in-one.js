@@ -103,7 +103,7 @@ console.log('Express server started on port ' + port);
 
 // create and configure socket.io
 var io = require('socket.io').listen(server);
-io.set('transports', ['websocket']);
+io.set('transports', ['websocket', 'xhr-polling']);
 io.set('log level', 1); //socket.io makes too much noise otherwise
 
 if (ENABLE_AUTH) {
