@@ -24,6 +24,8 @@ var port = process.env.VCAP_APP_PORT || '3000';
 var homepage = '/client/index.html';
 var pathResolve = require('path').resolve;
 
+var isCloudFoundry = host.indexOf('cfapps.io')>=0;
+
 var authentication = require('./authentication');
 var ENABLE_AUTH = authentication.isEnabled;
 var SUPER_USER = authentication.SUPER_USER;
@@ -95,15 +97,12 @@ app.get("/user",
 
 ////////////////////////////////////////////////////////
 
-var messagingHost = process.env.FLIGHT_MESSAGING_HOST || 'localhost';
-var messagingPort = process.env.FLIGHT_MESSAGING_PORT || 3000;
-
 var server = app.listen(port, host);
 console.log('Express server started on port ' + port);
 
 // create and configure socket.io
 var io = require('socket.io').listen(server);
-io.set('transports', ['websocket', 'xhr-polling']);
+io.set('transports', [/*'websocket',*/'xhr-polling']);
 io.set('log level', 1); //socket.io makes too much noise otherwise
 
 if (ENABLE_AUTH) {
@@ -117,6 +116,16 @@ var messageSync = new MessageCore();
 io.sockets.on('connection', function (socket) {
 	messageSync.initialize(socket, io.sockets);
 });
+
+/////////////////////////////////////////////////////////////////////////
+
+var messagingHost = 'localhost'; //Careful not to use real host name here as that
+                                 // won't work on CF deployments.
+                                 //The real host name for 'outside' connections
+                                 //doesn't expose the port it is actually running on
+                                 //but instead remaps that to standard http / https ports.
+                                 //so to talk directly to 'ourselves' we use locahost.
+var messagingPort = port;
 
 // check for MongoDB and create in-memory-repo in case MongoDB is not available
 var MongoClient = mongo.MongoClient;
