@@ -157,6 +157,49 @@ Eclipse/Java process. For example:
 You can generate (and revoke) tokens [here](https://github.com/settings/applications).
 Click the 'Generate New Token' button next to 'Personal Access Tokens'.
 
+## Flux on CloudFoundry
+
+### Accessing Flux on CloudFoundry
+
+  An experimental prototype is deployed to 'flux.cfapps.io'. This is a moving target.
+  
+  It provides a basic landing page that shows logged-in user's projects and 
+  a list of files in each project (not organized in any way). Clicking one of 
+  the files opens an embedded orion editor connected to the Flux message bus.
+  
+  Currently there is no way to create projects or files via this basic UI. 
+  So to get files / projects into it you have to run an Eclipse instance connected to
+  Flux (see "Running The Eclipse Plugin" above). To connect to the Flux on CF, 
+  set these system properties:
+  
+       -Dflux-eclipse-editor-connect=true
+       -Dflux-host=https://flux.cfapps.io:4443
+       -Dflux.user.name=...your github login id...
+       -Dflux.user.token=...github personal access token...
+
+### Deploying to CloudFoundry
+
+ To deploy Flux to Cloudfoundry requires the Flux github client-id and secret.
+ If deployed without this, flux will run in 'authentication disabled' mode
+ where all everyone is treated as 'defaultuser' and shares the same workspace.
+ 
+ To deploy, create a `node.server/manifest.yml`:
+ 
+     ---
+     applications:
+     - name: flux
+       memory: 512M
+       host: flux
+       env:
+         FLUX_GITHUB_CLIENT_ID: ...put Flux client id here...
+         FLUX_GITHUB_CLIENT_SECRET: ...put Flux client secret here...  
+         
+ If you register a new Client ID / Secret on github make sure to set the
+ callback url to:
+ 
+     https://flux.cfapps.io/auth/github/callback
+ 
+       
 ## Status
 
   This is prototype work and by no means meant to be used in production. It misses important features, good
