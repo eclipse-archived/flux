@@ -102,7 +102,7 @@ console.log('Express server started on port ' + port);
 
 // create and configure socket.io
 var io = require('socket.io').listen(server);
-io.set('transports', [/*'websocket',*/'xhr-polling']);
+//io.set('transports', ['websocket']);
 io.set('log level', 1); //socket.io makes too much noise otherwise
 
 if (ENABLE_AUTH) {
@@ -124,7 +124,7 @@ var messagingHost = 'localhost'; //Careful not to use real host name here as tha
                                  //The real host name for 'outside' connections
                                  //doesn't expose the port it is actually running on
                                  //but instead remaps that to standard http / https ports.
-                                 //so to talk directly to 'ourselves' we use locahost.
+                                 //so to talk directly to 'ourselves' we use localhost.
 var messagingPort = port;
 
 // check for MongoDB and create in-memory-repo in case MongoDB is not available

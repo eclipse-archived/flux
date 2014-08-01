@@ -18,6 +18,7 @@
 
 define([
 	"require",
+	"socket",
 	"orion/editor/textView",
 	"orion/keyBinding",
 	"editor/textview/textStyler",
@@ -28,10 +29,9 @@ define([
 	"orion/editor/contentAssist",
 	"editor/javaContentAssist",
 	"orion/editor/linkedMode",
-	"editor/sha1",
-	"socketio"],
+	"editor/sha1"],
 
-function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGrammar, mEditor, mEditorFeatures, mContentAssist, mJavaContentAssist, mLinkedMode) {
+function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGrammar, mEditor, mEditorFeatures, mContentAssist, mJavaContentAssist, mLinkedMode) {
 	var editorDomNode = document.getElementById("editor");
 
 	var textViewFactory = function() {
@@ -52,8 +52,6 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 		}
 	};
 
-	var socket = io.connect();
-	
 	socket.on('connect', function() {
 		connected();
 	});
@@ -455,7 +453,7 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 
 	socket.on('getLiveResourcesRequest', function(data) {
 		if (data.callback_id
-				&& (!data.projectRegEx || new RegExp(data.projectRegEx).test(project)) 
+				&& (!data.projectRegEx || new RegExp(data.projectRegEx).test(project))
 				&& (!data.resourceRegEx || new RegExp(data.resourceRegEx).test(resource))) {
 			var liveEditUnits = {};
 			liveEditUnits[project] = [{
@@ -471,7 +469,7 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 			});
 		}
 	});
-	
+
 	function sendModelChanged(evt) {
 		var changeData = {
 			'username' : username,
