@@ -13,6 +13,7 @@
 
 // create and configure express
 var URI = require('URIjs');
+var path = require('path');
 var express = require('express');
 var mongo = require('mongodb');
 var app = express();
@@ -24,12 +25,30 @@ var port = process.env.VCAP_APP_PORT || '3000';
 var homepage = '/client/index.html';
 var pathResolve = require('path').resolve;
 
-var isCloudFoundry = host.indexOf('cfapps.io')>=0;
+var isCloudFoundry = host!=='localhost';
+console.log('Starting flux on host: '+host);
+console.log('isCloudFoundry = ',isCloudFoundry);
 
 var authentication = require('./authentication');
 var ENABLE_AUTH = authentication.isEnabled;
 var SUPER_USER = authentication.SUPER_USER;
 var passport = authentication.passport;
+
+if (isCloudFoundry) {
+	//On CF all external http and https get routed to a single http connection
+	// on the server. We will force all connection on plain http to
+	// redirect to https
+	app.enable('trust proxy');
+	app.use(function (req, res, next) {
+		var protocol = req.protocol; //you must enable trust proxy option for this to work on CF
+		if (protocol === 'https') {
+			return next();
+		}
+		var target = 'https://'+path.join(req.host, req.url);
+		console.log('redirecting to '+target);
+		res.redirect(target);
+	});
+}
 
 app.use(express.cookieParser());
 app.use(express.bodyParser());
@@ -94,6 +113,13 @@ app.get("/user",
 		}
 	}
 );
+
+app.get("/headers", function (req, res) {
+	res.statusCode = 200;
+	res.set('Content-Type', 'text/plain');
+	res.write("req.protocol = "+req.protocol);
+	res.send(JSON.stringify(req.headers, null, '   '));
+});
 
 ////////////////////////////////////////////////////////
 

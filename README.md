@@ -190,7 +190,7 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
      ---
      applications:
      - name: flux
-       memory: 512M
+       memory: 1024M
        host: flux
        env:
          FLUX_GITHUB_CLIENT_ID: ...put Flux client id here...
