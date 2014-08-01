@@ -183,7 +183,7 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
 
  To deploy Flux to Cloudfoundry requires the Flux github client-id and secret.
  If deployed without this, flux will run in 'authentication disabled' mode
- where all everyone is treated as 'defaultuser' and shares the same workspace.
+ where everyone is treated as 'defaultuser' and shares the same workspace.
  
  To deploy, create a `node.server/manifest.yml`:
  
