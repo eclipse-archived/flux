@@ -133,9 +133,11 @@ The prototype supports user authentication via github using oauth. Some setup is
 ### Github Client ID and Secret
 
 Get a github client ID and secret [here](https://github.com/settings/applications/new
-Save these credentials in a file called "github-secret.json". When you start the server
-it will look for this file in your current working directory. Authentication will be enabled
-if the file is found.
+and define two environment variables `FLUX_GITHUB_CLIENT_ID` and `FLUX_GITHUB_CLIENT_SECRET`
+When you start the server and these variables are defined, Flux authentication will be enabled.
+
+If the environment variables are undefined Flux will run in 'no authentication' mode:
+the user 'defaultuser' is treated as if always logged in.
 
 ### Authenticating the Web Client
 
@@ -146,7 +148,7 @@ After that the client will be in an authenticated session tied to the user-id yo
 
 The Eclipse client currently is not able to use oauth (oauth is more geared towards browser-based
 applications). Instead it uses a github user-id and github "Personal Access Token" to authenticate. 
-There's the server verifies the validity of the token vai github rest API. 
+The server verifies the validity of the token via github rest API. 
 
 You provide these credentials, as system properties when running the 
 Eclipse/Java process. For example:
@@ -169,7 +171,7 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
   
   Currently there is no way to create projects or files via this basic UI. 
   So to get files / projects into it you have to run an Eclipse instance connected to
-  Flux (see "Running The Eclipse Plugin" above). To connect to the Flux on CF, 
+  Flux (see "Running The Eclipse Plugin" above). To connect to Flux on CF, 
   set these system properties:
   
        -Dflux-eclipse-editor-connect=true
