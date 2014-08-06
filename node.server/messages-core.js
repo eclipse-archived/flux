@@ -19,6 +19,11 @@ exports.MessageCore = MessageCore;
 
 MessageCore.prototype.initialize = function(socket, sockets) {
 	console.log('client connected for update notifications');
+	
+	this.configureServiceBroadcast(socket, sockets, 'serviceReady');
+	this.configureDirectRequest(socket, sockets, 'startServiceRequest');
+	this.configureResponse(socket, sockets, 'startServiceResponse');
+	this.configureDirectRequest(socket, sockets, 'shutdownService');
 
 	this.configureBroadcast(socket, 'projectConnected');
 	this.configureBroadcast(socket, 'projectDisconnected');
@@ -115,6 +120,19 @@ MessageCore.prototype.configureBroadcast = function(socket, messageName) {
 	});
 };
 
+MessageCore.prototype.configureServiceBroadcast = function(socket, sockets, messageName) {
+	socket.on(messageName, function(data) {
+		authentication.checkMessageSend(socket, data, function (err) {
+			if (err) {
+				console.log("Message rejected: ", err);
+				return;
+			}
+			data.socketID = socket.id;
+			socket.broadcast.to(SUPER_USER).emit(messageName, data);
+		});
+	});
+};
+
 MessageCore.prototype.configureRequest = function(socket, messageName) {
 	socket.on(messageName, function(data) {
 		authentication.checkMessageSend(socket, data, function (err) {
@@ -123,6 +141,7 @@ MessageCore.prototype.configureRequest = function(socket, messageName) {
 				return;
 			}
 			data.requestSenderID = socket.id;
+			console.log("REQUEST: " + messageName + " " + JSON.stringify(data));
 			if (data.username !== undefined) {
 				socket.broadcast.to(data.username).emit(messageName, data);
 			}
@@ -131,6 +150,20 @@ MessageCore.prototype.configureRequest = function(socket, messageName) {
 				//So don't send message again.
 				socket.broadcast.to(SUPER_USER).emit(messageName, data);
 			}
+		});
+	});
+};
+
+MessageCore.prototype.configureDirectRequest = function(socket, sockets, messageName) {
+	socket.on(messageName, function(data) {
+		authentication.checkMessageSend(socket, data, function (err) {
+			if (err) {
+				console.log("Message rejected: ", err);
+				return;
+			}
+			data.requestSenderID = socket.id;
+			console.log("DIRECT: " + messageName + " " + JSON.stringify(data));
+			sockets.socket(data.socketID).emit(messageName, data);
 		});
 	});
 };
@@ -145,6 +178,8 @@ MessageCore.prototype.configureResponse = function(socket, sockets, messageName)
 				console.log("Message rejected: ", err);
 				return;
 			}
+			console.log("RESPONSE: " + messageName + " " + JSON.stringify(data));
+			data.socketID = socket.id;
 			sockets.socket(data.requestSenderID).emit(messageName, data);
 		});
 	});

@@ -10,22 +10,13 @@
 *******************************************************************************/
 package org.eclipse.flux.service.common;
 
-import io.socket.IOAcknowledge;
-import io.socket.IOCallback;
-import io.socket.SocketIO;
-import io.socket.SocketIOException;
-
-import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
-
-import javax.net.ssl.SSLContext;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,33 +38,20 @@ import org.json.JSONObject;
  */
 final public class ToolingServiceManager {
 	
-	private static final String SUPER_USER = "$super$";
-	
 	/**
 	 * Service Manager is active
 	 */
 	private boolean active = false;
-	
-	/**
-	 * Run Cleanup service in a separate thread such that it can be stopped and restarted when needed 
-	 */
-	private boolean runCleanupInThread = false;
-	
+		
 	/**
 	 * Flux messaging server URL
 	 */
 	private String host;
 	
 	/**
-	 * Web socket
+	 * Web socket connector
 	 */
-	private SocketIO socket;
-	
-	/**
-	 * Indicates if the connection to messaging server and its broadcast channel
-	 * has been established
-	 */
-	private AtomicBoolean connectedToMessagingServer = new AtomicBoolean(false);
+	private MessageConnector messageConnector;
 	
 	/**
 	 * Users for which Tooling services need to be active during the cleanup phase
@@ -99,11 +77,6 @@ final public class ToolingServiceManager {
 	 * Starts and stops tooling services
 	 */
 	private IServiceLauncher serviceLauncher = null;
-	
-	/**
-	 * ID for the tooling service cleanup thread
-	 */
-	private String cleanupThreadId;
 	
 	/**
 	 * Callback ID for Flux messages
@@ -140,26 +113,6 @@ final public class ToolingServiceManager {
 	 */
 	private Thread cleanupThread = null;
 	
-	private void handleMessage(String messageType, JSONObject message) {
-		try {
-			if ("liveResourceStarted".equals(messageType)) {
-				String resource = message.getString("resource");
-				if (fileFiltersRegEx == null || Pattern.matches(fileFiltersRegEx, resource)) {
-					processUser(message.getString("username"));
-				}
-			} else if ("getLiveResourcesResponse".equals(messageType)) {
-				JSONObject liveUnits = message.getJSONObject("liveEditUnits");
-				String user = message.getString("username");
-				String[] projects = JSONObject.getNames(liveUnits);
-				if (projects != null && projects.length > 0) {
-					processUser(user);
-				}
-			}
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-	}
-	
 	/**
 	 * Constructs Tooling Services Manager
 	 * 
@@ -174,78 +127,70 @@ final public class ToolingServiceManager {
 	
 	private void init() {
 		executor = Executors.newFixedThreadPool(maxThreadNumber);
-		try {
-			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
-			this.socket = new SocketIO(host);
-			this.socket.connect(new IOCallback() {
+		messageConnector = new MessageConnector(host);
 
-				@Override
-				public void on(String messageType, IOAcknowledge arg1, Object... data) {
-					handleMessage(messageType, (JSONObject) data[0]);
+		messageConnector.addMessageHandler(new IMessageHandler() {
+
+			@Override
+			public boolean canHandle(String type, JSONObject message) {
+				try {
+					String resource = message.getString("resource");
+					return fileFiltersRegEx == null
+							|| Pattern.matches(fileFiltersRegEx, resource);
+				} catch (JSONException e) {
+					e.printStackTrace();
+					return false;
 				}
+			}
 
-				@Override
-				public void onConnect() {
-					try {
-						JSONObject message = new JSONObject();
-						message.put("channel", SUPER_USER);
-						socket.emit("connectToChannel", new IOAcknowledge() {
+			@Override
+			public void handle(String type, JSONObject message) {
+				try {
+					processUser(message.getString("username"));
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+			}
 
-							public void ack(Object... answer) {
-								try {
-									if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("connectedToChannel")) {
-										System.out.println("Connected to messaging server " + host);
-										connectedToMessagingServer.compareAndSet(false, true);
-									}
-								}
-								catch (Exception e) {
-									e.printStackTrace();
-								}
-							}
-							
-						}, message);
+			@Override
+			public String getMessageType() {
+				return "liveResourceStarted";
+			}
+
+		});
+
+		messageConnector.addMessageHandler(new IMessageHandler() {
+
+			@Override
+			public void handle(String type, JSONObject message) {
+				try {
+					JSONObject liveUnits = message
+							.getJSONObject("liveEditUnits");
+					String user = message.getString("username");
+					String[] projects = JSONObject.getNames(liveUnits);
+					if (projects != null && projects.length > 0) {
+						processUser(user);
 					}
-					catch (JSONException e) {
-						e.printStackTrace();
-					}
+				} catch (JSONException e) {
+					e.printStackTrace();
 				}
+			}
 
-				@Override
-				public void onDisconnect() {
-					// Nothing
-				}
+			@Override
+			public String getMessageType() {
+				return "getLiveResourcesResponse";
+			}
 
-				@Override
-				public void onError(SocketIOException ex) {
-					ex.printStackTrace();
-					
-					try {
-						socket = new SocketIO(host);
-						socket.connect(this);
-					} catch (MalformedURLException e) {
-						e.printStackTrace();
-					}
-				}
+			@Override
+			public boolean canHandle(String type, JSONObject message) {
+				return true;
+			}
+		});
 
-				@Override
-				public void onMessage(String arg0, IOAcknowledge arg1) {
-					// Nothing
-				}
-
-				@Override
-				public void onMessage(JSONObject arg0, IOAcknowledge arg1) {
-					// Nothing
-				}
-				
-			});
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
 	}
-	
+
 	private void doRun() {
-		while(!connectedToMessagingServer.get()) {
+		while(!messageConnector.isConnected()) {
 			System.out.println("Attempting to connect to messaging server: " + host);
 			try {
 				Thread.sleep(1000);
@@ -340,21 +285,9 @@ final public class ToolingServiceManager {
 		return this;
 	}
 		
-	public ToolingServiceManager cleanupThreadId(String cleanupThreadId) {
-		validateState();
-		this.cleanupThreadId = cleanupThreadId;
-		return this;
-	}
-	
 	public ToolingServiceManager cleanupCallbackId(int cleanupCallbackId) {
 		validateState();
 		this.cleanupCallbackId = cleanupCallbackId;
-		return this;
-	}
-	
-	public ToolingServiceManager runCleanupInThread(boolean runCleanupInThread) {
-		validateState();
-		this.runCleanupInThread = runCleanupInThread;
 		return this;
 	}
 	
@@ -362,8 +295,7 @@ final public class ToolingServiceManager {
 		// Stop the cleanup thread. Service will be shutdown below anyway.
 		cleanupThread.interrupt();
 		
-		socket.disconnect();
-		connectedToMessagingServer.compareAndSet(true, false);
+		messageConnector.dispose();
 		
 		// Schedule shutdown of JDT services
 		lock.writeLock().lock();
@@ -396,17 +328,7 @@ final public class ToolingServiceManager {
 	final public void start() {
 		active = true;
 		init();
-		if (runCleanupInThread) {
-			cleanupThread = new Thread(cleanupThreadId) {
-				@Override
-				public void run() {
-					doRun();
-				}
-			};
-			cleanupThread.start();
-		} else {
-			doRun();
-		}
+		doRun();
 	}
 	
 	private void processUser(String user) {
@@ -444,7 +366,7 @@ final public class ToolingServiceManager {
 			message.put("callback_id", cleanupCallbackId);
 			message.put("resourceRegEx", fileFiltersRegEx);
 			message.put("username", "*");
-			socket.emit("getLiveResourcesRequest", message);
+			messageConnector.send("getLiveResourcesRequest", message);
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
@@ -538,5 +460,5 @@ final public class ToolingServiceManager {
 			
 		});
 	}
-
+	
 }

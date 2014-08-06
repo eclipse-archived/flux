@@ -11,9 +11,15 @@
 package org.eclipse.flux.jdt.servicemanager;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 import org.eclipse.flux.service.common.HeadlessEclipseServiceLauncher;
+import org.eclipse.flux.service.common.IServiceLauncher;
+import org.eclipse.flux.service.common.MessageCliServiceLauncher;
 import org.eclipse.flux.service.common.ToolingServiceManager;
+import org.eclipse.flux.service.common.Utils;
 
 /**
  * Starts and Stops JDT Flux service per user. JDT Tooling resources are considered to be all *.java and *.class resources.
@@ -24,6 +30,8 @@ import org.eclipse.flux.service.common.ToolingServiceManager;
 public class JdtServiceManager {
 
 	private static final int CLEANUP_JDT_SERVICES_CALLBACK = "Cleanup-JDT-Services".hashCode();
+	
+	private static final String JDT_SERVICE_ID = "JDT";
 	
 	private static final String JDT_RESOURCE_REGEX = ".*\\.java|.*\\.class";
 
@@ -37,27 +45,19 @@ public class JdtServiceManager {
 		
 		String host = null;
 		String serviceFolderPath = null;
-		String workspaceFolderPath = null;
+		String cfUrl = null;
+		IServiceLauncher serviceLauncher = null;
 		
 		for (int i = 0; i < args.length; i+=2) {
 			if ("-host".equals(args[i])) {
-				if (i < args.length - 2) {
-					host = args[i+1];
-				} else {
-					throw new RuntimeException("Argument value expected after '" + args[i] + "'");
-				}
+				validateArgument(args, i);
+				host = args[i+1];
 			} else if ("-serviceFolder".equals(args[i])) {
-				if (i < args.length - 2) {
-					serviceFolderPath = args[i+1];
-				} else {
-					throw new RuntimeException("Argument value expected after '" + args[i] + "'");
-				}
-			} else if ("-workspacesFolder".equals(args[i])) {
-				if (i < args.length - 2) {
-					workspaceFolderPath = args[i+1];
-				} else {
-					throw new RuntimeException("Argument value expected after '" + args[i] + "'");
-				}
+				validateArgument(args, i);
+				serviceFolderPath = args[i+1];
+			} else if ("-cfUrl".equals(args[i])) {
+				validateArgument(args, i);
+				cfUrl = args[i+1];
 			} else {
 				throw new RuntimeException("Invalid argument '" + args[i] + "'");
 			}
@@ -87,27 +87,15 @@ public class JdtServiceManager {
 			serviceFolderPath = sb.toString();
 		}
 		
-		if (workspaceFolderPath == null) {
-			workspaceFolderPath = serviceFolderPath + File.separator + "workspaces";
-		}
-		
-		File workspaceFolder = new File(workspaceFolderPath);
-		if (workspaceFolder.exists()) {
-//			if (workspaceFolder.isDirectory()) {
-//				deleteFolder(workspaceFolder, false);
-//			} else {
-//				workspaceFolder.delete();
-//			}
+		if (cfUrl == null) {
+			serviceLauncher = createLocalProcessServiceLauncher(host, serviceFolderPath);
 		} else {
-			workspaceFolder.mkdir();
+			serviceLauncher = createCloudFoundryServiceLauncher(host, serviceFolderPath);
 		}
 		
 		ToolingServiceManager jdtServiceManager = new ToolingServiceManager(
-				host, new HeadlessEclipseServiceLauncher(
-						serviceFolderPath , host,
-						workspaceFolderPath, null))
-				.cleanupCallbackId(CLEANUP_JDT_SERVICES_CALLBACK).fileFilters(
-						JDT_RESOURCE_REGEX);
+				host, serviceLauncher).cleanupCallbackId(
+				CLEANUP_JDT_SERVICES_CALLBACK).fileFilters(JDT_RESOURCE_REGEX);
 		
 		jdtServiceManager.start();
 	}
@@ -126,5 +114,41 @@ public class JdtServiceManager {
 	    if (includeFolder) {
 	    	folder.delete();
 	    }
+	}
+	
+	private static HeadlessEclipseServiceLauncher createLocalProcessServiceLauncher(String host, String serviceFolderPath) {
+		String workspaceFolderPath = serviceFolderPath + File.separator + "workspaces";
+		File workspaceFolder = new File(workspaceFolderPath);
+		if (workspaceFolder.exists()) {
+//			if (workspaceFolder.isDirectory()) {
+//				deleteFolder(workspaceFolder, false);
+//			} else {
+//				workspaceFolder.delete();
+//			}
+		} else {
+			workspaceFolder.mkdir();
+		}
+		
+		return new HeadlessEclipseServiceLauncher(serviceFolderPath, host,
+				workspaceFolderPath, null);
+	}
+	
+	private static MessageCliServiceLauncher createCloudFoundryServiceLauncher(String host, String serviceFolder) {
+		List<String> command = new ArrayList<String>();
+		command.add("java");
+		command.add("-jar");
+		command.add("-Dflux-host=" + host);
+		command.add(Utils.getEquinoxLauncherJar(serviceFolder));
+		command.add("-data");
+		command.add(serviceFolder + File.separator + "workspace_" + new Random().nextInt());
+		MessageCliServiceLauncher launcher = new MessageCliServiceLauncher(host, JDT_SERVICE_ID, 500L, new File(serviceFolder), command);
+		launcher.setServicePoolSize(3);
+		return launcher;
+	}
+	
+	private static void validateArgument(String args[], int index) {
+		if (index > args.length - 2) {
+			throw new RuntimeException("Argument value expected after '" + args[index] + "'");
+		}
 	}
 }

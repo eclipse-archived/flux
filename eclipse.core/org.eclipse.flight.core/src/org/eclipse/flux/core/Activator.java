@@ -46,18 +46,27 @@ public class Activator implements BundleActivator {
 	private static Activator plugin;
 
 	private IMessagingConnector messagingConnector;
-	private IMessagingConnector internalMessagingConnector;
 	private Repository repository;
 	private LiveEditCoordinator liveEditCoordinator;
 	
 	@Override
 	public void start(BundleContext context) throws Exception {
-		plugin = this;
-		
-		String username = System.getProperty("flux.user.name", "defaultuser");
-		String token = System.getProperty("flux.user.token");
-		// TODO: change this username and token to preference and create some UI to set it
-		
+		plugin = this;		
+	}
+
+	@Override
+	public void stop(BundleContext context) throws Exception {
+		plugin = null;
+	}
+	
+	public void startService(String username, String token)  throws Exception {
+		if (repository != null) {
+			if (repository.getUsername().equals(username)) {
+				return;
+			} else {
+				throw new IllegalStateException("Service already has user assigned");
+			}
+		}
 		messagingConnector = new SocketIOMessagingConnector(username, token);
 		
 		repository = new Repository(messagingConnector, username);
@@ -107,12 +116,6 @@ public class Activator implements BundleActivator {
 		workspace.addResourceChangeListener(listener);
 
 		updateProjectConnections();
-
-	}
-
-	@Override
-	public void stop(BundleContext context) throws Exception {
-		plugin = null;
 	}
 
 	private void updateProjectConnections() throws CoreException {

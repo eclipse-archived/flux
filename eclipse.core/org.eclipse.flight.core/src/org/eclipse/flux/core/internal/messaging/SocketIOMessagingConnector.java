@@ -72,18 +72,20 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 				public void onError(SocketIOException ex) {
 					final IOCallback self = this;
 					Activator.log(ex);
-					new Job("Reconnect web-socket") {
-						@Override
-						protected IStatus run(IProgressMonitor arg0) {
-							try {
-								socket = createSocket(username, token);
-								socket.connect(self);
-							} catch (MalformedURLException e) {
-								e.printStackTrace();
+//					if (!connected) {
+						new Job("Reconnect web-socket") {
+							@Override
+							protected IStatus run(IProgressMonitor arg0) {
+								try {
+									socket = createSocket(username, token);
+									socket.connect(self);
+								} catch (MalformedURLException e) {
+									e.printStackTrace();
+								}
+								return Status.OK_STATUS;
 							}
-							return Status.OK_STATUS;
-						}
-					}.schedule(reconnectDelay());
+						}.schedule(reconnectDelay());
+//					}
 				}
 
 				private long reconnectDelay() {
