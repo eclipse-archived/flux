@@ -36,6 +36,9 @@ public final class MessageConnector {
 	
 				@Override
 				public void on(String messageType, IOAcknowledge arg1, Object... data) {
+					if ("getLiveResourcesResponse".equals(messageType)) {
+						System.out.println(data[0]);
+					}
 					if (data.length == 1 && data[0] instanceof JSONObject) {
 						handleIncomingMessage(messageType, (JSONObject)data[0]);
 					}

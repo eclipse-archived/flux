@@ -18,6 +18,7 @@ import java.util.Random;
 import org.eclipse.flux.service.common.HeadlessEclipseServiceLauncher;
 import org.eclipse.flux.service.common.IServiceLauncher;
 import org.eclipse.flux.service.common.MessageCliServiceLauncher;
+import org.eclipse.flux.service.common.MessageConnector;
 import org.eclipse.flux.service.common.ToolingServiceManager;
 import org.eclipse.flux.service.common.Utils;
 
@@ -87,14 +88,16 @@ public class JdtServiceManager {
 			serviceFolderPath = sb.toString();
 		}
 		
+		MessageConnector messageConnector = new MessageConnector(host);
+		
 		if (cfUrl == null) {
 			serviceLauncher = createLocalProcessServiceLauncher(host, serviceFolderPath);
 		} else {
-			serviceLauncher = createCloudFoundryServiceLauncher(host, serviceFolderPath);
+			serviceLauncher = createCloudFoundryServiceLauncher(host, serviceFolderPath, messageConnector);
 		}
 		
 		ToolingServiceManager jdtServiceManager = new ToolingServiceManager(
-				host, serviceLauncher).cleanupCallbackId(
+				messageConnector, serviceLauncher).cleanupCallbackId(
 				CLEANUP_JDT_SERVICES_CALLBACK).fileFilters(JDT_RESOURCE_REGEX);
 		
 		jdtServiceManager.start();
@@ -133,7 +136,7 @@ public class JdtServiceManager {
 				workspaceFolderPath, null);
 	}
 	
-	private static MessageCliServiceLauncher createCloudFoundryServiceLauncher(String host, String serviceFolder) {
+	private static MessageCliServiceLauncher createCloudFoundryServiceLauncher(String host, String serviceFolder, MessageConnector messageConnector) {
 		List<String> command = new ArrayList<String>();
 		command.add("java");
 		command.add("-jar");
@@ -141,7 +144,7 @@ public class JdtServiceManager {
 		command.add(Utils.getEquinoxLauncherJar(serviceFolder));
 		command.add("-data");
 		command.add(serviceFolder + File.separator + "workspace_" + new Random().nextInt());
-		MessageCliServiceLauncher launcher = new MessageCliServiceLauncher(host, JDT_SERVICE_ID, 500L, new File(serviceFolder), command);
+		MessageCliServiceLauncher launcher = new MessageCliServiceLauncher(messageConnector, JDT_SERVICE_ID, 500L, new File(serviceFolder), command);
 		launcher.setServicePoolSize(3);
 		return launcher;
 	}

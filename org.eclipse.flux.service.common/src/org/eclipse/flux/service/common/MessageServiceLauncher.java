@@ -30,7 +30,7 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	
 	private final Object poolSizeLock = new Object();
 	
-	public MessageServiceLauncher(final String host, final String serviceID, long timeout) {
+	public MessageServiceLauncher(/*final String host*/MessageConnector messageConnector, final String serviceID, long timeout) {
 		this.serviceID = serviceID;
 		
 		if (timeout < MIN_TIMEOUT) {
@@ -39,7 +39,7 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 			this.timeout = timeout;
 		}
 		
-		messageConnector = new MessageConnector(host);
+		this.messageConnector = /*new MessageConnector(host)*/messageConnector;
 		
 		messageConnector.addMessageHandler(new IMessageHandler() {
 			

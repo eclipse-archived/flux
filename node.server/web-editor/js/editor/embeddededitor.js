@@ -454,7 +454,6 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 	});
 
 	socket.on('getLiveResourcesRequest', function(data) {
-		console.log("getLiveResourcesRequest: " + JSON.stringify(data));
 		if (data.callback_id
 				&& (!data.projectRegEx || new RegExp(data.projectRegEx).test(project)) 
 				&& (!data.resourceRegEx || new RegExp(data.resourceRegEx).test(resource))) {
@@ -464,14 +463,12 @@ function(require, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGra
 				'savePointTimestamp' : lastSavePointTimestamp,
 				'savePointHash'      : lastSavePointHash
 			}];
-			console.log("Sending response");
 			socket.emit('getLiveResourcesResponse', {
 				'callback_id'        : data.callback_id,
+				'liveEditUnits'      : liveEditUnits,
 				'requestSenderID'    : data.requestSenderID,
-				'username'           : username,
-				'liveEditUnits'      : liveEditUnits
+				'username'           : username
 			});
-			console.log("Response sent");
 		}
 	});
 	

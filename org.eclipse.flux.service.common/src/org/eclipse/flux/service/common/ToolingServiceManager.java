@@ -119,15 +119,16 @@ final public class ToolingServiceManager {
 	 * @param host Flux server URL
 	 * @param serviceLauncher The tooling service starter/stopper 
 	 */
-	public ToolingServiceManager(String host, IServiceLauncher serviceLauncher) {
+	public ToolingServiceManager(/*String host*/MessageConnector messageConnector, IServiceLauncher serviceLauncher) {
 		super();
-		host(host);
+		this.messageConnector = messageConnector;
+//		host(host);
 		serviceLauncher(serviceLauncher);
 	}
 	
 	private void init() {
 		executor = Executors.newFixedThreadPool(maxThreadNumber);
-		messageConnector = new MessageConnector(host);
+//		messageConnector = new MessageConnector(host);
 
 		messageConnector.addMessageHandler(new IMessageHandler() {
 
@@ -181,6 +182,24 @@ final public class ToolingServiceManager {
 				return "getLiveResourcesResponse";
 			}
 
+			@Override
+			public boolean canHandle(String type, JSONObject message) {
+				return true;
+			}
+		});
+		
+		messageConnector.addMessageHandler(new IMessageHandler() {
+			
+			@Override
+			public void handle(String type, JSONObject message) {
+				System.out.println("TOOLING: " + message);
+			}
+			
+			@Override
+			public String getMessageType() {
+				return "LOGGING";
+			}
+			
 			@Override
 			public boolean canHandle(String type, JSONObject message) {
 				return true;
@@ -460,5 +479,5 @@ final public class ToolingServiceManager {
 			
 		});
 	}
-	
+
 }

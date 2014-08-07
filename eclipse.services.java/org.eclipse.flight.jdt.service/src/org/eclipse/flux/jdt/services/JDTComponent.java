@@ -15,7 +15,6 @@ import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.Repository;
 import org.eclipse.flux.core.ServiceConnector;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -43,6 +42,7 @@ public class JDTComponent {
 					try {
 						System.out.println("FULL STOP");
 						context.getBundleContext().getBundle(0).stop();
+						System.exit(0);
 					} catch (BundleException e) {
 						e.printStackTrace();
 					}

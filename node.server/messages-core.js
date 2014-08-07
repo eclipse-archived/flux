@@ -64,9 +64,15 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 	this.configureResponse(socket, sockets, 'renameinfileresponse');
 
 	socket.on('disconnect', function () {
+		console.log(arguments.length);
 		console.log('client disconnected from update notifications');
 	});
 
+	socket.on('error', function (err) { 
+		console.log("Socket.IO Error"); 
+		console.log(err.stack); // this is changed from your code in last comment
+	});
+	
 	socket.on('connectToChannel', function(data, fn) {
 		var channel = data.channel;
 		authentication.checkChannelJoin(socket, data, function (err) {
@@ -141,7 +147,6 @@ MessageCore.prototype.configureRequest = function(socket, messageName) {
 				return;
 			}
 			data.requestSenderID = socket.id;
-			console.log("REQUEST: " + messageName + " " + JSON.stringify(data));
 			if (data.username !== undefined) {
 				socket.broadcast.to(data.username).emit(messageName, data);
 			}
@@ -162,7 +167,6 @@ MessageCore.prototype.configureDirectRequest = function(socket, sockets, message
 				return;
 			}
 			data.requestSenderID = socket.id;
-			console.log("DIRECT: " + messageName + " " + JSON.stringify(data));
 			sockets.socket(data.socketID).emit(messageName, data);
 		});
 	});
@@ -178,9 +182,11 @@ MessageCore.prototype.configureResponse = function(socket, sockets, messageName)
 				console.log("Message rejected: ", err);
 				return;
 			}
-			console.log("RESPONSE: " + messageName + " " + JSON.stringify(data));
 			data.socketID = socket.id;
+//			socket.broadcast.to(SUPER_USER).emit("LOGGING", {msgName: messageName, data: data});
 			sockets.socket(data.requestSenderID).emit(messageName, data);
+//			sockets.socket(data.requestSenderID).emit(messageName, data);
+			console.log("RESPONSE: " + messageName + " " + JSON.stringify(data));
 		});
 	});
 };

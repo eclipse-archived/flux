@@ -9,9 +9,9 @@ public class MessageCliServiceLauncher extends MessageServiceLauncher {
 	
 	private ProcessBuilder processBuilder;
 
-	public MessageCliServiceLauncher(String host, String serviceID,
+	public MessageCliServiceLauncher(/*String host*/MessageConnector messageConnector, String serviceID,
 			long timeout, File serviceFolder, List<String> command) {
-		super(host, serviceID, timeout);
+		super(/*host*/messageConnector, serviceID, timeout);
 		int random = new Random().nextInt();
 		this.processBuilder = new ProcessBuilder(command).directory(serviceFolder)
 				.redirectOutput(new File(serviceFolder.getPath() + File.separator + random + ".out"))

@@ -21,10 +21,8 @@ public abstract class ServiceConnector implements IServiceConnector {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
 				try {
-					System.out.println("SHUTDOWN");
 					if (message.getString("service").equals(serviceID)
 							&& (username == null || username.equals(message.getString("username")))) {
-						System.out.println("STOPPING");
 						stopService();
 					}
 				} catch (JSONException e) {
