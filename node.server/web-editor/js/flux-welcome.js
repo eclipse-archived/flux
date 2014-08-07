@@ -1,7 +1,8 @@
 /*global io alert $*/
 define(function (require) {
 
-	var socketio = require("socketio");
+	var socket = require("socket");
+
 	//Map from projectName -> ProjectView
 	var projects = {};
 
@@ -20,7 +21,6 @@ define(function (require) {
 	//console.log('query=', query);
 
 
-	var socket = io.connect();
 
 	function ProjectView(projectName) {
 		this.name = projectName;
