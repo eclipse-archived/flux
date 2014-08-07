@@ -22,7 +22,7 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 	
 	this.configureServiceBroadcast(socket, sockets, 'serviceReady');
 	this.configureDirectRequest(socket, sockets, 'startServiceRequest');
-	this.configureResponse(socket, sockets, 'startServiceResponse');
+	this.configureDirectResponse(socket, sockets, 'startServiceResponse');
 	this.configureDirectRequest(socket, sockets, 'shutdownService');
 
 	this.configureBroadcast(socket, 'projectConnected');
@@ -182,11 +182,23 @@ MessageCore.prototype.configureResponse = function(socket, sockets, messageName)
 				console.log("Message rejected: ", err);
 				return;
 			}
-			data.socketID = socket.id;
-//			socket.broadcast.to(SUPER_USER).emit("LOGGING", {msgName: messageName, data: data});
 			sockets.socket(data.requestSenderID).emit(messageName, data);
-//			sockets.socket(data.requestSenderID).emit(messageName, data);
-			console.log("RESPONSE: " + messageName + " " + JSON.stringify(data));
+		});
+	});
+};
+
+MessageCore.prototype.configureDirectResponse = function(socket, sockets, messageName) {
+	//TODO: auth checking of response messages.
+	//  As it is, I beleave it might be possible for malicious client to send fake resonses
+	//  to any socket they have previously received a message from. This is probably an issue.
+	socket.on(messageName, function(data) {
+		authentication.checkMessageSend(socket, data, function (err) {
+			if (err) {
+				console.log("Message rejected: ", err);
+				return;
+			}
+			data.socketID = socket.id;
+			sockets.socket(data.requestSenderID).emit(messageName, data);
 		});
 	});
 };

@@ -10,6 +10,7 @@
 *******************************************************************************/
 package org.eclipse.flux.service.common;
 
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -43,11 +44,6 @@ final public class ToolingServiceManager {
 	 */
 	private boolean active = false;
 		
-	/**
-	 * Flux messaging server URL
-	 */
-	private String host;
-	
 	/**
 	 * Web socket connector
 	 */
@@ -113,104 +109,91 @@ final public class ToolingServiceManager {
 	 */
 	private Thread cleanupThread = null;
 	
+	private IMessageHandler[] messageHandlers;
+	
 	/**
 	 * Constructs Tooling Services Manager
 	 * 
 	 * @param host Flux server URL
 	 * @param serviceLauncher The tooling service starter/stopper 
 	 */
-	public ToolingServiceManager(/*String host*/MessageConnector messageConnector, IServiceLauncher serviceLauncher) {
+	public ToolingServiceManager(URL host, IServiceLauncher serviceLauncher) {
 		super();
-		this.messageConnector = messageConnector;
-//		host(host);
+		this.messageConnector = MessageConnector
+				.getServiceMessageConnector(host);
 		serviceLauncher(serviceLauncher);
-	}
+
+		messageHandlers = new IMessageHandler[] {
+
+			new IMessageHandler() {
 	
+				@Override
+				public boolean canHandle(String type, JSONObject message) {
+					try {
+						String resource = message.getString("resource");
+						return fileFiltersRegEx == null
+								|| Pattern.matches(fileFiltersRegEx, resource);
+					} catch (JSONException e) {
+						e.printStackTrace();
+						return false;
+					}
+				}
+	
+				@Override
+				public void handle(String type, JSONObject message) {
+					try {
+						processUser(message.getString("username"));
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+	
+				@Override
+				public String getMessageType() {
+					return "liveResourceStarted";
+				}
+	
+			},
+	
+			new IMessageHandler() {
+	
+				@Override
+				public void handle(String type, JSONObject message) {
+					try {
+						JSONObject liveUnits = message
+								.getJSONObject("liveEditUnits");
+						String user = message.getString("username");
+						String[] projects = JSONObject.getNames(liveUnits);
+						if (projects != null && projects.length > 0) {
+							processUser(user);
+						}
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+	
+				@Override
+				public String getMessageType() {
+					return "getLiveResourcesResponse";
+				}
+	
+				@Override
+				public boolean canHandle(String type, JSONObject message) {
+					return true;
+				}
+			}
+		};
+	}
+
 	private void init() {
 		executor = Executors.newFixedThreadPool(maxThreadNumber);
-//		messageConnector = new MessageConnector(host);
-
-		messageConnector.addMessageHandler(new IMessageHandler() {
-
-			@Override
-			public boolean canHandle(String type, JSONObject message) {
-				try {
-					String resource = message.getString("resource");
-					return fileFiltersRegEx == null
-							|| Pattern.matches(fileFiltersRegEx, resource);
-				} catch (JSONException e) {
-					e.printStackTrace();
-					return false;
-				}
-			}
-
-			@Override
-			public void handle(String type, JSONObject message) {
-				try {
-					processUser(message.getString("username"));
-				} catch (JSONException e) {
-					e.printStackTrace();
-				}
-			}
-
-			@Override
-			public String getMessageType() {
-				return "liveResourceStarted";
-			}
-
-		});
-
-		messageConnector.addMessageHandler(new IMessageHandler() {
-
-			@Override
-			public void handle(String type, JSONObject message) {
-				try {
-					JSONObject liveUnits = message
-							.getJSONObject("liveEditUnits");
-					String user = message.getString("username");
-					String[] projects = JSONObject.getNames(liveUnits);
-					if (projects != null && projects.length > 0) {
-						processUser(user);
-					}
-				} catch (JSONException e) {
-					e.printStackTrace();
-				}
-			}
-
-			@Override
-			public String getMessageType() {
-				return "getLiveResourcesResponse";
-			}
-
-			@Override
-			public boolean canHandle(String type, JSONObject message) {
-				return true;
-			}
-		});
-		
-		messageConnector.addMessageHandler(new IMessageHandler() {
-			
-			@Override
-			public void handle(String type, JSONObject message) {
-				System.out.println("TOOLING: " + message);
-			}
-			
-			@Override
-			public String getMessageType() {
-				return "LOGGING";
-			}
-			
-			@Override
-			public boolean canHandle(String type, JSONObject message) {
-				return true;
-			}
-		});
-
+		for (IMessageHandler messageHandler : messageHandlers) {
+			messageConnector.addMessageHandler(messageHandler);
+		}
 	}
 
 	private void doRun() {
 		while(!messageConnector.isConnected()) {
-			System.out.println("Attempting to connect to messaging server: " + host);
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
@@ -238,21 +221,6 @@ final public class ToolingServiceManager {
 		}
 	}
 	
-	/**
-	 * Sets the Flux messaging server URL
-	 * 
-	 * @param host Flux messaging server URL
-	 * @return
-	 */
-	public ToolingServiceManager host(String host) {
-		validateState();
-		if (host == null) {
-			throw new IllegalArgumentException("Parameter must not be NULL!");
-		}
-		this.host = host;
-		return this;
-	}
-		
 	public ToolingServiceManager serviceLauncher(IServiceLauncher serviceLauncher) {
 		validateState();
 		if (serviceLauncher == null) {
@@ -314,7 +282,9 @@ final public class ToolingServiceManager {
 		// Stop the cleanup thread. Service will be shutdown below anyway.
 		cleanupThread.interrupt();
 		
-		messageConnector.dispose();
+		for (IMessageHandler messageHandler : messageHandlers) {
+			messageConnector.removeMessageHandler(messageHandler);
+		}
 		
 		// Schedule shutdown of JDT services
 		lock.writeLock().lock();

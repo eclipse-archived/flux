@@ -2,6 +2,7 @@ package org.eclipse.flux.service.common;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.List;
 import java.util.Random;
 
@@ -9,9 +10,9 @@ public class MessageCliServiceLauncher extends MessageServiceLauncher {
 	
 	private ProcessBuilder processBuilder;
 
-	public MessageCliServiceLauncher(/*String host*/MessageConnector messageConnector, String serviceID,
+	public MessageCliServiceLauncher(URL host, String serviceID,
 			long timeout, File serviceFolder, List<String> command) {
-		super(/*host*/messageConnector, serviceID, timeout);
+		super(host, serviceID, timeout);
 		int random = new Random().nextInt();
 		this.processBuilder = new ProcessBuilder(command).directory(serviceFolder)
 				.redirectOutput(new File(serviceFolder.getPath() + File.separator + random + ".out"))

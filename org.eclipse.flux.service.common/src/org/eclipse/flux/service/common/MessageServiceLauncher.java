@@ -1,5 +1,6 @@
 package org.eclipse.flux.service.common;
 
+import java.net.URL;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +31,7 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	
 	private final Object poolSizeLock = new Object();
 	
-	public MessageServiceLauncher(/*final String host*/MessageConnector messageConnector, final String serviceID, long timeout) {
+	public MessageServiceLauncher(URL host, final String serviceID, long timeout) {
 		this.serviceID = serviceID;
 		
 		if (timeout < MIN_TIMEOUT) {
@@ -39,7 +40,7 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 			this.timeout = timeout;
 		}
 		
-		this.messageConnector = /*new MessageConnector(host)*/messageConnector;
+		this.messageConnector = MessageConnector.getServiceMessageConnector(host);
 		
 		messageConnector.addMessageHandler(new IMessageHandler() {
 			

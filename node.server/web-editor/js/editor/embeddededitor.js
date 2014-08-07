@@ -463,9 +463,9 @@ function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, 
 			}];
 			socket.emit('getLiveResourcesResponse', {
 				'callback_id'        : data.callback_id,
-				'liveEditUnits'      : liveEditUnits,
 				'requestSenderID'    : data.requestSenderID,
-				'username'           : username
+				'username'           : username,
+				'liveEditUnits'      : liveEditUnits
 			});
 		}
 	});

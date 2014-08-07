@@ -6,9 +6,12 @@ import io.socket.SocketIO;
 import io.socket.SocketIOException;
 
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -23,12 +26,33 @@ public final class MessageConnector {
 	
 	private static final String SUPER_USER = "$super$";
 	
+	static Map<URL, MessageConnector> pool = new HashMap<URL, MessageConnector>();
+	
 	private AtomicBoolean connected = new AtomicBoolean(false);
 	private SocketIO socket;
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
 	private List<IConnectionListener> connectionListeners = new ArrayList<IConnectionListener>();
 	
-	public MessageConnector(final String host) {
+
+	public static MessageConnector getUserMessageConnector(URL host, String userSpace) {
+		try {
+			URL key = new URL(host.getProtocol(), host.getHost(), host.getPort(), userSpace);
+			MessageConnector messageConnector = pool.get(key);
+			if (messageConnector == null) {
+				messageConnector = new MessageConnector(host.toString(), userSpace);
+				pool.put(key, messageConnector);
+			}
+			return messageConnector;
+		} catch (MalformedURLException e) {
+			throw new IllegalArgumentException("Invalid Flux messaging server URL!", e);
+		} 
+	}
+	
+	public static MessageConnector getServiceMessageConnector(URL host) {
+		return getUserMessageConnector(host, SUPER_USER);
+	}
+	
+	private MessageConnector(final String host, final String userSpace) {
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
 			this.socket = new SocketIO(host);
@@ -36,9 +60,6 @@ public final class MessageConnector {
 	
 				@Override
 				public void on(String messageType, IOAcknowledge arg1, Object... data) {
-					if ("getLiveResourcesResponse".equals(messageType)) {
-						System.out.println(data[0]);
-					}
 					if (data.length == 1 && data[0] instanceof JSONObject) {
 						handleIncomingMessage(messageType, (JSONObject)data[0]);
 					}
@@ -48,7 +69,7 @@ public final class MessageConnector {
 				public void onConnect() {
 					try {
 						JSONObject message = new JSONObject();
-						message.put("channel", SUPER_USER);
+						message.put("channel", userSpace);
 						socket.emit("connectToChannel", new IOAcknowledge() {
 	
 							public void ack(Object... answer) {
@@ -131,10 +152,6 @@ public final class MessageConnector {
 
 	public void removeMessageHandler(IMessageHandler messageHandler) {
 		this.messageHandlers.get(messageHandler.getMessageType()).remove(messageHandler);
-	}
-	
-	public void dispose() {
-		socket.disconnect();
 	}
 	
 	public void addConnectionListener(IConnectionListener listener) {
