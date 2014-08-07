@@ -10,9 +10,9 @@ public class MessageCliServiceLauncher extends MessageServiceLauncher {
 	
 	private ProcessBuilder processBuilder;
 
-	public MessageCliServiceLauncher(URL host, String serviceID,
+	public MessageCliServiceLauncher(URL host, String serviceID, int maxPoolSize, 
 			long timeout, File serviceFolder, List<String> command) {
-		super(host, serviceID, timeout);
+		super(host, serviceID, maxPoolSize, timeout);
 		int random = new Random().nextInt();
 		this.processBuilder = new ProcessBuilder(command).directory(serviceFolder)
 				.redirectOutput(new File(serviceFolder.getPath() + File.separator + random + ".out"))
@@ -20,7 +20,7 @@ public class MessageCliServiceLauncher extends MessageServiceLauncher {
 	}
 
 	@Override
-	protected void addServiceToPool() {
+	protected void addService() {
 		try {
 			processBuilder.start();
 		} catch (IOException e) {

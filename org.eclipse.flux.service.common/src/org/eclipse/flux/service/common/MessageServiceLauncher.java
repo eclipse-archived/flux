@@ -15,11 +15,11 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	
 	private static final int MAX_NUMBER_OF_TRIALS = 3;
 	
-	private String serviceID;
+	protected String serviceID;
 		
-	private long timeout;
+	final private long timeout;
 	
-	private int maxPoolSize = 1;
+	final protected int maxPoolSize;
 	
 	private MessageConnector messageConnector;
 	
@@ -28,10 +28,8 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	private Deque<String> servicePoolQueue = new LinkedList<String>();
 	
 	private final Object servicePoolLock = new Object();
-	
-	private final Object poolSizeLock = new Object();
-	
-	public MessageServiceLauncher(URL host, final String serviceID, long timeout) {
+		
+	public MessageServiceLauncher(URL host, final String serviceID, int maxPoolSize, long timeout) {
 		this.serviceID = serviceID;
 		
 		if (timeout < MIN_TIMEOUT) {
@@ -39,6 +37,12 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 		} else {
 			this.timeout = timeout;
 		}
+		
+		if (maxPoolSize < 1) {
+			throw new IllegalArgumentException("Pool size must greater than 0!");
+		}
+		
+		this.maxPoolSize = maxPoolSize;
 		
 		this.messageConnector = MessageConnector.getServiceMessageConnector(host);
 		
@@ -99,19 +103,15 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 			
 		});
 		
+		if (messageConnector.isConnected()) {
+			initServicePool();
+		}
+		
 		messageConnector.addConnectionListener(new IConnectionListener() {
 
 			@Override
 			public void connected() {
-				synchronized (poolSizeLock) {
-					synchronized (servicePoolLock) {
-						if (servicePoolQueue.isEmpty()) {
-							for (int i = 0; i < maxPoolSize; i++) {
-								addServiceToPool();
-							}
-						}
-					}
-				}
+				initServicePool();
 			}
 
 			@Override
@@ -120,13 +120,14 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 			}
 			
 		});
+		
 	}
 
 	@Override
 	public boolean startService(String user) {
 		try {
 			for (int i = 0; i < MAX_NUMBER_OF_TRIALS; i++) {
-				addServiceToPool();
+				addService();
 				String socketId = null;
 				while (socketId == null) {
 					synchronized (servicePoolLock) {
@@ -153,7 +154,7 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 						Thread.sleep(TIME_STEP);
 					}
 				}
-				stopService(socketId, null);
+				removeService(socketId, null);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -165,15 +166,14 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	public boolean stopService(String user) {
 		String socketId = userToServiceCache.remove(user);
 		try {
-			stopService(socketId, user);
-			return true;
+			return removeService(socketId, user);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return false;
 		}
 	}
 	
-	private void stopService(String socketId, String user) throws JSONException {
+	protected boolean removeService(String socketId, String user) throws JSONException {
 		if (socketId != null) {
 			JSONObject message = new JSONObject();
 			message.put("service", serviceID);
@@ -182,35 +182,18 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 			}
 			message.put("socketID", socketId);
 			messageConnector.send("shutdownService", message);
+			return true;
+		}
+		return false;
+	}
+	
+
+	protected void initServicePool() {
+		for (int i = 0; i < maxPoolSize; i++) {
+			addService();
 		}
 	}
 	
-	public void setServicePoolSize(final int size) {
-		if (size <= 0) {
-			throw new IllegalArgumentException("Cannot be negative or zero!");
-		}
-		
-		synchronized(poolSizeLock) {
-			if (messageConnector.isConnected()) {
-	 			synchronized(servicePoolLock) {
-					for (int i = size; i < maxPoolSize && i < servicePoolQueue.size(); i++) {
-						try {
-							stopService(servicePoolQueue.pollLast(), null);
-						} catch (JSONException e) {
-							e.printStackTrace();
-						}
-					}
-					for (int i = maxPoolSize; i < size; i++) {
-						addServiceToPool();
-					}
-				}
-	 			this.maxPoolSize = size;
-			} else {
-				maxPoolSize = size;
-			}
-		}
-	}
-	
-	abstract protected void addServiceToPool();
+	abstract protected void addService();
 
 }
