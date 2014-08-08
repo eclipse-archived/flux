@@ -15,8 +15,7 @@ var when = require('when');
 var amqp = require('amqplib');
 
 var authentication = require('./authentication');
-
-var rabbitUrl = 'amqp://localhost'; //TODO: make this configurable
+var rabbitUrl = require('./rabbit-url');
 
 var connection = null;
 
@@ -35,7 +34,7 @@ function addLogging(prefix, eventSource) {
  */
 function getConnection() {
 	if (!connection) {
-		connection = when(amqp.connect());
+		connection = when(amqp.connect(rabbitUrl));
 		//Add some logging to the connection
 		connection.done(function (connection) {
 			addLogging('AMQP connection: ', connection);
