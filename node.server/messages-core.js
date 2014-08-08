@@ -11,6 +11,14 @@
 *******************************************************************************/
 /*global require console exports process __dirname*/
 
+// TODO: delete this file
+//
+// THIS MODULE IS OBSOLETE
+//
+// It has been replaced with module 'rabbit-connector'.
+// Any references to these module should be deleted and
+// replaced with references to 'rabbit-connector'
+
 var authentication = require('./authentication');
 var SUPER_USER = authentication.SUPER_USER;
 
