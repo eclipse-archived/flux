@@ -20,9 +20,9 @@ var GridStore = mongo.GridStore;
 var MongoDBRepository = function() {
 	this.mongodb = null;
 	this.notificationSender = null;
-	
+
 	MongoClient.connect("mongodb://localhost:27017/flight-db", function(err, db) {
-		
+
 		if (err) {
 			this.mongodb = undefined;
 			return console.dir(err);
@@ -42,7 +42,7 @@ MongoDBRepository.prototype.getProjects = function(username, callback) {
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var projectCollection = this.mongodb.collection('projects');
 
 	projectCollection.find({
@@ -59,7 +59,7 @@ MongoDBRepository.prototype.getProjects = function(username, callback) {
 					'name' : items[i].name
 				});
 			}
-			
+
 		    callback(null, projects);
 		}
 	});
@@ -69,7 +69,7 @@ MongoDBRepository.prototype.hasProject = function(username, projectName, callbac
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var projectCollection = this.mongodb.collection('projects');
 
 	projectCollection.find({
@@ -90,7 +90,7 @@ MongoDBRepository.prototype.getProject = function(username, projectName, include
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var resourcesCollection = this.mongodb.collection('resources');
 
 	resourcesCollection.find({
@@ -104,7 +104,7 @@ MongoDBRepository.prototype.getProject = function(username, projectName, include
 			if (items !== undefined) {
 				var resources = [];
 				var deleted = [];
-				
+
 				var i;
 				for (i = 0; i < items.length; i++) {
 					if (!items[i].deleted) {
@@ -123,7 +123,7 @@ MongoDBRepository.prototype.getProject = function(username, projectName, include
 						deleted.push(deleteDescription);
 					}
 				}
-				
+
 				if (includeDeleted) {
 					callback(null, resources, deleted);
 				}
@@ -142,7 +142,7 @@ MongoDBRepository.prototype.createProject = function(username, projectName, call
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var projectCollection = this.mongodb.collection('projects');
 	projectCollection.insert({
 		'username' : username,
@@ -154,7 +154,7 @@ MongoDBRepository.prototype.createProject = function(username, projectName, call
 		else {
 			console.log(insertedDocs);
 			callback(null, {'project': projectName});
-			
+
 			this.notificationSender.emit('projectCreated', {
 				'username' : username,
 				'project' : projectName
@@ -167,7 +167,7 @@ MongoDBRepository.prototype.createResource = function(username, projectName, res
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	if (type === 'file') {
 		var fileName = username + '#' + projectName + '#' + resourcePath;
 		new GridStore(this.mongodb, fileName, "w").open(function(err, gridStore) {
@@ -213,7 +213,7 @@ MongoDBRepository.prototype._createResourceCollectionEntry = function(username, 
 				'timestamp' : timestamp,
 				'type' : type
 			});
-			
+
 			this.notificationSender.emit('resourceStored', {
 				'username' : username,
 				'project' : projectName,
@@ -230,7 +230,7 @@ MongoDBRepository.prototype.updateResource = function(username, projectName, res
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var resourcesCollection = this.mongodb.collection('resources');
 
 	resourcesCollection.find({
@@ -263,7 +263,7 @@ MongoDBRepository.prototype.updateResource = function(username, projectName, res
 			}
 			else {
 				callback(404);
-			}				
+			}
 		}
 	}.bind(this));
 };
@@ -298,7 +298,7 @@ MongoDBRepository.prototype._updateResourceCollectionEntry = function(username, 
 				'timestamp' : timestamp,
 				'hash' : hash
 			});
-			
+
 			this.notificationSender.emit('resourceStored', {
 				'username' : username,
 				'project' : projectName,
@@ -315,7 +315,7 @@ MongoDBRepository.prototype.hasResource = function(username, projectName, resour
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var resourcesCollection = this.mongodb.collection('resources');
 
 	resourcesCollection.find({
@@ -338,7 +338,7 @@ MongoDBRepository.prototype.needsUpdate = function(username, projectName, resour
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var resourcesCollection = this.mongodb.collection('resources');
 
 	resourcesCollection.find({
@@ -357,7 +357,7 @@ MongoDBRepository.prototype.needsUpdate = function(username, projectName, resour
 			}
 			else {
 				callback(404);
-			}				
+			}
 		}
 	});
 };
@@ -366,7 +366,7 @@ MongoDBRepository.prototype.gotDeleted = function(username, projectName, resourc
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var resourcesCollection = this.mongodb.collection('resources');
 
 	resourcesCollection.find({
@@ -385,7 +385,7 @@ MongoDBRepository.prototype.gotDeleted = function(username, projectName, resourc
 			}
 			else {
 				callback(404);
-			}				
+			}
 		}
 	});
 };
@@ -394,7 +394,7 @@ MongoDBRepository.prototype.getResourceInfo = function(username, projectName, re
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var resourcesCollection = this.mongodb.collection('resources');
 
 	resourcesCollection.find({
@@ -407,7 +407,7 @@ MongoDBRepository.prototype.getResourceInfo = function(username, projectName, re
 		}
 		else {
 			var error = null;
-			
+
 			var result = {
 				'username' : username,
 				'project' : projectName,
@@ -415,7 +415,7 @@ MongoDBRepository.prototype.getResourceInfo = function(username, projectName, re
 				'timestamp' : timestamp,
 				'hash' : hash
 			};
-			
+
 			if (items !== undefined && items.length === 1) {
 				result.exists = !items[0].deleted;
 				result.needsUpdate = !items[0].deleted && (items[0].type != type || items[0].timestamp < timestamp);
@@ -429,7 +429,7 @@ MongoDBRepository.prototype.getResourceInfo = function(username, projectName, re
 			else {
 				error = 404;
 			}
-			
+
 			callback(error, result);
 		}
 	});
@@ -454,7 +454,7 @@ MongoDBRepository.prototype.getResource = function(username, projectName, resour
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var resourcesCollection = this.mongodb.collection('resources');
 
 	resourcesCollection.find({
@@ -491,7 +491,7 @@ MongoDBRepository.prototype.getResource = function(username, projectName, resour
 						}
 					}.bind(this));
 				}
-				
+
 			}
 			else {
 				callback(404);
@@ -504,7 +504,7 @@ MongoDBRepository.prototype.deleteResource = function(username, projectName, res
 	if (this.mongodb === undefined) {
 		callback(404);
 	}
-	
+
 	var resourcesCollection = this.mongodb.collection('resources');
 
 	resourcesCollection.find({
@@ -522,7 +522,7 @@ MongoDBRepository.prototype.deleteResource = function(username, projectName, res
 				'deletedResource' : resourcePath,
 				'deletedTimestamp' : timestamp
 			};
-			
+
 			if (items !== undefined && items.length === 1 && timestamp > items[0].timestamp) {
 				resourcesCollection.update({
 					'username' : username,
@@ -539,7 +539,7 @@ MongoDBRepository.prototype.deleteResource = function(username, projectName, res
 					}
 					else {
 						callback(null, result);
-			
+
 						this.notificationSender.emit('resourceDeleted', {
 							'username' : username,
 							'project' : projectName,
@@ -551,7 +551,7 @@ MongoDBRepository.prototype.deleteResource = function(username, projectName, res
 			}
 			else {
 				callback(404, result);
-			}				
+			}
 		}
 	}.bind(this));
 };

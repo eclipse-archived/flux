@@ -174,6 +174,14 @@ InMemoryRepository.prototype.updateResource = function(username, projectName, re
 				'resource' : resourcePath,
 				'timestamp' : timestamp,
 				'hash' : hash});
+
+			this.notificationSender.emit('resourceStored', {
+				'username' : username,
+				'project' : projectName,
+				'resource' : resourcePath,
+				'timestamp' : timestamp,
+				'hash' : hash});
+
 		}
 		else {
 			callback(404);

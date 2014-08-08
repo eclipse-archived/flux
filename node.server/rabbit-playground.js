@@ -1,3 +1,5 @@
+/*global require*/
+
 /**
  * Testing ground to play around with 'rabbit.js' library which can
  * be used to talk to an amqp message broker such as rabbitmq.
