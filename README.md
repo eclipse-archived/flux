@@ -68,6 +68,14 @@
   
 ## Running the prototype
 
+### RabbitMQ
+
+  The current prototype uses RabbitMQ to relay messages between client connections. As such having access to
+  a message broker is required to run the prototype.
+  
+  Follow the [instructions for installing RabbitMQ](https://www.rabbitmq.com/download.html) on your machine.
+  The default 'out of the box' configuration should do just fine for running the prototype locally.
+
 ### Running the node-js server
 
   The node.js-based server can be found in the "node.server" folder. Switch to that directory and install the
@@ -77,7 +85,7 @@
   npm install
   ```
   
-  Then you can star the node.js server application:
+  Then you can start the node.js server application:
   
   ```
   npm start
@@ -201,6 +209,8 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
  
      https://flux.cfapps.io/auth/github/callback
  
+ The prototype uses RabbitMQ to relay messages between clients. So you must create
+ and bind a RabbitMQ service instance to your cloudfoundry app for it to work.
        
 ## Status
 
