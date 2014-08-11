@@ -170,7 +170,7 @@ public class JdtServiceManager {
 		jdtServiceManager.stop();
 		messageConnector.disconnect();
 		// Workaround for a defect coming from Socket IO. SocketIO doesn't terminate all threads on disconnect.
-//		System.exit(0);
+		System.exit(0);
 	}
 
 	public static void deleteFolder(File folder, boolean includeFolder) {

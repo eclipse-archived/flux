@@ -108,6 +108,25 @@ final public class ToolingServiceManager {
 	private Thread cleanupThread = null;
 	
 	private IMessageHandler[] messageHandlers;
+
+	private final IConnectionListener CONNECTION_LISTENER = new IConnectionListener() {
+
+		@Override
+		public void connected(String userChannel) {
+			if (Utils.SUPER_USER.equals(userChannel)) {
+				init();
+				cleanupThread.start();
+			}
+		}
+
+		@Override
+		public void disconnected(String userChannel) {
+			if (Utils.SUPER_USER.equals(userChannel)) {
+				stop();
+			}
+		}
+		
+	};;
 	
 	/**
 	 * Constructs Tooling Services Manager
@@ -282,6 +301,11 @@ final public class ToolingServiceManager {
 	}
 	
 	final public void stop() {
+		if (!active) {
+			return;
+		}
+		
+		messageConnector.removeConnectionListener(CONNECTION_LISTENER);
 		
 		if (cleanupThread != null) {
 			cleanupThread.interrupt();
@@ -321,22 +345,12 @@ final public class ToolingServiceManager {
 			return;
 		}
 		active = true;
-		messageConnector.addConnectionListener(new IConnectionListener() {
-
-			@Override
-			public void connected(String userChannel) {
-				messageConnector.removeConnectionListener(this);
-				init();
-				cleanupThread.start();
-			}
-
-			@Override
-			public void disconnected(String userChannel) {
-				// nothing
-			}
-			
-		});
-		messageConnector.connect("$super$");
+		messageConnector.addConnectionListener(CONNECTION_LISTENER);
+		if (messageConnector.isConnected(Utils.SUPER_USER)) {
+			CONNECTION_LISTENER.connected(Utils.SUPER_USER);
+		} else {
+			messageConnector.connectToChannel(Utils.SUPER_USER);
+		}
 	}
 	
 	private void processUser(String user) {

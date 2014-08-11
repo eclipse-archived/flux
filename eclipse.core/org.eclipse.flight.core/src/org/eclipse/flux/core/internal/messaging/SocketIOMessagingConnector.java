@@ -209,27 +209,20 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 
 	@Override
 	public void disconnect() {
-		if (socket != null) {
-			socket.disconnect();
-		}
+		socket.disconnect();
 	}
 	
 	private void switchChannel(final String userChannel) {
 		try {
 			JSONObject message = new JSONObject();
 			message.put("channel", this.userChannel);
-			
-			/*
-			 * The call nullifies this.userChannel. So call it after creating the disconnect message
-			 * Send dosconnection event to listeners before disconnecting
-			 */
-			processDisconnect();
-	
+				
 			socket.emit("disconnectFromChannel", new IOAcknowledge() {
 				@Override
 				public void ack(Object... answer) {
 					try {
 						if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("disconnectedFromChannel")) {
+							processDisconnect();
 							if (userChannel != null) {
 								connectToChannel(userChannel);
 							}
