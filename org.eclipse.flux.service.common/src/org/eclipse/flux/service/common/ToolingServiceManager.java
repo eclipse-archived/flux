@@ -177,11 +177,15 @@ final public class ToolingServiceManager {
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
 			this.socket = new SocketIO(host);
+			this.socket.addHeader("X-flux-user-name", SUPER_USER);
+			this.socket.addHeader("X-flux-user-token", "f1ecfb8686487c20f8a99c4d3a7f5a6e91cb09b2");
 			this.socket.connect(new IOCallback() {
 
 				@Override
 				public void on(String messageType, IOAcknowledge arg1, Object... data) {
-					handleMessage(messageType, (JSONObject) data[0]);
+					if (data[0] instanceof JSONObject) {
+						handleMessage(messageType, (JSONObject) data[0]);
+					}
 				}
 
 				@Override
