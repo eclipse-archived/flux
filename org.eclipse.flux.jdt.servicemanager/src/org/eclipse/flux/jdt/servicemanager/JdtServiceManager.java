@@ -138,15 +138,15 @@ public class JdtServiceManager {
 		if (cfUrl == null) {
 			serviceLauncher = createLocalProcessServiceLauncher(host, serviceFolderPath);
 		} else {
-			if (cfUsername == null) {
-				serviceLauncher = createCFImmitationServiceLauncher(messageConnector, serviceFolderPath, username, password);
-			} else {
+//			if (cfUsername == null) {
+//				serviceLauncher = createCFImmitationServiceLauncher(messageConnector, serviceFolderPath, username, password);
+//			} else {
 				try {
-					serviceLauncher = createCloudFoundryServiceLauncher(messageConnector, cfUrl, orgName, spaceName, username, password, serviceFolderPath);
+					serviceLauncher = createCloudFoundryServiceLauncher(messageConnector, cfUrl, orgName, spaceName, cfUsername, cfPassword, host.toString(), username, password, serviceFolderPath);
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}
-			}
+//			}
 		}
 		
 		ToolingServiceManager jdtServiceManager = new ToolingServiceManager(
@@ -223,8 +223,8 @@ public class JdtServiceManager {
 		return launcher;
 	}
 	
-	private static MessageCloudFoundryServiceLauncher createCloudFoundryServiceLauncher(MessageConnector messageConnector, URL cfControllerUrl, String orgName, String spaceName, String username, String password, String serviceFolder) throws IOException {
-		return new MessageCloudFoundryServiceLauncher(messageConnector, cfControllerUrl, orgName, spaceName, username, password, JDT_SERVICE_ID, 3, 500L, new File(serviceFolder));
+	private static MessageCloudFoundryServiceLauncher createCloudFoundryServiceLauncher(MessageConnector messageConnector, URL cfControllerUrl, String orgName, String spaceName, String cfUsername, String cfPassword, String fluxUrl, String username, String password, String serviceFolder) throws IOException {
+		return new MessageCloudFoundryServiceLauncher(messageConnector, cfControllerUrl, orgName, spaceName, cfUsername, cfPassword, fluxUrl, username, password, JDT_SERVICE_ID, 3, 500L, new File(serviceFolder));
 	}
 	
 	private static void validateArgument(String args[], int index) {
