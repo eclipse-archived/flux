@@ -98,5 +98,12 @@
             class="org.eclipse.flux.ui.integration.FluxUiPlugin">
       </startup>
    </extension>
+   <extension
+         point="org.eclipse.flux.core.connectionInitialListeners">
+      <initialListener
+            class="org.eclipse.flux.ui.integration.UiConnectionListener"
+            priority="MEDIUM">
+      </initialListener>
+   </extension>
 
 </plugin>

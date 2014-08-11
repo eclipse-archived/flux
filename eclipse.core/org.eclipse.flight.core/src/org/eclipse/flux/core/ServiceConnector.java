@@ -1,28 +1,19 @@
 package org.eclipse.flux.core;
 
-import org.eclipse.flux.core.internal.messaging.SocketIOMessagingConnector;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public abstract class ServiceConnector implements IServiceConnector {
 
-	private static final String SUPER_USER = "$super$";
-	
-	private String username = null;
-
-	public ServiceConnector(final String serviceID) {
+	public ServiceConnector(final IMessagingConnector serviceConnector, final String serviceID) {
 		
-		final IMessagingConnector messagingConnector = new SocketIOMessagingConnector(
-				SUPER_USER, null);
-		
-		messagingConnector.addMessageHandler(new AbstractMessageHandler(
+		serviceConnector.addMessageHandler(new AbstractMessageHandler(
 				"shutdownService") {
 
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
 				try {
-					if (message.getString("service").equals(serviceID)
-							&& (username == null || username.equals(message.getString("username")))) {
+					if (message.getString("service").equals(serviceID)) {
 						stopService();
 					}
 				} catch (JSONException e) {
@@ -32,22 +23,20 @@ public abstract class ServiceConnector implements IServiceConnector {
 
 		});
 
-		messagingConnector.addMessageHandler(new AbstractMessageHandler("startServiceRequest") {
+		serviceConnector.addMessageHandler(new AbstractMessageHandler("startServiceRequest") {
 
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
 				try {
 					if (serviceID.equals(message.getString("service"))) {
+						serviceConnector.removeMessageHandler(this);
 						String username = message.getString("username");
-						String token = message.has("token") ? message.getString("token") : null;
-						startService(username, token);
-						ServiceConnector.this.username = username;
+						startService(username);
 						JSONObject response = new JSONObject();
 						response.put("service", serviceID);
 						response.put("username", username);
 						response.put("requestSenderID", message.getString("requestSenderID"));
-						messagingConnector.send("startServiceResponse", response);
-						messagingConnector.removeMessageHandler(this);
+						serviceConnector.send("startServiceResponse", response);
 					}
 				} catch (Throwable e) {
 					e.printStackTrace();
@@ -56,26 +45,16 @@ public abstract class ServiceConnector implements IServiceConnector {
 
 		});
 		
-		messagingConnector.addConnectionListener(new IConnectionListener() {
-			
-			@Override
-			public void disconnected() {
-				// nothing
-			}
-			
-			@Override
-			public void connected() {
-				try {
-					JSONObject readyMessage = new JSONObject();
-					readyMessage.put("service", serviceID);
-					messagingConnector.send("serviceReady", readyMessage);
-					messagingConnector.removeConnectionListener(this);
-				} catch (JSONException e) {
-					e.printStackTrace();
-				}
-			}
-			
-		});
+		/*
+		 * Send service ready message
+		 */
+		try {
+			JSONObject readyMessage = new JSONObject();
+			readyMessage.put("service", serviceID);
+			serviceConnector.send("serviceReady", readyMessage);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

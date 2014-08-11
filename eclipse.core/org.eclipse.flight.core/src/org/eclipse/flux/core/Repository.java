@@ -60,15 +60,15 @@ public class Repository {
 		this.syncedProjects = new ConcurrentHashMap<String, ConnectedProject>();
 		this.repositoryListeners = new ConcurrentLinkedDeque<>();
 		
-		this.messagingConnector.addConnectionListener(new IConnectionListener() {
-			@Override
-			public void connected() {
-				connect();
-			}
-			@Override
-			public void disconnected() {
-			}
-		});
+//		this.messagingConnector.addConnectionListener(new IConnectionListener() {
+//			@Override
+//			public void connected(String userChannel) {
+//				connect();
+//			}
+//			@Override
+//			public void disconnected(String userChannel) {
+//			}
+//		});
 		
 		IMessageHandler resourceChangedHandler = new AbstractMessageHandler("resourceChanged") {
 			@Override

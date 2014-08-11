@@ -2,8 +2,8 @@ package org.eclipse.flux.service.common;
 
 public interface IConnectionListener {
 	
-	void connected();
+	void connected(String userChannel);
 	
-	void disconnected();
+	void disconnected(String userChannel);
 
 }

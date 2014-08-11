@@ -12,6 +12,7 @@ package org.eclipse.flux.jdt.services;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarkerDelta;
@@ -25,7 +26,6 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.flux.core.CallbackIDAwareMessageHandler;
-import org.eclipse.flux.core.IConnectionListener;
 import org.eclipse.flux.core.ILiveEditConnector;
 import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.IRepositoryListener;
@@ -91,18 +91,6 @@ public class LiveEditUnits {
 		};
 		liveEditCoordinator.addLiveEditConnector(liveEditConnector);
 
-		this.messagingConnector.addConnectionListener(new IConnectionListener() {
-			@Override
-			public void connected() {
-				startup();
-			}
-
-			@Override
-			public void disconnected() {
-				disconnect();
-			}
-		});
-
 		this.repository.addRepositoryListener(new IRepositoryListener() {
 			@Override
 			public void projectConnected(IProject project) {
@@ -114,10 +102,8 @@ public class LiveEditUnits {
 			}
 		});
 
-		if (this.messagingConnector.isConnected()) {
-			startup();
-		}
-
+		startup();
+		
 		messagingConnector.addMessageHandler(new CallbackIDAwareMessageHandler("getLiveResourcesResponse", GET_LIVE_RESOURCES_CALLBACK) {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {

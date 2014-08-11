@@ -26,6 +26,7 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.internal.CloudSyncResourceListener;
+import org.eclipse.flux.core.internal.messaging.ConnectionInitializersRegistry;
 import org.eclipse.flux.core.internal.messaging.SocketIOMessagingConnector;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
@@ -45,31 +46,55 @@ public class Activator implements BundleActivator {
 	// The shared instance
 	private static Activator plugin;
 
-	private IMessagingConnector messagingConnector;
+	private SocketIOMessagingConnector messagingConnector;
 	private Repository repository;
 	private LiveEditCoordinator liveEditCoordinator;
 	
+	private final IChannelListener SERVICE_STARTER = new IChannelListener() {
+		@Override
+		public void connected(String userChannel) {
+			try {
+				plugin.initCoreService(userChannel);
+			} catch (CoreException e) {
+				e.printStackTrace();
+			}
+			ConnectionInitializersRegistry.getInstance().connected(userChannel);
+		}
+
+		@Override
+		public void disconnected(String userChannel) {
+			ConnectionInitializersRegistry.getInstance().disconnected(userChannel);
+			/*
+			 * TODO: support for cleaning up data upon disconnecting from channel 
+			 */
+		}	
+	};
+	
 	@Override
 	public void start(BundleContext context) throws Exception {
-		plugin = this;		
+		plugin = this;
 	}
 
 	@Override
 	public void stop(BundleContext context) throws Exception {
+		if (messagingConnector != null) {
+			messagingConnector.disconnect();
+		}
 		plugin = null;
 	}
 	
-	public void startService(String username, String token)  throws Exception {
-		if (repository != null) {
-			if (repository.getUsername().equals(username)) {
-				return;
-			} else {
-				throw new IllegalStateException("Service already has user assigned");
+	public void startService(String host, final String login, String token, boolean connectToChannel) throws CoreException {
+		if (this.messagingConnector == null) {
+			this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
+			this.messagingConnector.addConnectionListener(SERVICE_STARTER);
+			if (connectToChannel) {
+				this.messagingConnector.connect(login);
 			}
 		}
-		messagingConnector = new SocketIOMessagingConnector(username, token);
-		
-		repository = new Repository(messagingConnector, username);
+	}
+	
+	private void initCoreService(String userChannel) throws CoreException {
+		repository = new Repository(messagingConnector, userChannel);
 		liveEditCoordinator = new LiveEditCoordinator(messagingConnector);
 		
 		CloudSyncResourceListener resourceListener = new CloudSyncResourceListener(repository);
@@ -117,7 +142,7 @@ public class Activator implements BundleActivator {
 
 		updateProjectConnections();
 	}
-
+	
 	private void updateProjectConnections() throws CoreException {
 		String[] projects = getConnectedProjectPreferences();
 		for (String projectName : projects) {
@@ -202,5 +227,5 @@ public class Activator implements BundleActivator {
 	public static void log(Throwable ex) {
 		ex.printStackTrace();
 	}
-
+	
 }

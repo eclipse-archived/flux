@@ -7,13 +7,12 @@ import io.socket.SocketIOException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -24,38 +23,33 @@ import org.json.JSONObject;
 
 public final class MessageConnector {
 	
-	private static final String SUPER_USER = "$super$";
-	
 	static Map<URL, MessageConnector> pool = new HashMap<URL, MessageConnector>();
 	
 	private AtomicBoolean connected = new AtomicBoolean(false);
 	private SocketIO socket;
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
-	private List<IConnectionListener> connectionListeners = new ArrayList<IConnectionListener>();
+	private ConcurrentLinkedQueue<IConnectionListener> connectionListeners = new ConcurrentLinkedQueue<IConnectionListener>();
+	final private String host;
+	private String userChannel;
+	private String login;
+	private String token;
 	
-
-	public static MessageConnector getUserMessageConnector(URL host, String userSpace) {
-		try {
-			URL key = new URL(host.getProtocol(), host.getHost(), host.getPort(), userSpace);
-			MessageConnector messageConnector = pool.get(key);
-			if (messageConnector == null) {
-				messageConnector = new MessageConnector(host.toString(), userSpace);
-				pool.put(key, messageConnector);
-			}
-			return messageConnector;
-		} catch (MalformedURLException e) {
-			throw new IllegalArgumentException("Invalid Flux messaging server URL!", e);
-		} 
-	}
-	
-	public static MessageConnector getServiceMessageConnector(URL host) {
-		return getUserMessageConnector(host, SUPER_USER);
-	}
-	
-	private MessageConnector(final String host, final String userSpace) {
+	public MessageConnector(final String host, final String login, String token) {
+		this.host = host;
+		this.login = login;
+		this.token = token;
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
-			this.socket = new SocketIO(host);
+			this.socket = createSocket(host);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void connect(final String userChannel) {
+		if (this.userChannel != null) {
+			switchChannel(userChannel);
+		} else {
 			this.socket.connect(new IOCallback() {
 	
 				@Override
@@ -68,24 +62,7 @@ public final class MessageConnector {
 				@Override
 				public void onConnect() {
 					try {
-						JSONObject message = new JSONObject();
-						message.put("channel", userSpace);
-						socket.emit("connectToChannel", new IOAcknowledge() {
-	
-							public void ack(Object... answer) {
-								try {
-									if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("connectedToChannel")) {
-										if (connected.compareAndSet(false, true)) {
-											notifyConnected();
-										}
-									}
-								}
-								catch (Exception e) {
-									e.printStackTrace();
-								}
-							}
-							
-						}, message);
+						connectToChannel(userChannel);
 					}
 					catch (JSONException e) {
 						e.printStackTrace();
@@ -94,8 +71,7 @@ public final class MessageConnector {
 	
 				@Override
 				public void onDisconnect() {
-					connected.compareAndSet(true, false);
-					notifyDisconnected();
+					processDisconnect();
 				}
 	
 				@Override
@@ -103,7 +79,13 @@ public final class MessageConnector {
 					ex.printStackTrace();
 					
 					try {
-						socket = new SocketIO(host);
+						disconnect();
+					} catch (Throwable t) {
+						t.printStackTrace();
+					}
+					
+					try {
+						socket = createSocket(host);
 						socket.connect(this);
 					} catch (MalformedURLException e) {
 						e.printStackTrace();
@@ -121,17 +103,71 @@ public final class MessageConnector {
 				}
 				
 			});
-		} catch (Exception e) {
+		}
+	}
+	
+	private void switchChannel(final String userChannel) {
+		try {
+			JSONObject message = new JSONObject();
+			message.put("channel", this.userChannel);
+	
+			socket.emit("disconnectFromChannel", new IOAcknowledge() {
+				@Override
+				public void ack(Object... answer) {
+					try {
+						if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("disconnectedFromChannel")) {
+							processDisconnect();
+							if (userChannel != null) {
+								connectToChannel(userChannel);
+							}
+						}
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}, message);
+		} catch (JSONException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private void connectToChannel(final String userChannel) throws JSONException {
+		JSONObject message = new JSONObject();
+		message.put("channel", userChannel);
+		socket.emit("connectToChannel", new IOAcknowledge() {
+
+			public void ack(Object... answer) {
+				try {
+					if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("connectedToChannel")) {
+						processConnect(userChannel);
+					}
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}, message);
+	}
+
+	private SocketIO createSocket(String host) throws MalformedURLException {
+		SocketIO socket = new SocketIO(host);
+		socket.addHeader("X-flux-user-name", login);
+		socket.addHeader("X-flux-user-token", token);
+		return socket;
 	}
 	
 	protected void handleIncomingMessage(String messageType, JSONObject message) {
 		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageType);
 		if (handlers != null) {
 			for (IMessageHandler handler : handlers) {
-				if (handler.canHandle(messageType, message)) {
-					handler.handle(messageType, message);
+				try {
+					if (handler.canHandle(messageType, message)) {
+						handler.handle(messageType, message);
+					}
+				} catch (Throwable t) {
+					t.printStackTrace();
 				}
 			}
 		}
@@ -162,15 +198,52 @@ public final class MessageConnector {
 		this.connectionListeners.remove(listener);
 	}
 	
-	private void notifyConnected() {
+	private void notifyConnected(String userChannel) {
 		for (IConnectionListener listener : connectionListeners) {
-			listener.connected();
+			try {
+				listener.connected(userChannel);
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
 		}
 	}
 	
-	private void notifyDisconnected() {
+	private void notifyDisconnected(String userChannel) {
 		for (IConnectionListener listener : connectionListeners) {
-			listener.disconnected();
+			try {
+				listener.disconnected(userChannel);
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
 		}
 	}
+	
+	public void disconnect() {
+		if (socket != null) {
+			socket.disconnect();
+		}
+	}
+	
+	public String getHost() {
+		return host;
+	}
+	
+	private void processConnect(String userChannel) {
+		this.connected.compareAndSet(false, true);
+		if (userChannel != null) {
+			this.userChannel = userChannel;
+			notifyConnected(userChannel);
+		}
+	}
+	
+	private void processDisconnect() {
+		this.connected.compareAndSet(true, false);
+		if (this.userChannel != null) {
+			String userChannel = this.userChannel;
+			this.userChannel = null;
+			notifyDisconnected(userChannel);
+		}
+	}
+	
+ 	
 }

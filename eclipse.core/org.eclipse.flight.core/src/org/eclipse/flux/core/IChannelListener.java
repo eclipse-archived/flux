@@ -13,9 +13,9 @@ package org.eclipse.flux.core;
 /**
  * @author Martin Lippert
  */
-public interface IConnectionListener {
+public interface IChannelListener {
 
-	void connected();
-	void disconnected();
+	void connected(String userChannel);
+	void disconnected(String userChannel);
 
 }

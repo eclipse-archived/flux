@@ -10,14 +10,7 @@
  *******************************************************************************/
 package org.eclipse.flux.ui.integration;
 
-import org.eclipse.core.resources.IProject;
-import org.eclipse.flux.core.IRepositoryListener;
-import org.eclipse.flux.core.LiveEditCoordinator;
-import org.eclipse.flux.core.Repository;
-import org.eclipse.flux.ui.integration.handlers.LiveEditConnector;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.LabelProviderChangedEvent;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IStartup;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
@@ -40,28 +33,10 @@ public class FluxUiPlugin extends AbstractUIPlugin implements IStartup {
 		
 		String username = System.getProperty("flux.user.name", "defaultuser");
 		String token = System.getProperty("flux.user.token");
+		String host = System.getProperty("flux-host", "http://localhost:3000");
 		// TODO: change this username and token to preference and create some UI to set it
 		
-		org.eclipse.flux.core.Activator.getDefault().startService(username, token);
-		
-		org.eclipse.flux.core.Activator.getDefault().getRepository()
-				.addRepositoryListener(new IRepositoryListener() {
-					@Override
-					public void projectDisconnected(IProject project) {
-						updateProjectLabel(project);
-					}
-
-					@Override
-					public void projectConnected(IProject project) {
-						updateProjectLabel(project);
-					}
-				});
-
-		if (Boolean.getBoolean("flux-eclipse-editor-connect")) {
-			Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
-			LiveEditCoordinator liveEditCoordinator = org.eclipse.flux.core.Activator.getDefault().getLiveEditCoordinator();
-			new LiveEditConnector(liveEditCoordinator, repository);
-		}
+		org.eclipse.flux.core.Activator.getDefault().startService(host, username, token, true);		
 		
 	}
 
@@ -78,20 +53,6 @@ public class FluxUiPlugin extends AbstractUIPlugin implements IStartup {
 	 */
 	public static FluxUiPlugin getDefault() {
 		return plugin;
-	}
-
-	protected static void updateProjectLabel(final IProject project) {
-		final CloudProjectDecorator projectDecorator = CloudProjectDecorator
-				.getInstance();
-		if (projectDecorator != null) {
-			Display.getDefault().asyncExec(new Runnable() {
-				public void run() {
-					projectDecorator
-							.fireLabelProviderChanged(new LabelProviderChangedEvent(
-									projectDecorator, project));
-				}
-			});
-		}
 	}
 
 	/**

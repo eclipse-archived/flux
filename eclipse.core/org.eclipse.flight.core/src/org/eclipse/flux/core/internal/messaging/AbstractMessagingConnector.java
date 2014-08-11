@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 
-import org.eclipse.flux.core.IConnectionListener;
+import org.eclipse.flux.core.IChannelListener;
 import org.eclipse.flux.core.IMessageHandler;
 import org.eclipse.flux.core.IMessagingConnector;
 import org.json.JSONObject;
@@ -25,7 +25,7 @@ import org.json.JSONObject;
  */
 public abstract class AbstractMessagingConnector implements IMessagingConnector {
 	
-	private Collection<IConnectionListener> connectionListeners;
+	private Collection<IChannelListener> connectionListeners;
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers;
 	
 	public AbstractMessagingConnector() {
@@ -34,12 +34,12 @@ public abstract class AbstractMessagingConnector implements IMessagingConnector 
 	}
 	
 	@Override
-	public void addConnectionListener(IConnectionListener connectionListener) {
+	public void addConnectionListener(IChannelListener connectionListener) {
 		this.connectionListeners.add(connectionListener);
 	}
 
 	@Override
-	public void removeConnectionListener(IConnectionListener connectionListener) {
+	public void removeConnectionListener(IChannelListener connectionListener) {
 		this.connectionListeners.remove(connectionListener);
 	}
 	
@@ -54,15 +54,15 @@ public abstract class AbstractMessagingConnector implements IMessagingConnector 
 		this.messageHandlers.get(messageHandler.getMessageType()).remove(messageHandler);
 	}
 	
-	protected void notifyConnected() {
-		for (IConnectionListener connectionListener : connectionListeners) {
-			connectionListener.connected();
+	protected void notifyChannelConnected(String userChannel) {
+		for (IChannelListener connectionListener : connectionListeners) {
+			connectionListener.connected(userChannel);
 		}
 	}
 	
-	protected void notifyDisconnected() {
-		for (IConnectionListener connectionListener : connectionListeners) {
-			connectionListener.disconnected();
+	protected void notifyChannelDisconnected(String userChannel) {
+		for (IChannelListener connectionListener : connectionListeners) {
+			connectionListener.disconnected(userChannel);
 		}
 	}
 	
@@ -77,10 +77,4 @@ public abstract class AbstractMessagingConnector implements IMessagingConnector 
 		}
 	}
 	
-	/** 
-	 * Connectors that suport authentication will ensure that the userName can only connect to
-	 * the flux bus if the user has been authorized to do so.
-	 */
-	public abstract String getUserName();
-
 }

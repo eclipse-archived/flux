@@ -10,8 +10,10 @@
 *******************************************************************************/
 package org.eclipse.flux.jdt.servicemanager;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ import org.eclipse.flux.service.common.HeadlessEclipseServiceLauncher;
 import org.eclipse.flux.service.common.IServiceLauncher;
 import org.eclipse.flux.service.common.MessageCliServiceLauncher;
 import org.eclipse.flux.service.common.MessageCloudFoundryServiceLauncher;
+import org.eclipse.flux.service.common.MessageConnector;
 import org.eclipse.flux.service.common.ToolingServiceManager;
 import org.eclipse.flux.service.common.Utils;
 
@@ -31,10 +34,12 @@ import org.eclipse.flux.service.common.Utils;
  *
  */
 public class JdtServiceManager {
-
-	private static final int CLEANUP_JDT_SERVICES_CALLBACK = "Cleanup-JDT-Services".hashCode();
 	
-	private static final String JDT_SERVICE_ID = "JDT";
+	private static final String JDT_SERVICE_CLEANUP_THREAD_ID = "Cleanup-JDT-Services";
+
+	private static final int CLEANUP_JDT_SERVICES_CALLBACK = JDT_SERVICE_CLEANUP_THREAD_ID.hashCode();
+	
+	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
 	
 	private static final String JDT_RESOURCE_REGEX = ".*\\.java|.*\\.class";
 	
@@ -55,6 +60,8 @@ public class JdtServiceManager {
 		String spaceName = null;
 		String username = null;
 		String password = null;
+		String cfUsername = null;
+		String cfPassword = null;
 		IServiceLauncher serviceLauncher = null;
 		
 		for (int i = 0; i < args.length; i+=2) {
@@ -87,6 +94,12 @@ public class JdtServiceManager {
 			} else if ("-password".equals(args[i])) {
 				validateArgument(args, i);
 				password = args[i+1];
+			} else if ("-cfuser".equals(args[i])) {
+				validateArgument(args, i);
+				cfUsername = args[i+1];
+			} else if ("-cfpassword".equals(args[i])) {
+				validateArgument(args, i);
+				cfPassword = args[i+1];
 			} else {
 				throw new IllegalArgumentException("Invalid argument '" + args[i] + "'");
 			}
@@ -120,14 +133,16 @@ public class JdtServiceManager {
 			serviceFolderPath = sb.toString();
 		}
 		
+		MessageConnector messageConnector = new MessageConnector(host.toString(), username, password);
+		
 		if (cfUrl == null) {
 			serviceLauncher = createLocalProcessServiceLauncher(host, serviceFolderPath);
 		} else {
-			if (username == null) {
-				serviceLauncher = createCFImmitationServiceLauncher(host, serviceFolderPath);
+			if (cfUsername == null) {
+				serviceLauncher = createCFImmitationServiceLauncher(messageConnector, serviceFolderPath, username, password);
 			} else {
 				try {
-					serviceLauncher = createCloudFoundryServiceLauncher(host, cfUrl, orgName, spaceName, username, password, serviceFolderPath);
+					serviceLauncher = createCloudFoundryServiceLauncher(messageConnector, cfUrl, orgName, spaceName, username, password, serviceFolderPath);
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}
@@ -135,10 +150,27 @@ public class JdtServiceManager {
 		}
 		
 		ToolingServiceManager jdtServiceManager = new ToolingServiceManager(
-				host, serviceLauncher).cleanupCallbackId(
-				CLEANUP_JDT_SERVICES_CALLBACK).fileFilters(JDT_RESOURCE_REGEX);
+				messageConnector, serviceLauncher)
+				.cleanupCallbackId(CLEANUP_JDT_SERVICES_CALLBACK)
+				.fileFilters(JDT_RESOURCE_REGEX)
+				.cleanupThreadId(JDT_SERVICE_CLEANUP_THREAD_ID);
 		
 		jdtServiceManager.start();
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		System.out.println("Type 'stop' to stop JDT services.");
+		String userInput = "";
+		while (!"stop".equalsIgnoreCase(userInput)) {
+			try {
+				userInput = br.readLine();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		jdtServiceManager.stop();
+		messageConnector.disconnect();
+		// Workaround for a defect coming from Socket IO. SocketIO doesn't terminate all threads on disconnect.
+//		System.exit(0);
 	}
 
 	public static void deleteFolder(File folder, boolean includeFolder) {
@@ -174,22 +206,25 @@ public class JdtServiceManager {
 				workspaceFolderPath, null);
 	}
 	
-	private static MessageCliServiceLauncher createCFImmitationServiceLauncher(URL host, String serviceFolder) {
+	private static MessageCliServiceLauncher createCFImmitationServiceLauncher(MessageConnector messageConnector, String serviceFolder, String login, String password) {
 		List<String> command = new ArrayList<String>();
 		command.add("java");
 //		command.add("-Xdebug");
 //		command.add("-Xrunjdwp:transport=dt_socket,address=8001,server=y,suspend=y");
 		command.add("-jar");
-		command.add("-Dflux-host=" + host);
+		command.add("-Dflux-host=" + messageConnector.getHost());
+		command.add("-Dflux.user.name=" + login);
+		command.add("-Dflux.user.token" + password);
+		command.add("-Dflux.jdt.lazyStart=true");
 		command.add(Utils.getEquinoxLauncherJar(serviceFolder));
 		command.add("-data");
 		command.add(serviceFolder + File.separator + "workspace_" + System.currentTimeMillis());
-		MessageCliServiceLauncher launcher = new MessageCliServiceLauncher(host, JDT_SERVICE_ID, 3, 500L, new File(serviceFolder), command);
+		MessageCliServiceLauncher launcher = new MessageCliServiceLauncher(messageConnector, JDT_SERVICE_ID, 3, 500L, new File(serviceFolder), command);
 		return launcher;
 	}
 	
-	private static MessageCloudFoundryServiceLauncher createCloudFoundryServiceLauncher(URL host, URL cfControllerUrl, String orgName, String spaceName, String username, String password, String serviceFolder) throws IOException {
-		return new MessageCloudFoundryServiceLauncher(host, cfControllerUrl, orgName, spaceName, username, password, JDT_SERVICE_ID, 3, 500L, new File(serviceFolder));
+	private static MessageCloudFoundryServiceLauncher createCloudFoundryServiceLauncher(MessageConnector messageConnector, URL cfControllerUrl, String orgName, String spaceName, String username, String password, String serviceFolder) throws IOException {
+		return new MessageCloudFoundryServiceLauncher(messageConnector, cfControllerUrl, orgName, spaceName, username, password, JDT_SERVICE_ID, 3, 500L, new File(serviceFolder));
 	}
 	
 	private static void validateArgument(String args[], int index) {

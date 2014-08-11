@@ -19,9 +19,11 @@ public interface IMessagingConnector {
 	
 	boolean isConnected();
 	void send(String messageType, JSONObject message);
+	void disconnect();
+	void connect(String channel);
 
-	void addConnectionListener(IConnectionListener connectionListener);
-	void removeConnectionListener(IConnectionListener connectionListener);
+	void addConnectionListener(IChannelListener connectionListener);
+	void removeConnectionListener(IChannelListener connectionListener);
 	void addMessageHandler(IMessageHandler messageHandler);
 	void removeMessageHandler(IMessageHandler messageHandler);
 

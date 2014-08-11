@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Flux Core
-Bundle-SymbolicName: org.eclipse.flux.core
+Bundle-SymbolicName: org.eclipse.flux.core;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Bundle-Vendor: Eclipse.org - Flux
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7

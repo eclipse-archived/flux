@@ -11,29 +11,35 @@
  *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
-import org.eclipse.flux.core.IMessagingConnector;
-import org.eclipse.flux.core.LiveEditCoordinator;
-import org.eclipse.flux.core.Repository;
 import org.eclipse.flux.core.ServiceConnector;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Deactivate;
 
 /**
  * This component connects Java development tools (JDT) services to the Flux message bus.
  */
 public class JDTComponent {
+	
+	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
+	
 	@Activate
-	public void activate(final ComponentContext context) {
+	public void activate(final ComponentContext context) throws Exception {
 		
-		String username = System.getProperty("flux.user.name");
+		boolean lazyStart = Boolean.getBoolean("flux.jdt.lazyStart");
+		String login = System.getProperty("flux.user.name", "defaultuser");
 		String token = System.getProperty("flux.user.token");
+		String host = System.getProperty("flux-host", "http://localhost:3000");
 		
-		if (username == null) {
-			new ServiceConnector("JDT") {
+		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, !lazyStart);
+		
+		if (lazyStart) {
+			 new ServiceConnector(org.eclipse.flux.core.Activator
+				.getDefault().getMessagingConnector(), JDT_SERVICE_ID) {
 
 				@Override
-				public void startService(String user, String token) {
-					startJdtService(user, token);
+				public void startService(String user) {
+					org.eclipse.flux.core.Activator.getDefault().getMessagingConnector().connect(user);
 				}
 
 				@Override
@@ -47,27 +53,12 @@ public class JDTComponent {
 				}
 				
 			};
-		} else {
-			startJdtService(username, token);
 		}
 	}
 	
-	private void startJdtService(String username, String token) {
-		try {
-			org.eclipse.flux.core.Activator.getDefault().startService(username, token);
-			IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator.getDefault().getMessagingConnector();
-			Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
-			LiveEditCoordinator liveEditCoordinator = org.eclipse.flux.core.Activator.getDefault().getLiveEditCoordinator();
-
-			LiveEditUnits liveEditUnits = new LiveEditUnits(messagingConnector, liveEditCoordinator, repository);
-			new ContentAssistService(messagingConnector, liveEditUnits);
-			new NavigationService(messagingConnector, liveEditUnits);
-			new RenameService(messagingConnector, liveEditUnits);
-			
-			InitializeServiceEnvironment initializer = new InitializeServiceEnvironment(messagingConnector, repository);
-			initializer.start();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+	@Deactivate
+	public void deactivate(final ComponentContext context) {
+		
 	}
+	
 }

@@ -1,9 +1,9 @@
 package org.eclipse.flux.service.common;
 
-import java.net.URL;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -12,6 +12,11 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	
 	private static final long MIN_TIMEOUT = 500L;
 	private static final long TIME_STEP = 50L;
+	
+	/**
+	 * Time to wait for serviceReady message for all pending services 
+	 */
+	private static final long DISPOSE_TIMEOUT = 5000L; 
 	
 	private static final int MAX_NUMBER_OF_TRIALS = 3;
 	
@@ -28,8 +33,73 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	private Deque<String> servicePoolQueue = new LinkedList<String>();
 	
 	private final Object servicePoolLock = new Object();
+	
+	private final AtomicBoolean active = new AtomicBoolean(false);
+	
+	private final IMessageHandler[] MESSAGE_HANDLERS = new IMessageHandler[] {
+			
+			new IMessageHandler() {	
+				
+				@Override
+				public void handle(String type, JSONObject message) {
+					try {
+						String user = message.getString("username");
+						String socketId = message.getString("socketID");
+						userToServiceCache.put(user, socketId);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+				
+				@Override
+				public String getMessageType() {
+					return "startServiceResponse";
+				}
+				
+				@Override
+				public boolean canHandle(String type, JSONObject message) {
+					try {
+						return message.has("service") && message.getString("service").equals(serviceID);
+					} catch (JSONException e) {
+						e.printStackTrace();
+						return false;
+					}
+				}
+			},
+			
+			new IMessageHandler() {
+				
+				@Override
+				public void handle(String type, JSONObject message) {
+					try {
+						String socketId = message.getString("socketID");
+						synchronized (servicePoolQueue) {
+							servicePoolQueue.add(socketId);
+						}
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+				
+				@Override
+				public String getMessageType() {
+					return "serviceReady";
+				}
+				
+				@Override
+				public boolean canHandle(String type, JSONObject message) {
+					try {
+						return message.has("service") && message.getString("service").equals(serviceID);
+					} catch (JSONException e) {
+						e.printStackTrace();
+						return false;
+					}
+				}
+				
+			}			
+	};
 		
-	public MessageServiceLauncher(URL host, final String serviceID, int maxPoolSize, long timeout) {
+	public MessageServiceLauncher(MessageConnector messageConnector, final String serviceID, int maxPoolSize, long timeout) {
 		this.serviceID = serviceID;
 		
 		if (timeout < MIN_TIMEOUT) {
@@ -38,96 +108,19 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 			this.timeout = timeout;
 		}
 		
-		if (maxPoolSize < 1) {
-			throw new IllegalArgumentException("Pool size must greater than 0!");
+		if (maxPoolSize < 0) {
+			throw new IllegalArgumentException("Pool size must not be negative!");
 		}
 		
 		this.maxPoolSize = maxPoolSize;
-		
-		this.messageConnector = MessageConnector.getServiceMessageConnector(host);
-		
-		messageConnector.addMessageHandler(new IMessageHandler() {
-			
-			@Override
-			public void handle(String type, JSONObject message) {
-				try {
-					userToServiceCache.put(message.getString("username"), message.getString("socketID"));
-				} catch (JSONException e) {
-					e.printStackTrace();
-				}
-			}
-			
-			@Override
-			public String getMessageType() {
-				return "startServiceResponse";
-			}
-			
-			@Override
-			public boolean canHandle(String type, JSONObject message) {
-				try {
-					return message.has("service") && message.getString("service").equals(serviceID);
-				} catch (JSONException e) {
-					e.printStackTrace();
-					return false;
-				}
-			}
-		});
-		
-		messageConnector.addMessageHandler(new IMessageHandler() {
-			
-			@Override
-			public void handle(String type, JSONObject message) {
-				try {
-					synchronized(servicePoolQueue) {
-						servicePoolQueue.add(message.getString("socketID"));
-					}
-				} catch (JSONException e) {
-					e.printStackTrace();
-				}
-			}
-			
-			@Override
-			public String getMessageType() {
-				return "serviceReady";
-			}
-			
-			@Override
-			public boolean canHandle(String type, JSONObject message) {
-				try {
-					return message.has("service") && message.getString("service").equals(serviceID);
-				} catch (JSONException e) {
-					e.printStackTrace();
-					return false;
-				}
-			}
-			
-		});
-		
-		if (messageConnector.isConnected()) {
-			initServicePool();
-		}
-		
-		messageConnector.addConnectionListener(new IConnectionListener() {
-
-			@Override
-			public void connected() {
-				initServicePool();
-			}
-
-			@Override
-			public void disconnected() {
-				// nothing
-			}
-			
-		});
-		
+		this.messageConnector = messageConnector;		
 	}
 
 	@Override
 	public boolean startService(String user) {
 		try {
-			for (int i = 0; i < MAX_NUMBER_OF_TRIALS; i++) {
-				addService();
+			for (int i = 0; i < MAX_NUMBER_OF_TRIALS && active.get(); i++) {
+				addService(1);
 				String socketId = null;
 				while (socketId == null) {
 					synchronized (servicePoolLock) {
@@ -154,7 +147,7 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 						Thread.sleep(TIME_STEP);
 					}
 				}
-				removeService(socketId, null);
+				removeService(socketId);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -165,35 +158,61 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	@Override
 	public boolean stopService(String user) {
 		String socketId = userToServiceCache.remove(user);
+		return removeService(socketId);
+	}
+	
+	protected boolean removeService(String socketId) {
 		try {
-			return removeService(socketId, user);
+			if (socketId != null) {
+				JSONObject message = new JSONObject();
+				message.put("service", serviceID);
+				message.put("socketID", socketId);
+				messageConnector.send("shutdownService", message);
+				return true;
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			return false;
-		}
-	}
-	
-	protected boolean removeService(String socketId, String user) throws JSONException {
-		if (socketId != null) {
-			JSONObject message = new JSONObject();
-			message.put("service", serviceID);
-			if (user != null) {
-				message.put("username", user);
-			}
-			message.put("socketID", socketId);
-			messageConnector.send("shutdownService", message);
-			return true;
 		}
 		return false;
 	}
 	
 
-	protected void initServicePool() {
-		for (int i = 0; i < maxPoolSize; i++) {
-			addService();
+	@Override
+	public void init() {
+		active.compareAndSet(false, true);
+		for (IMessageHandler messageHandler : MESSAGE_HANDLERS) {
+			messageConnector.addMessageHandler(messageHandler);
+		}
+		synchronized(servicePoolLock) {
+			addService(maxPoolSize);
 		}
 	}
 	
-	abstract protected void addService();
+	protected void initServices() {
+	}
+
+	@Override
+	public void dispose() {
+		active.compareAndSet(true, false);
+		try {
+			Thread.sleep(DISPOSE_TIMEOUT);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		for (IMessageHandler messageHandler : MESSAGE_HANDLERS) {
+			messageConnector.removeMessageHandler(messageHandler);
+		}
+		synchronized(servicePoolLock) {
+			while (!servicePoolQueue.isEmpty()) {
+				removeService(servicePoolQueue.poll());
+			}
+		}
+		while (!userToServiceCache.isEmpty()) {
+			removeService(userToServiceCache.keys().nextElement());
+		}
+	}
+	
+	abstract protected void addService(int n);
 
 }

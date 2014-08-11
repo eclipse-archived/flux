@@ -10,12 +10,10 @@
 *******************************************************************************/
 package org.eclipse.flux.service.common;
 
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 
@@ -75,6 +73,11 @@ final public class ToolingServiceManager {
 	private IServiceLauncher serviceLauncher = null;
 	
 	/**
+	 * ID for the tooling service cleanup thread
+	 */
+	private String cleanupThreadId = "Service-Cleanup";
+	
+	/**
 	 * Callback ID for Flux messages
 	 */
 	private int cleanupCallbackId;
@@ -95,11 +98,6 @@ final public class ToolingServiceManager {
 	private int maxThreadNumber = 10;
 	
 	/**
-	 * Shutdown timeout for the thread pool
-	 */
-	private long shutdownTimeout = 60 * 1000; // 60 seconds	
-	
-	/**
 	 * Regular expression for acceptable resource types which would trigger tooling service start 
 	 */
 	private String fileFiltersRegEx = null;
@@ -117,10 +115,9 @@ final public class ToolingServiceManager {
 	 * @param host Flux server URL
 	 * @param serviceLauncher The tooling service starter/stopper 
 	 */
-	public ToolingServiceManager(URL host, IServiceLauncher serviceLauncher) {
+	public ToolingServiceManager(MessageConnector messageConnector, IServiceLauncher serviceLauncher) {
 		super();
-		this.messageConnector = MessageConnector
-				.getServiceMessageConnector(host);
+		this.messageConnector = messageConnector;
 		serviceLauncher(serviceLauncher);
 
 		messageHandlers = new IMessageHandler[] {
@@ -186,21 +183,30 @@ final public class ToolingServiceManager {
 	}
 
 	private void init() {
+		if (serviceLauncher != null) {
+			serviceLauncher.init();
+		}
+		lock.writeLock().lock();
+		try {
+			currentUsersWithActiveService.clear();
+		} finally {
+			lock.writeLock().unlock();
+		}
 		executor = Executors.newFixedThreadPool(maxThreadNumber);
 		for (IMessageHandler messageHandler : messageHandlers) {
 			messageConnector.addMessageHandler(messageHandler);
 		}
+		cleanupThread = new Thread(cleanupThreadId) {
+			@Override
+			public void run() {
+				doRun();
+			}
+		};
 	}
 
 	private void doRun() {
-		while(!messageConnector.isConnected()) {
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-		while (true) {
+		boolean interruped = false;
+		while (!interruped) {
 			try {
 
 				// Do the cleanup of unused services
@@ -210,7 +216,7 @@ final public class ToolingServiceManager {
 				Thread.sleep(cleanupTimePeriod);
 
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				interruped = true;
 			}
 		}
 	}
@@ -257,12 +263,9 @@ final public class ToolingServiceManager {
 		return this;
 	}
 	
-	public ToolingServiceManager shutdownTimeoutTime(long shutdownTimeout) {
+	public ToolingServiceManager cleanupThreadId(String cleanupThreadId) {
 		validateState();
-		if (shutdownTimeout < 0) {
-			throw new IllegalArgumentException("Parameter must be positive or 0!");
-		}
-		this.shutdownTimeout = shutdownTimeout;
+		this.cleanupThreadId = cleanupThreadId;
 		return this;
 	}
 	
@@ -279,8 +282,10 @@ final public class ToolingServiceManager {
 	}
 	
 	final public void stop() {
-		// Stop the cleanup thread. Service will be shutdown below anyway.
-		cleanupThread.interrupt();
+		
+		if (cleanupThread != null) {
+			cleanupThread.interrupt();
+		}
 		
 		for (IMessageHandler messageHandler : messageHandlers) {
 			messageConnector.removeMessageHandler(messageHandler);
@@ -298,26 +303,40 @@ final public class ToolingServiceManager {
 				}
 			}
 			currentUsersWithActiveService.clear();
-			newUsersWithActiveService.clear();
 		} finally {
 			lock.writeLock().unlock();
 		}
 		
-		// Wait until all JDT services shutdown
-		try {
-			executor.awaitTermination(shutdownTimeout, TimeUnit.MILLISECONDS);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		executor.shutdown();
+		
+		if (serviceLauncher != null) {
+			serviceLauncher.dispose();
 		}
 		
-		active = false;
-		
+		active = false;		
 	}
 	
 	final public void start() {
+		if (active) {
+			return;
+		}
 		active = true;
-		init();
-		doRun();
+		messageConnector.addConnectionListener(new IConnectionListener() {
+
+			@Override
+			public void connected(String userChannel) {
+				messageConnector.removeConnectionListener(this);
+				init();
+				cleanupThread.start();
+			}
+
+			@Override
+			public void disconnected(String userChannel) {
+				// nothing
+			}
+			
+		});
+		messageConnector.connect("$super$");
 	}
 	
 	private void processUser(String user) {
@@ -378,13 +397,13 @@ final public class ToolingServiceManager {
 		lock.writeLock().unlock();
 	}
 	
-	private void launchService(final String user, final boolean handleFailre) {
+	private void launchService(final String user, final boolean handleFailure) {
 		executor.submit(new Runnable() {
 
 			@Override
 			public void run() {
 				try {
-					if (!serviceLauncher.startService(user) && handleFailre) {
+					if (!serviceLauncher.startService(user) && handleFailure) {
 						// error stopping the service
 						lock.writeLock().lock();
 						try {
