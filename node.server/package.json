@@ -15,7 +15,9 @@
 	"jsonwebtoken"     :  "0.4.0",
 	"cookie"           :  "0.0.5",
 	"connect"          :  "2.7.2",
-	"orion"            :  "0.0.32"
+	"orion"            :  "0.0.32",
+	"when"             :  "3.4.2",
+	"amqplib"          :  "0.2.0"
   },
 
   "scripts": {

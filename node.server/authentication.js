@@ -346,6 +346,13 @@ function checkChannelJoin(socket, requestData, callback) {
 }
 
 /**
+ * Retrieve the id of the authenticated user associated with given websocket.
+ */
+function getUser(socket) {
+	return socket.handshake.fluxUser || defaultUser;
+}
+
+/**
  * Checks wether a given socket client is allowed to send given message.
  */
 function checkMessageSend(socket, data, callback) {
@@ -388,3 +395,4 @@ exports.SUPER_USER = SUPER_USER;
 exports.isEnabled = isEnabled;
 exports.checkMessageSend = isEnabled ? checkMessageSend : dummyCheck;
 exports.defaultUser = defaultUser;
+exports.getUser = getUser;

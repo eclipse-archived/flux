@@ -28,9 +28,8 @@ var io = require('socket.io').listen(server);
 io.set('transports', ['websocket']);
 
 // create and configure services
-var MessageCore = require('./messages-core.js').MessageCore;
-var messageSync = new MessageCore();
+var rabbitConnector = require('./rabbit-connector');
 
 io.sockets.on('connection', function (socket) {
-	messageSync.initialize(socket, io.sockets);
+	rabbitConnector.connectWebsocket(socket);
 });

@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 
@@ -29,11 +30,13 @@ public final class MessageConnector {
 	
 	private SocketIO socket;
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
+	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();
 	private ConcurrentLinkedQueue<IConnectionListener> connectionListeners = new ConcurrentLinkedQueue<IConnectionListener>();
 	final private String host;
 	private String login;
 	private String token;
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
+	private AtomicBoolean connected = new AtomicBoolean(false);
 	
 	public MessageConnector(final String host, final String login, String token) {
 		this.host = host;
@@ -53,6 +56,8 @@ public final class MessageConnector {
 	
 				@Override
 				public void onConnect() {
+					connected.compareAndSet(false, true);
+					notifyConnected();
 				}
 	
 				@Override
@@ -60,8 +65,10 @@ public final class MessageConnector {
 					while (!channels.isEmpty()) {
 						String channel = channels.iterator().next();
 						channels.remove(channel);
-						notifyDisconnected(channel);
+						notifyChannelDisconnected(channel);
 					}
+					notifyDisconnected();
+					connected.compareAndSet(true, false);
 				}
 	
 				@Override
@@ -105,7 +112,7 @@ public final class MessageConnector {
 									&& answer[0] instanceof JSONObject
 									&& ((JSONObject) answer[0])
 											.getBoolean("connectedToChannel")) {
-								notifyConnected(channel);
+								notifyChannelConnected(channel);
 							}
 						} catch (Exception e) {
 							e.printStackTrace();
@@ -130,7 +137,7 @@ public final class MessageConnector {
 					public void ack(Object... answer) {
 						try {
 							if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("disconnectedFromChannel")) {
-								notifyDisconnected(channel);
+								notifyChannelDisconnected(channel);
 							}
 						}
 						catch (Exception e) {
@@ -147,8 +154,10 @@ public final class MessageConnector {
 	
 	private SocketIO createSocket(String host) throws MalformedURLException {
 		SocketIO socket = new SocketIO(host);
-		socket.addHeader("X-flux-user-name", login);
-		socket.addHeader("X-flux-user-token", token);
+		if (token != null) {
+			socket.addHeader("X-flux-user-name", login);
+			socket.addHeader("X-flux-user-token", token);
+		}
 		return socket;
 	}
 	
@@ -184,6 +193,14 @@ public final class MessageConnector {
 		this.messageHandlers.get(messageHandler.getMessageType()).remove(messageHandler);
 	}
 	
+	public void addChannelListener(IChannelListener listener) {
+		this.channelListeners.add(listener);
+	}
+	
+	public void removeChannelListener(IChannelListener listener) {
+		this.channelListeners.remove(listener);
+	}
+	
 	public void addConnectionListener(IConnectionListener listener) {
 		this.connectionListeners.add(listener);
 	}
@@ -192,8 +209,8 @@ public final class MessageConnector {
 		this.connectionListeners.remove(listener);
 	}
 	
-	private void notifyConnected(String userChannel) {
-		for (IConnectionListener listener : connectionListeners) {
+	private void notifyChannelConnected(String userChannel) {
+		for (IChannelListener listener : channelListeners) {
 			try {
 				listener.connected(userChannel);
 			} catch (Throwable t) {
@@ -202,10 +219,30 @@ public final class MessageConnector {
 		}
 	}
 	
-	private void notifyDisconnected(String userChannel) {
-		for (IConnectionListener listener : connectionListeners) {
+	private void notifyChannelDisconnected(String userChannel) {
+		for (IChannelListener listener : channelListeners) {
 			try {
 				listener.disconnected(userChannel);
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+	}
+	
+	private void notifyConnected() {
+		for (IConnectionListener listener : connectionListeners) {
+			try {
+				listener.connected();
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+	}
+	
+	private void notifyDisconnected() {
+		for (IConnectionListener listener : connectionListeners) {
+			try {
+				listener.disconnected();
 			} catch (Throwable t) {
 				t.printStackTrace();
 			}
@@ -218,6 +255,10 @@ public final class MessageConnector {
 	
 	public String getHost() {
 		return host;
+	}
+	
+	public boolean isConnected() {
+		return connected.get();
 	}
 	
 }

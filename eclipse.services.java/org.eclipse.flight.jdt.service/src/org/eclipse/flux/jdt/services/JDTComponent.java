@@ -39,7 +39,7 @@ public class JDTComponent {
 
 				@Override
 				public void startService(String user) {
-					org.eclipse.flux.core.Activator.getDefault().getMessagingConnector().connect(user);
+					org.eclipse.flux.core.Activator.getDefault().getMessagingConnector().connectChannel(user);
 				}
 
 				@Override

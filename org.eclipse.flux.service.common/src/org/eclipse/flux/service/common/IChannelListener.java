@@ -1,6 +1,6 @@
 package org.eclipse.flux.service.common;
 
-public interface IConnectionListener {
+public interface IChannelListener {
 	
 	void connected(String userChannel);
 	

@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 
 import org.eclipse.flux.core.IChannelListener;
+import org.eclipse.flux.core.IConnectionListener;
 import org.eclipse.flux.core.IMessageHandler;
 import org.eclipse.flux.core.IMessagingConnector;
 import org.json.JSONObject;
@@ -25,22 +26,24 @@ import org.json.JSONObject;
  */
 public abstract class AbstractMessagingConnector implements IMessagingConnector {
 	
-	private Collection<IChannelListener> connectionListeners;
+	private Collection<IChannelListener> channelListeners;
+	private Collection<IConnectionListener> connectionListeners;
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers;
 	
 	public AbstractMessagingConnector() {
-		this.connectionListeners = new ConcurrentLinkedDeque<>();
+		this.connectionListeners = new ConcurrentLinkedDeque<IConnectionListener>();
+		this.channelListeners = new ConcurrentLinkedDeque<IChannelListener>();
 		this.messageHandlers = new ConcurrentHashMap<>();
 	}
 	
 	@Override
-	public void addConnectionListener(IChannelListener connectionListener) {
-		this.connectionListeners.add(connectionListener);
+	public void addChannelListener(IChannelListener connectionListener) {
+		this.channelListeners.add(connectionListener);
 	}
 
 	@Override
-	public void removeConnectionListener(IChannelListener connectionListener) {
-		this.connectionListeners.remove(connectionListener);
+	public void removeChannelListener(IChannelListener connectionListener) {
+		this.channelListeners.remove(connectionListener);
 	}
 	
 	@Override
@@ -55,17 +58,55 @@ public abstract class AbstractMessagingConnector implements IMessagingConnector 
 	}
 	
 	protected void notifyChannelConnected(String userChannel) {
-		for (IChannelListener connectionListener : connectionListeners) {
-			connectionListener.connected(userChannel);
+		for (IChannelListener channelListener : channelListeners) {
+			try {
+				channelListener.connected(userChannel);
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
 		}
 	}
 	
 	protected void notifyChannelDisconnected(String userChannel) {
-		for (IChannelListener connectionListener : connectionListeners) {
-			connectionListener.disconnected(userChannel);
+		for (IChannelListener channelListener : channelListeners) {
+			try {
+				channelListener.disconnected(userChannel);
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
 		}
 	}
 	
+	protected void notifyConnected() {
+		for (IConnectionListener connectionListener : connectionListeners) {
+			try {
+				connectionListener.connected();
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+	}
+	
+	protected void notifyDisconnected() {
+		for (IConnectionListener connectionListener : connectionListeners) {
+			try {
+				connectionListener.disconnected();
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+	}
+	
+	@Override
+	public void addConnectionListener(IConnectionListener connectionListener) {
+		connectionListeners.add(connectionListener);
+	}
+
+	@Override
+	public void removeConnectionListener(IConnectionListener connectionListener) {
+		connectionListeners.remove(connectionListener);
+	}
+
 	protected void handleIncomingMessage(String messageType, JSONObject message) {
 		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageType);
 		if (handlers != null) {

@@ -63,11 +63,13 @@ public class Activator implements BundleActivator {
 
 		@Override
 		public void disconnected(String userChannel) {
-			ConnectionInitializersRegistry.getInstance().disconnected(userChannel);
+			ConnectionInitializersRegistry.getInstance().disconnected(
+					userChannel);
 			/*
-			 * TODO: support for cleaning up data upon disconnecting from channel 
+			 * TODO: support for cleaning up data upon disconnecting from
+			 * channel
 			 */
-		}	
+		}
 	};
 	
 	@Override
@@ -86,10 +88,25 @@ public class Activator implements BundleActivator {
 	public void startService(String host, final String login, String token, boolean connectToChannel) throws CoreException {
 		if (this.messagingConnector == null) {
 			this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
-			this.messagingConnector.addConnectionListener(SERVICE_STARTER);
+			this.messagingConnector.addChannelListener(SERVICE_STARTER);
 			if (connectToChannel) {
-				this.messagingConnector.connect(login);
+				messagingConnector.addConnectionListener(new IConnectionListener() {
+
+					@Override
+					public void connected() {
+						messagingConnector.removeConnectionListener(this);
+						messagingConnector.connectChannel(login);
+					}
+
+					@Override
+					public void disconnected() {
+						// TODO Auto-generated method stub
+						
+					}
+					
+				});
 			}
+			this.messagingConnector.connect();
 		}
 	}
 	

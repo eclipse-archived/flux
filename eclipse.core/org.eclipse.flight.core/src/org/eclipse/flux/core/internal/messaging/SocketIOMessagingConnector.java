@@ -58,73 +58,78 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
 			socket = createSocket();
-			socket.connect(new IOCallback() {
-				
-				private long delay = INITIAL_DELAY;
-	
-				@Override
-				public void onMessage(JSONObject arg0, IOAcknowledge arg1) {
-				}
-	
-				@Override
-				public void onMessage(String arg0, IOAcknowledge arg1) {
-				}
-	
-				@Override
-				public void onError(SocketIOException ex) {
-					final IOCallback self = this;
-					Activator.log(ex);
-					new Job("Reconnect web-socket") {
-						@Override
-						protected IStatus run(IProgressMonitor arg0) {
-							try {
-								socket = createSocket();
-								socket.connect(self);
-							} catch (MalformedURLException e) {
-								e.printStackTrace();
-							}
-							return Status.OK_STATUS;
-						}
-					}.schedule(reconnectDelay());
-				}
-	
-				private long reconnectDelay() {
-					long r = this.delay;
-					this.delay = (long)((this.delay+1000)*1.1);
-					return r;
-				}
-	
-				@Override
-				public void onConnect() {
-					try {
-						connected = true;
-						delay = INITIAL_DELAY;
-					}
-					catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-	
-				@Override
-				public void onDisconnect() {
-					processDisconnect();
-					connected = false;
-				}
-	
-				@Override
-				public void on(String event, IOAcknowledge ack, Object... data) {
-					if (data.length == 1 && data[0] instanceof JSONObject) {
-						handleIncomingMessage(event, (JSONObject)data[0]);
-					}
-				}
-	
-			});
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
-	public void connect(final String userChannel) {
+	public void connect() {
+		socket.connect(new IOCallback() {
+			
+			private long delay = INITIAL_DELAY;
+
+			@Override
+			public void onMessage(JSONObject arg0, IOAcknowledge arg1) {
+			}
+
+			@Override
+			public void onMessage(String arg0, IOAcknowledge arg1) {
+			}
+
+			@Override
+			public void onError(SocketIOException ex) {
+				final IOCallback self = this;
+				Activator.log(ex);
+				new Job("Reconnect web-socket") {
+					@Override
+					protected IStatus run(IProgressMonitor arg0) {
+						try {
+							socket = createSocket();
+							socket.connect(self);
+						} catch (MalformedURLException e) {
+							e.printStackTrace();
+						}
+						return Status.OK_STATUS;
+					}
+				}.schedule(reconnectDelay());
+			}
+
+			private long reconnectDelay() {
+				long r = this.delay;
+				this.delay = (long)((this.delay+1000)*1.1);
+				return r;
+			}
+
+			@Override
+			public void onConnect() {
+				try {
+					connected = true;
+					delay = INITIAL_DELAY;
+					notifyConnected();
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+			@Override
+			public void onDisconnect() {
+				processDisconnectChannel();
+				notifyDisconnected();
+				connected = false;
+			}
+
+			@Override
+			public void on(String event, IOAcknowledge ack, Object... data) {
+				if (data.length == 1 && data[0] instanceof JSONObject) {
+					handleIncomingMessage(event, (JSONObject)data[0]);
+				}
+			}
+
+		});
+	}
+	
+	public void connectChannel(final String userChannel) {
 		if (this.userChannel == userChannel || (this.userChannel != null && this.userChannel.equals(userChannel))) {
 			return;
 		}
@@ -140,7 +145,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 		}
 	}
 	
-	private void processConnect(String userChannel) {
+	private void processConnectChannel(String userChannel) {
 		this.connectedToUserspace = true;
 		if (userChannel != null) {
 			this.userChannel = userChannel;
@@ -148,7 +153,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 		}
 	}
 	
-	private void processDisconnect() {
+	private void processDisconnectChannel() {
 		this.connectedToUserspace = false;
 		if (this.userChannel != null) {
 			String userChannel = this.userChannel;
@@ -166,7 +171,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 			public void ack(Object... answer) {
 				try {
 					if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("connectedToChannel")) {
-						processConnect(userChannel);
+						processConnectChannel(userChannel);
 					}
 				}
 				catch (Exception e) {
@@ -222,7 +227,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 				public void ack(Object... answer) {
 					try {
 						if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("disconnectedFromChannel")) {
-							processDisconnect();
+							processDisconnectChannel();
 							if (userChannel != null) {
 								connectToChannel(userChannel);
 							}

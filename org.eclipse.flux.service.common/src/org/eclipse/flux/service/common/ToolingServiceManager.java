@@ -109,7 +109,7 @@ final public class ToolingServiceManager {
 	
 	private IMessageHandler[] messageHandlers;
 
-	private final IConnectionListener CONNECTION_LISTENER = new IConnectionListener() {
+	private final IChannelListener CONNECTION_LISTENER = new IChannelListener() {
 
 		@Override
 		public void connected(String userChannel) {
@@ -140,7 +140,7 @@ final public class ToolingServiceManager {
 		serviceLauncher(serviceLauncher);
 
 		messageHandlers = new IMessageHandler[] {
-
+				
 			new IMessageHandler() {
 	
 				@Override
@@ -305,7 +305,7 @@ final public class ToolingServiceManager {
 			return;
 		}
 		
-		messageConnector.removeConnectionListener(CONNECTION_LISTENER);
+		messageConnector.removeChannelListener(CONNECTION_LISTENER);
 		
 		if (cleanupThread != null) {
 			cleanupThread.interrupt();
@@ -345,7 +345,7 @@ final public class ToolingServiceManager {
 			return;
 		}
 		active = true;
-		messageConnector.addConnectionListener(CONNECTION_LISTENER);
+		messageConnector.addChannelListener(CONNECTION_LISTENER);
 		if (messageConnector.isConnected(Utils.SUPER_USER)) {
 			CONNECTION_LISTENER.connected(Utils.SUPER_USER);
 		} else {
@@ -397,7 +397,7 @@ final public class ToolingServiceManager {
 		try {
 			Thread.sleep(cleanupTime);
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			// nothing
 		}
 
 		lock.writeLock().lock();

@@ -11,11 +11,13 @@
 *******************************************************************************/
 /*global require console exports process __dirname*/
 
-// create and configure express
+var rabbitConnector = require('./rabbit-connector');
 var URI = require('URIjs');
 var path = require('path');
 var express = require('express');
 var mongo = require('mongodb');
+
+// create and configure express
 var app = express();
 var passport = require('passport');
 var pathResolve = require('path').resolve;
@@ -23,7 +25,6 @@ var pathResolve = require('path').resolve;
 var host = process.env.VCAP_APP_HOST || 'localhost';
 var port = process.env.VCAP_APP_PORT || '3000';
 var homepage = '/client/index.html';
-var pathResolve = require('path').resolve;
 
 var isCloudFoundry = host!=='localhost';
 console.log('Starting flux on host: '+host);
@@ -45,7 +46,6 @@ if (isCloudFoundry) {
 			return next();
 		}
 		var target = 'https://'+path.join(req.host, req.url);
-		console.log('redirecting to '+target);
 		res.redirect(target);
 	});
 }
@@ -128,19 +128,15 @@ console.log('Express server started on port ' + port);
 
 // create and configure socket.io
 var io = require('socket.io').listen(server);
-//io.set('transports', ['websocket']);
+io.set('transports', ['websocket']);
 io.set('log level', 1); //socket.io makes too much noise otherwise
 
 if (ENABLE_AUTH) {
 	io.set('authorization', authentication.socketIoHandshake);
 }
 
-// create and configure services
-var MessageCore = require('./messages-core.js').MessageCore;
-var messageSync = new MessageCore();
-
 io.sockets.on('connection', function (socket) {
-	messageSync.initialize(socket, io.sockets);
+	rabbitConnector.connectWebSocket(socket);
 });
 
 /////////////////////////////////////////////////////////////////////////
@@ -184,7 +180,7 @@ MongoClient.connect("mongodb://localhost:27017/flight-db", function(err, db) {
 	}));
 
 	client_socket.on('connect', function() {
-		console.log('client socket connected');
+		console.log('client socket connected to '+messagingHost);
 
 		client_socket.emit('connectToChannel', {
 			'channel' : SUPER_USER

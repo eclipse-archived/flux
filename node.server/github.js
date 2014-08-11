@@ -51,24 +51,24 @@ function getUserRequest(token) {
  */
 function _getUser(token, callback) {
 	var req = httpRequest(getUserRequest(token), function (res) {
-		console.log('>>> github response received ===');
-		console.log('STATUS: ' + res.statusCode);
-		console.log('HEADERS: ' + JSON.stringify(res.headers));
-		console.log('<<< github response received ===');
+//		console.log('>>> github response received ===');
+//		console.log('STATUS: ' + res.statusCode);
+//		console.log('HEADERS: ' + JSON.stringify(res.headers));
+//		console.log('<<< github response received ===');
 		res.setEncoding('utf8');
 		var data = "";
 
 		res.on('data', function (chunk) {
 			data = data + chunk; //TODO: more efficient way to collect the data?
-			console.log('BODY: ' + chunk);
+//			console.log('BODY: ' + chunk);
 		});
 		res.on('end', function () {
-			console.log('end of data '+res.statusCode);
+			//console.log('end of data '+res.statusCode);
 			if (res.statusCode === 200) {
 				try {
 					if (data) {
 						data = JSON.parse(data);
-						console.log('data = ', data);
+						//console.log('data = ', data);
 						var user = data.login;
 						if (user) {
 							return callback(null, user);

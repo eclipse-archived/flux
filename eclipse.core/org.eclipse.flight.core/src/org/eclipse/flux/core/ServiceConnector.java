@@ -48,10 +48,31 @@ public abstract class ServiceConnector implements IServiceConnector {
 		/*
 		 * Send service ready message
 		 */
+		if (serviceConnector.isConnected()) {
+			sendReadyMessage(serviceConnector, serviceID);
+		} else {
+			serviceConnector.addConnectionListener(new IConnectionListener() {
+
+				@Override
+				public void connected() {
+					serviceConnector.removeConnectionListener(this);
+					sendReadyMessage(serviceConnector, serviceID);
+				}
+
+				@Override
+				public void disconnected() {
+					// nothing
+				}
+				
+			});
+		}
+	}
+	
+	private static void sendReadyMessage(IMessagingConnector connecgtor, String serviceID) {
 		try {
 			JSONObject readyMessage = new JSONObject();
 			readyMessage.put("service", serviceID);
-			serviceConnector.send("serviceReady", readyMessage);
+			connecgtor.send("serviceReady", readyMessage);
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
