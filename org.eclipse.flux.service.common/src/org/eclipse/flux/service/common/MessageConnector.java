@@ -58,7 +58,9 @@ public final class MessageConnector {
 				@Override
 				public void onDisconnect() {
 					while (!channels.isEmpty()) {
-						notifyDisconnected(channels.iterator().next());
+						String channel = channels.iterator().next();
+						channels.remove(channel);
+						notifyDisconnected(channel);
 					}
 				}
 	
