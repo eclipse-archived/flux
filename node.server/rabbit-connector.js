@@ -19,6 +19,12 @@ var rabbitUrl = require('./rabbit-url');
 
 var connection = null;
 
+/**
+ * Special user name routing key to deliver messages to all users.
+ * This name is internal only, client code uses '*' in username
+ */
+var EVERYONE = '$all$';
+
 function addLogging(prefix, eventSource) {
 	eventSource.on('error', function (err) {
 		console.error(prefix, err);
@@ -56,12 +62,19 @@ function createChannel() {
 	});
 }
 
-function channelNameToTopic(name) {
+function channelNameToTopicPattern(name) {
 	if (name===authentication.SUPER_USER) {
 		return '*';
 	}
 	//TODO: we assume for now that channel names do not contain special characters
 	// (i.e. '.', '*' or '#' which have special meaning in AMQP routing patterns)
+	return name;
+}
+
+function usernameToRoutingKey(name) {
+	if (name==='*') {
+		return EVERYONE;
+	}
 	return name;
 }
 
@@ -109,8 +122,8 @@ RabbitConnector.prototype.initialize = function () {
 			});
 		}).then(function () {
 			//Subscribe to messages intended for 'everyone'
-			return channel.bindQueue(self.inbox, self.outbox, '$all$').then(function () {
-				console.log('Connected to topic $all$');
+			return channel.bindQueue(self.inbox, self.outbox, EVERYONE).then(function () {
+				console.log('Connected to topic '+EVERYONE);
 			});
 		}).then(function () {
 			return self.configure();
@@ -142,7 +155,7 @@ RabbitConnector.prototype.initialize = function () {
 			//TODO: for cleaner code don't mix promise and callback style.
 			//      Should convert 'checkChannelJoin' to promise style.
 			return authentication.checkChannelJoin(socket, data, function (err) {
-				var topic = channelNameToTopic(data.channel);
+				var topic = channelNameToTopicPattern(data.channel);
 				console.log('checkChannelJoin => ', err);
 				if (err) {
 					return fn({
@@ -245,7 +258,7 @@ RabbitConnector.prototype.configureRequest = function(type) {
 	this.socket.on(type, function (data) {
 		data.requestSenderID = self.inbox;
 		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
-		return self.channel.publish(outbox, data.username,
+		return self.channel.publish(outbox, usernameToRoutingKey(data.username),
 			self.encode({type: type, origin: self.inbox, data: data})
 		);
 	});
@@ -260,7 +273,7 @@ RabbitConnector.prototype.configureBroadcast = function (type) {
 
 		// broadcast type messages don't expect a reply back. So need to set
 		// 'requestSenderID'
-		return self.channel.publish(outbox, data.username,
+		return self.channel.publish(outbox, usernameToRoutingKey(data.username),
 			self.encode({type: type, origin: self.inbox, data: data})
 		);
 	});
