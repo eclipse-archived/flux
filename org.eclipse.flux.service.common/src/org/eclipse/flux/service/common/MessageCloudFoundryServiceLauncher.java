@@ -52,25 +52,19 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 			public void onCheckResources() {
 				System.out.println("Check resources!");
 			}
-		});
-		cfClient.startApplication(serviceID);
-		
-		cfApp = cfClient.getApplication(serviceID);
-		cfApp.setEnv(createEnv(fluxUrl, username, password));
-		cfApp.setInstances(0);
-		cfApp.setRunningInstances(0);
+		});		
+		cfClient.updateApplicationEnv(serviceID, createEnv(fluxUrl, username, password));
+		cfClient.updateApplicationInstances(serviceID, maxPoolSize);
 	}
 
 	@Override
 	protected void addService() {
-		CloudApplication cfApp = cfClient.getApplication(serviceID);
-		cfApp.setRunningInstances(numberOfInstances.incrementAndGet());
+		cfClient.updateApplicationInstances(serviceID, numberOfInstances.incrementAndGet());
 	}
 
 	@Override
 	protected void initServices() {
-		CloudApplication cfApp = cfClient.getApplication(serviceID);
-		cfApp.setRunningInstances(numberOfInstances.get());
+		cfClient.startApplication(serviceID);
 	}
 
 	@Override
@@ -87,6 +81,7 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 		env.add("-Dflux-host=" + fluxUrl);
 		env.add("-Dflux.user.name=" + username);
 		env.add("-Dflux.user.token=" + password);
+		env.add("-Dflux.jdt.lazyStart=true");
 		return env;
 	}
 
