@@ -52,24 +52,9 @@ public class JDTComponent {
 					}
 				}
 				
-			};
-			
-//			new Thread() {
-//
-//				@Override
-//				public void run() {
-//					try {
-//						sleep(50);
-//					} catch (InterruptedException e) {
-//						e.printStackTrace();
-//					}
-//					String user = "BoykoAlex";
-//					System.out.println("Starting user: " + user);
-//					org.eclipse.flux.core.Activator.getDefault().getMessagingConnector().connectChannel(user);
-//				}
-//				
-//			}.start();
+			};			
 		}
+		
 	}
 	
 	@Deactivate

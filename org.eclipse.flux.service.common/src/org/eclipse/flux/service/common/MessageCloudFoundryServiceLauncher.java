@@ -30,8 +30,6 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 			cfClient.deleteApplication(serviceID);
 		}
 		cfClient.createApplication(serviceID, new Staging(), 1024, null, null);
-		cfApp = cfClient.getApplication(serviceID);
-		cfApp.setEnv(createEnv(fluxUrl, username, password));
 		cfClient.uploadApplication(serviceID , appLocation, new UploadStatusCallback() {
 			
 			@Override
@@ -55,13 +53,18 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 				System.out.println("Check resources!");
 			}
 		});
-//		System.out.println(getManifestFile(appFolder, fluxUrl, username, password).getPath());
+		cfClient.startApplication(serviceID);
+		
+		cfApp = cfClient.getApplication(serviceID);
+		cfApp.setEnv(createEnv(fluxUrl, username, password));
+		cfApp.setInstances(0);
+		cfApp.setRunningInstances(0);
 	}
 
 	@Override
 	protected void addService(int n) {
 		CloudApplication cfApp = cfClient.getApplication(serviceID);
-		cfApp.setInstances(numberOfInstances.addAndGet(n));
+		cfApp.setRunningInstances(numberOfInstances.addAndGet(n));
 	}
 
 	@Override
@@ -73,52 +76,18 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 		return stopped;
 	}
 	
-//	private File getManifestFile(File appFolder, String fluxUrl, String username, String password) {
-//		File manifestFile = new File(System.getProperty(/*"java.io.tmpdir"*/"user.dir") + File.separator + serviceID + ".yml");
-//		FileWriter fw = null;
-//		try {
-//			fw = new FileWriter(manifestFile, false);
-//			fw.write(createManifestContents(appFolder, fluxUrl, username, password).toString());
-//			fw.close();
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-//
-//		return manifestFile;
-//	}
-	
 	private List<String> createEnv(String fluxUrl, String username, String password) {
 		List<String> env = new ArrayList<String>(3);
 		env.add("-Dflux-host=" + fluxUrl);
 		env.add("-Dflux.user.name=" + username);
-		env.add("-Dflux.user.name=" + password);
+		env.add("-Dflux.user.token=" + password);
 		return env;
 	}
-	
-//	private StringBuilder createManifestContents(File appFolder, String fluxUrl, String username, String password) {
-//		StringBuilder sb = new StringBuilder();
-//		sb.append("---\n");
-//		sb.append("applications:\n");
-//		sb.append("-name: ");
-//		sb.append(serviceID);
-//		sb.append("\n");
-//		sb.append("memory: 1G\n");
-//		sb.append("instances: 0\n");
-//		sb.append("no-route: true\n");
-//		sb.append("path: ");
-//		sb.append(appFolder.getPath());
-//		sb.append("\n");
-//		sb.append("env:\n");
-//		sb.append("-Dflux-host=");
-//		sb.append(fluxUrl);
-//		sb.append("\n");
-//		sb.append("-Dflux.user.name=");
-//		sb.append(username);
-//		sb.append("\n");
-//		sb.append("-Dflux.user.token=");
-//		sb.append(password);
-//		sb.append("\n");		
-//		return sb;
-//	}
 
+	@Override
+	public void dispose() {
+		super.dispose();
+		cfClient.stopApplication(serviceID);
+	}
+	
 }

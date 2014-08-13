@@ -189,9 +189,6 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 		}
 	}
 	
-	protected void initServices() {
-	}
-
 	@Override
 	public void dispose() {
 		active.compareAndSet(true, false);
