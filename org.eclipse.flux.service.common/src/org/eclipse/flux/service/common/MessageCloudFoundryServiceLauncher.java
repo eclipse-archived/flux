@@ -25,6 +25,7 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 		super(messageConnector, serviceID, maxPoolSize, timeout);
 		this.numberOfInstances = new AtomicInteger(maxPoolSize);
 		cfClient = new CloudFoundryClient(new CloudCredentials(cfLogin, cfPassword), cfControllerUrl, orgName, spaceName);
+		cfClient.login();
 		CloudApplication cfApp = cfClient.getApplication(serviceID);
 		if (cfApp != null) {
 			cfClient.deleteApplication(serviceID);
@@ -78,10 +79,10 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 	
 	private List<String> createEnv(String fluxUrl, String username, String password) {
 		List<String> env = new ArrayList<String>(3);
-		env.add("-Dflux-host=" + fluxUrl);
-		env.add("-Dflux.user.name=" + username);
-		env.add("-Dflux.user.token=" + password);
-		env.add("-Dflux.jdt.lazyStart=true");
+		env.add("flux-host=" + fluxUrl);
+		env.add("flux.user.name=" + username);
+		env.add("flux.user.token=" + password);
+		env.add("flux.jdt.lazyStart=true");
 		return env;
 	}
 
@@ -89,6 +90,7 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 	public void dispose() {
 		super.dispose();
 		cfClient.stopApplication(serviceID);
+		cfClient.logout();
 	}
 	
 }
