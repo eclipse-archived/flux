@@ -4,7 +4,7 @@
    <extension
          point="org.eclipse.flux.core.connectionInitialListeners">
       <initialListener
-            class="org.eclipse.flux.jdt.services.JdtConnectionListener"
+            class="org.eclipse.flux.jdt.services.JdtChannelListener"
             priority="MEDIUM">
       </initialListener>
    </extension>

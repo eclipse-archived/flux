@@ -140,5 +140,10 @@ public class InitializeServiceEnvironment {
 			e.printStackTrace();
 		}
 	}
+	
+	public void dispose() {
+		messagingConnector.removeMessageHandler(getProjectsResponseHandler);
+		messagingConnector.removeMessageHandler(projectConnectedHandler);
+	}
 
 }

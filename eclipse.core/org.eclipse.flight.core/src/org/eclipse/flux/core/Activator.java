@@ -50,6 +50,11 @@ public class Activator implements BundleActivator {
 	private Repository repository;
 	private LiveEditCoordinator liveEditCoordinator;
 	
+	private CloudSyncResourceListener resourceListener;
+	private CloudSyncMetadataListener metadataListener;
+	private IRepositoryListener repositoryListener;
+	private IResourceChangeListener workspaceListener;
+	
 	private final IChannelListener SERVICE_STARTER = new IChannelListener() {
 		@Override
 		public void connected(String userChannel) {
@@ -65,10 +70,7 @@ public class Activator implements BundleActivator {
 		public void disconnected(String userChannel) {
 			ConnectionInitializersRegistry.getInstance().disconnected(
 					userChannel);
-			/*
-			 * TODO: support for cleaning up data upon disconnecting from
-			 * channel
-			 */
+			disposeCoreServices(userChannel);
 		}
 	};
 	
@@ -114,27 +116,29 @@ public class Activator implements BundleActivator {
 		repository = new Repository(messagingConnector, userChannel);
 		liveEditCoordinator = new LiveEditCoordinator(messagingConnector);
 		
-		CloudSyncResourceListener resourceListener = new CloudSyncResourceListener(repository);
-		ResourcesPlugin.getWorkspace().addResourceChangeListener(resourceListener, IResourceChangeEvent.POST_CHANGE);
-
-		CloudSyncMetadataListener metadataListener = new CloudSyncMetadataListener(repository);
-		ResourcesPlugin.getWorkspace().addResourceChangeListener(metadataListener, IResourceChangeEvent.POST_BUILD);
-
-		getRepository()
-				.addRepositoryListener(new IRepositoryListener() {
-					@Override
-					public void projectDisconnected(IProject project) {
-						removeConnectedProjectPreference(project.getName());
-					}
-
-					@Override
-					public void projectConnected(IProject project) {
-						addConnectedProjectPreference(project.getName());
-					}
-				});
-
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
-		IResourceChangeListener listener = new IResourceChangeListener() {
+		
+		resourceListener = new CloudSyncResourceListener(repository);
+		workspace.addResourceChangeListener(resourceListener, IResourceChangeEvent.POST_CHANGE);
+
+		metadataListener = new CloudSyncMetadataListener(repository);
+		workspace.addResourceChangeListener(metadataListener, IResourceChangeEvent.POST_BUILD);
+		
+		this.repositoryListener = new IRepositoryListener() {
+			@Override
+			public void projectDisconnected(IProject project) {
+				removeConnectedProjectPreference(project.getName());
+			}
+
+			@Override
+			public void projectConnected(IProject project) {
+				addConnectedProjectPreference(project.getName());
+			}
+		};
+
+		getRepository().addRepositoryListener(repositoryListener);
+
+		workspaceListener = new IResourceChangeListener() {
 			public void resourceChanged(IResourceChangeEvent event) {
 				if (event.getResource() instanceof IProject) {
 					IResourceDelta delta = event.getDelta();
@@ -155,9 +159,21 @@ public class Activator implements BundleActivator {
 				}
 			}
 		};
-		workspace.addResourceChangeListener(listener);
+		workspace.addResourceChangeListener(workspaceListener);
 
 		updateProjectConnections();
+	}
+	
+	private void disposeCoreServices(String userChannel) {
+		if (userChannel.equals(repository.getUsername())) {
+			IWorkspace workspace = ResourcesPlugin.getWorkspace();
+			workspace.removeResourceChangeListener(workspaceListener);
+			workspace.removeResourceChangeListener(resourceListener);
+			workspace.removeResourceChangeListener(metadataListener);
+			repository.removeRepositoryListener(repositoryListener);
+			liveEditCoordinator.dispose();
+			repository.dispose();
+		}
 	}
 	
 	private void updateProjectConnections() throws CoreException {

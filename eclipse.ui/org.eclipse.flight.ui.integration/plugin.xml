@@ -101,7 +101,7 @@
    <extension
          point="org.eclipse.flux.core.connectionInitialListeners">
       <initialListener
-            class="org.eclipse.flux.ui.integration.UiConnectionListener"
+            class="org.eclipse.flux.ui.integration.UiChannelListener"
             priority="MEDIUM">
       </initialListener>
    </extension>

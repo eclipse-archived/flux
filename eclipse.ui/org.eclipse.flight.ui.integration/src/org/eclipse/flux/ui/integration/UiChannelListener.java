@@ -9,29 +9,33 @@ import org.eclipse.flux.ui.integration.handlers.LiveEditConnector;
 import org.eclipse.jface.viewers.LabelProviderChangedEvent;
 import org.eclipse.swt.widgets.Display;
 
-public class UiConnectionListener implements IChannelListener {
+public class UiChannelListener implements IChannelListener {
+	
+	private LiveEditConnector liveEditConnector = null;
+	
+	private IRepositoryListener repositoryListener = new IRepositoryListener() {
+		@Override
+		public void projectDisconnected(IProject project) {
+			updateProjectLabel(project);
+		}
+
+		@Override
+		public void projectConnected(IProject project) {
+			updateProjectLabel(project);
+		}
+	};
 
 	@Override
 	public void connected(String userChannel) {
-		org.eclipse.flux.core.Activator.getDefault().getRepository()
-				.addRepositoryListener(new IRepositoryListener() {
-					@Override
-					public void projectDisconnected(IProject project) {
-						updateProjectLabel(project);
-					}
-
-					@Override
-					public void projectConnected(IProject project) {
-						updateProjectLabel(project);
-					}
-				});
+		Repository repository = org.eclipse.flux.core.Activator
+				.getDefault().getRepository();
+		
+		repository.addRepositoryListener(repositoryListener);
 
 		if (Boolean.getBoolean("flux-eclipse-editor-connect")) {
-			Repository repository = org.eclipse.flux.core.Activator
-					.getDefault().getRepository();
 			LiveEditCoordinator liveEditCoordinator = org.eclipse.flux.core.Activator
 					.getDefault().getLiveEditCoordinator();
-			new LiveEditConnector(liveEditCoordinator, repository);
+			liveEditConnector = new LiveEditConnector(liveEditCoordinator, repository);
 		}
 	}
 
@@ -51,7 +55,11 @@ public class UiConnectionListener implements IChannelListener {
 
 	@Override
 	public void disconnected(String userChannel) {
-		// nothing
+		org.eclipse.flux.core.Activator
+			.getDefault().getRepository().removeRepositoryListener(repositoryListener);
+		if (liveEditConnector != null) {
+			liveEditConnector.dispose();
+		}
 	}
 
 }

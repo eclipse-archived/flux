@@ -19,7 +19,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.flux.service.common.IConnectionListener;
 import org.eclipse.flux.service.common.IServiceLauncher;
 import org.eclipse.flux.service.common.MessageCliServiceLauncher;
 import org.eclipse.flux.service.common.MessageCloudFoundryServiceLauncher;
@@ -61,7 +60,7 @@ public class JdtServiceManager {
 		String username = null;
 		String password = "";
 		String cfUsername = null;
-		String cfPassword = null;
+		String cfPassword = "";
 		IServiceLauncher serviceLauncher = null;
 		
 		for (int i = 0; i < args.length; i+=2) {
@@ -72,7 +71,7 @@ public class JdtServiceManager {
 				} catch (MalformedURLException e) {
 					throw new IllegalArgumentException("Invalid Flux messaging server URL", e);
 				}
-			} else if ("-appFolder".equals(args[i])) {
+			} else if ("-app".equals(args[i])) {
 				validateArgument(args, i);
 				serviceFolderPath = args[i+1];
 			} else if ("-cfUrl".equals(args[i])) {
@@ -134,6 +133,10 @@ public class JdtServiceManager {
 			sb.append("cocoa");
 			sb.append(File.separator);
 			sb.append("x86_64");
+			if (cfUrl != null) {
+				sb.append(File.separator);
+				sb.append("flux-jdt.jar");
+			}
 			serviceFolderPath = sb.toString();
 		}
 		
@@ -145,6 +148,9 @@ public class JdtServiceManager {
 					messageConnector, serviceFolderPath, username, password);
 		} else {
 			try {
+				if (cfUsername == null) {
+					throw new IllegalStateException("Cloud Foundry login credentials are not provided!");
+				}
 				serviceLauncher = createCloudFoundryServiceLauncher(
 						messageConnector, cfUrl, orgName, spaceName,
 						cfUsername, cfPassword, host.toString(), username,
@@ -160,24 +166,20 @@ public class JdtServiceManager {
 				.fileFilters(JDT_RESOURCE_REGEX)
 				.cleanupThreadId(JDT_SERVICE_CLEANUP_THREAD_ID);
 		
-		if (messageConnector.isConnected()) {
-			jdtServiceManager.start();
-		} else {
-			messageConnector.addConnectionListener(new IConnectionListener() {
-
-				@Override
-				public void connected() {
-					messageConnector.removeConnectionListener(this);
-					jdtServiceManager.start();
-				}
-
-				@Override
-				public void disconnected() {
-					
-				}
-				
-			});
+		
+		System.out.print("\nConnecting to Flux server: " + host.toString() + " ...");
+		while (!messageConnector.isConnected()) {
+			try {
+				System.out.print('.');
+				Thread.sleep(200L);
+			} catch (InterruptedException e) {
+				// ignore
+			}
 		}
+		System.out.println();
+		
+		System.out.println("Starting JDT service manager...");
+		jdtServiceManager.start();
 		
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		System.out.println("Type 'stop' to stop JDT services.");

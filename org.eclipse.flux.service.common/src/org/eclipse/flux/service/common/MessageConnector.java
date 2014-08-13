@@ -31,7 +31,6 @@ public final class MessageConnector {
 	private SocketIO socket;
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
 	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();
-	private ConcurrentLinkedQueue<IConnectionListener> connectionListeners = new ConcurrentLinkedQueue<IConnectionListener>();
 	final private String host;
 	private String login;
 	private String token;
@@ -57,7 +56,6 @@ public final class MessageConnector {
 				@Override
 				public void onConnect() {
 					connected.compareAndSet(false, true);
-					notifyConnected();
 				}
 	
 				@Override
@@ -67,7 +65,6 @@ public final class MessageConnector {
 						channels.remove(channel);
 						notifyChannelDisconnected(channel);
 					}
-					notifyDisconnected();
 					connected.compareAndSet(true, false);
 				}
 	
@@ -96,6 +93,10 @@ public final class MessageConnector {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public void connect() {
+		
 	}
 	
 	public void connectToChannel(final String channel) {
@@ -201,14 +202,6 @@ public final class MessageConnector {
 		this.channelListeners.remove(listener);
 	}
 	
-	public void addConnectionListener(IConnectionListener listener) {
-		this.connectionListeners.add(listener);
-	}
-	
-	public void removeConnectionListener(IConnectionListener listener) {
-		this.connectionListeners.remove(listener);
-	}
-	
 	private void notifyChannelConnected(String userChannel) {
 		for (IChannelListener listener : channelListeners) {
 			try {
@@ -223,26 +216,6 @@ public final class MessageConnector {
 		for (IChannelListener listener : channelListeners) {
 			try {
 				listener.disconnected(userChannel);
-			} catch (Throwable t) {
-				t.printStackTrace();
-			}
-		}
-	}
-	
-	private void notifyConnected() {
-		for (IConnectionListener listener : connectionListeners) {
-			try {
-				listener.connected();
-			} catch (Throwable t) {
-				t.printStackTrace();
-			}
-		}
-	}
-	
-	private void notifyDisconnected() {
-		for (IConnectionListener listener : connectionListeners) {
-			try {
-				listener.disconnected();
 			} catch (Throwable t) {
 				t.printStackTrace();
 			}

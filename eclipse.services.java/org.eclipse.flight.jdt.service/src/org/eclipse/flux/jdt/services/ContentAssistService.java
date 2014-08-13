@@ -36,18 +36,19 @@ public class ContentAssistService {
 
 	private LiveEditUnits liveEditUnits;
 	private IMessagingConnector messagingConnector;
+	private IMessageHandler contentAssistRequestHandler;
 
 	public ContentAssistService(IMessagingConnector messagingConnector, LiveEditUnits liveEditUnits) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditUnits = liveEditUnits;
 
-		IMessageHandler contentAssistRequestHandler = new AbstractMessageHandler("contentassistrequest") {
+		this.contentAssistRequestHandler = new AbstractMessageHandler("contentassistrequest") {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
 				handleContentAssistRequest(message);
 			}
 		};
-		messagingConnector.addMessageHandler(contentAssistRequestHandler);
+		messagingConnector.addMessageHandler(this.contentAssistRequestHandler);
 	}
 
 	protected void handleContentAssistRequest(JSONObject message) {
@@ -210,5 +211,9 @@ public class ContentAssistService {
 		description.put("segments", new JSONArray(provider.createDescription(proposal).toString()));
 		description.put("metadata", new JSONObject(provider.createMetadata(proposal)));
 		return description;
+	}
+	
+	public void dispose() {
+		messagingConnector.removeMessageHandler(contentAssistRequestHandler);
 	}
 }

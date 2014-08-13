@@ -10,6 +10,7 @@
 *******************************************************************************/
 package org.eclipse.flux.core;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -26,10 +27,12 @@ public class LiveEditCoordinator {
 	
 	private IMessagingConnector messagingConnector;
 	private Collection<ILiveEditConnector> liveEditConnectors;
+	private Collection<IMessageHandler> messageHandlers;
 	
 	public LiveEditCoordinator(IMessagingConnector messagingConnector) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditConnectors = new CopyOnWriteArrayList<>();
+		this.messageHandlers = new ArrayList<IMessageHandler>(4);
 		
 		IMessageHandler startLiveUnit = new AbstractMessageHandler("liveResourceStarted") {
 			@Override
@@ -38,6 +41,7 @@ public class LiveEditCoordinator {
 			}
 		};
 		messagingConnector.addMessageHandler(startLiveUnit);
+		messageHandlers.add(startLiveUnit);
 		
 		IMessageHandler startLiveUnitResponse = new AbstractMessageHandler("liveResourceStartedResponse") {
 			@Override
@@ -46,6 +50,7 @@ public class LiveEditCoordinator {
 			}
 		};
 		messagingConnector.addMessageHandler(startLiveUnitResponse);
+		messageHandlers.add(startLiveUnitResponse);
 		
 		IMessageHandler modelChangedHandler = new AbstractMessageHandler("liveResourceChanged") {
 			@Override
@@ -54,6 +59,7 @@ public class LiveEditCoordinator {
 			}
 		};
 		messagingConnector.addMessageHandler(modelChangedHandler);
+		messageHandlers.add(modelChangedHandler);
 		
 		// Listen to the internal broadcast channel to send out info about current live edit units
 		IMessageHandler liveUnits = new AbstractMessageHandler("getLiveResourcesRequest") {
@@ -63,7 +69,7 @@ public class LiveEditCoordinator {
 			}
 		};
 		messagingConnector.addMessageHandler(liveUnits);
-
+		messageHandlers.add(liveUnits);
 	}
 	
 	protected void startLiveUnit(JSONObject message) {
@@ -261,6 +267,13 @@ public class LiveEditCoordinator {
 				e.printStackTrace();
 			}
 		}
+	}
+	
+	public void dispose() {
+		for (IMessageHandler messageHanlder : messageHandlers) {
+			messagingConnector.removeMessageHandler(messageHanlder);
+		}
+		liveEditConnectors.clear();
 	}
 
 }

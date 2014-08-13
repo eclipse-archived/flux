@@ -61,6 +61,11 @@ public class LiveEditConnector {
 	private static final String LIVE_EDIT_CONNECTOR_ID = "UI-Editor-Live-Edit-Connector";
 	
 	private IDocumentListener documentListener;
+	private IFileBufferListener fileBufferListener;
+	private IRepositoryListener repositoryListener;
+	private IResourceChangeListener workspaceListener;
+	private IPartListener2 partListener;
+	private ILiveEditConnector liveEditConnector;
 	private Repository repository;
 	
 	private ConcurrentMap<IDocument, String> resourceMappings;
@@ -88,7 +93,7 @@ public class LiveEditConnector {
 			}
 		};
 		
-		FileBuffers.getTextFileBufferManager().addFileBufferListener(new IFileBufferListener() {
+		this.fileBufferListener = new IFileBufferListener() {
 			@Override
 			public void underlyingFileMoved(IFileBuffer buffer, IPath path) {
 			}
@@ -160,9 +165,11 @@ public class LiveEditConnector {
 					}
 				}
 			}
-		});
+		};
 		
-		this.repository.addRepositoryListener(new IRepositoryListener() {
+		FileBuffers.getTextFileBufferManager().addFileBufferListener(fileBufferListener);
+		
+		this.repositoryListener = new IRepositoryListener() {
 			@Override
 			public void projectConnected(IProject project) {
 				connectOpenEditors(project);
@@ -171,9 +178,11 @@ public class LiveEditConnector {
 			public void projectDisconnected(IProject project) {
 				disconnectOpenEditors(project);
 			}
-		});
+		};
 		
-		ILiveEditConnector liveEditConnector = new ILiveEditConnector() {
+		this.repository.addRepositoryListener(repositoryListener);
+		
+		this.liveEditConnector = new ILiveEditConnector() {
 			@Override
 			public String getConnectorID() {
 				return LIVE_EDIT_CONNECTOR_ID;
@@ -203,51 +212,54 @@ public class LiveEditConnector {
 		};
 		this.liveEditCoordinator.addLiveEditConnector(liveEditConnector);
 		
-		IWorkspace workspace = ResourcesPlugin.getWorkspace();
-		workspace.addResourceChangeListener(new IResourceChangeListener() {
+		this.workspaceListener = new IResourceChangeListener() {
 			@Override
 			public void resourceChanged(IResourceChangeEvent event) {
 				reactToResourceChanged(event);
 			}
-		});
+		};
 		
-		Display.getDefault().asyncExec(new Runnable() {
+		ResourcesPlugin.getWorkspace().addResourceChangeListener(workspaceListener);
+		
+		this.partListener = new IPartListener2() {
+			@Override
+			public void partVisible(IWorkbenchPartReference partRef) {
+			}
+			@Override
+			public void partOpened(IWorkbenchPartReference partRef) {
+				IWorkbenchPart part = partRef.getPart(false);
+				if (part instanceof AbstractTextEditor) {
+					connectEditor((AbstractTextEditor) part);
+				}
+			}
+			@Override
+			public void partInputChanged(IWorkbenchPartReference partRef) {
+			}
+			@Override
+			public void partHidden(IWorkbenchPartReference partRef) {
+			}
+			@Override
+			public void partDeactivated(IWorkbenchPartReference partRef) {
+			}
+			@Override
+			public void partClosed(IWorkbenchPartReference partRef) {
+				IWorkbenchPart part = partRef.getPart(false);
+				if (part instanceof AbstractTextEditor) {
+					disconnectEditor((AbstractTextEditor) part);
+				}
+			}
+			@Override
+			public void partBroughtToTop(IWorkbenchPartReference partRef) {
+			}
+			@Override
+			public void partActivated(IWorkbenchPartReference partRef) {
+			}
+		};
+		
+		PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
 			public void run() {
 				IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-				window.getActivePage().addPartListener(new IPartListener2() {
-					@Override
-					public void partVisible(IWorkbenchPartReference partRef) {
-					}
-					@Override
-					public void partOpened(IWorkbenchPartReference partRef) {
-						IWorkbenchPart part = partRef.getPart(false);
-						if (part instanceof AbstractTextEditor) {
-							connectEditor((AbstractTextEditor) part);
-						}
-					}
-					@Override
-					public void partInputChanged(IWorkbenchPartReference partRef) {
-					}
-					@Override
-					public void partHidden(IWorkbenchPartReference partRef) {
-					}
-					@Override
-					public void partDeactivated(IWorkbenchPartReference partRef) {
-					}
-					@Override
-					public void partClosed(IWorkbenchPartReference partRef) {
-						IWorkbenchPart part = partRef.getPart(false);
-						if (part instanceof AbstractTextEditor) {
-							disconnectEditor((AbstractTextEditor) part);
-						}
-					}
-					@Override
-					public void partBroughtToTop(IWorkbenchPartReference partRef) {
-					}
-					@Override
-					public void partActivated(IWorkbenchPartReference partRef) {
-					}
-				});
+				window.getActivePage().addPartListener(partListener);
 			}
 		});
 		/*
@@ -522,6 +534,28 @@ public class LiveEditConnector {
 				}
 			}
 		}
+	}
+	
+	public void dispose() {
+		this.liveEditCoordinator.removeLiveEditConnector(liveEditConnector);
+		this.repository.removeRepositoryListener(repositoryListener);
+		FileBuffers.getTextFileBufferManager().removeFileBufferListener(fileBufferListener);
+		ResourcesPlugin.getWorkspace().removeResourceChangeListener(workspaceListener);
+		if (!PlatformUI.getWorkbench().isClosing()) {
+			PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+				public void run() {
+					IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+					window.getActivePage().removePartListener(partListener);
+				}
+			});
+		}
+		for (IDocument document : documentMappings.values()) {
+			if (document != null) {
+				document.removeDocumentListener(documentListener);
+			}
+		}
+		resourceMappings.clear();
+		documentMappings.clear();
 	}
 	
 }

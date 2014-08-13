@@ -31,18 +31,19 @@ public class NavigationService {
 
 	private LiveEditUnits liveEditUnits;
 	private IMessagingConnector messagingConnector;
+	private IMessageHandler navigationRequestHandler;
 
 	public NavigationService(IMessagingConnector messagingConnector, LiveEditUnits liveEditUnits) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditUnits = liveEditUnits;
 
-		IMessageHandler contentAssistRequestHandler = new AbstractMessageHandler("navigationrequest") {
+		this.navigationRequestHandler = new AbstractMessageHandler("navigationrequest") {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
 				handleNavigationRequest(message);
 			}
 		};
-		messagingConnector.addMessageHandler(contentAssistRequestHandler);
+		messagingConnector.addMessageHandler(this.navigationRequestHandler);
 	}
 
 	protected void handleNavigationRequest(JSONObject message) {
@@ -135,6 +136,10 @@ public class NavigationService {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	public void dispose() {
+		messagingConnector.removeMessageHandler(navigationRequestHandler);
 	}
 
 }

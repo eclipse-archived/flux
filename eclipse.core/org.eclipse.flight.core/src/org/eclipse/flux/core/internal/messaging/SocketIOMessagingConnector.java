@@ -16,6 +16,7 @@ import io.socket.SocketIO;
 import io.socket.SocketIOException;
 
 import java.net.MalformedURLException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 
@@ -45,8 +46,8 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 
 	private SocketIO socket;
 	private String host;	
-	private transient boolean connectedToUserspace;
-	private transient boolean connected;
+	private AtomicBoolean connectedToUserspace = new AtomicBoolean(false);;
+	private AtomicBoolean connected = new AtomicBoolean(false);
 	private String userChannel;
 	private String login;
 	private String token;
@@ -84,8 +85,16 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 					@Override
 					protected IStatus run(IProgressMonitor arg0) {
 						try {
+							String channel = userChannel;
+							if (userChannel != null) {
+								processDisconnectChannel();
+							}
+							notifyDisconnected();
 							socket = createSocket();
 							socket.connect(self);
+							if (channel != null) {
+								connectChannel(channel);
+							}
 						} catch (MalformedURLException e) {
 							e.printStackTrace();
 						}
@@ -103,7 +112,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 			@Override
 			public void onConnect() {
 				try {
-					connected = true;
+					connected.compareAndSet(false, true);
 					delay = INITIAL_DELAY;
 					notifyConnected();
 				}
@@ -116,7 +125,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 			public void onDisconnect() {
 				processDisconnectChannel();
 				notifyDisconnected();
-				connected = false;
+				connected.compareAndSet(true, false);
 			}
 
 			@Override
@@ -146,7 +155,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 	}
 	
 	private void processConnectChannel(String userChannel) {
-		this.connectedToUserspace = true;
+		this.connectedToUserspace.compareAndSet(false, true);
 		if (userChannel != null) {
 			this.userChannel = userChannel;
 			notifyChannelConnected(userChannel);
@@ -154,7 +163,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 	}
 	
 	private void processDisconnectChannel() {
-		this.connectedToUserspace = false;
+		this.connectedToUserspace.compareAndSet(true, false);
 		if (this.userChannel != null) {
 			String userChannel = this.userChannel;
 			this.userChannel = null;
@@ -197,7 +206,11 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 
 	@Override
 	public boolean isConnected() {
-		return connected && connectedToUserspace;
+		return connected.get();
+	}
+	
+	public boolean isChannelConnected() {
+		return connectedToUserspace.get();
 	}
 	
 	public String getLogin() {

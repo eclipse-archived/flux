@@ -35,7 +35,12 @@ public class CloudProjectDecorator extends LabelProvider implements ILightweight
 
 	@Override
 	public void decorate(Object element, IDecoration decoration) {
-		if (element instanceof IProject && org.eclipse.flux.core.Activator.getDefault().getRepository().isConnected((IProject) element)) {
+		if (element instanceof IProject
+				&& org.eclipse.flux.core.Activator.getDefault()
+						.getMessagingConnector().isChannelConnected()
+				&& org.eclipse.flux.core.Activator.getDefault().getRepository() != null
+				&& org.eclipse.flux.core.Activator.getDefault().getRepository()
+						.isConnected((IProject) element)) {
 			decoration.addSuffix(" [connected to flux]");
 		}
 	}

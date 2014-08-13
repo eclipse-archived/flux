@@ -18,6 +18,7 @@ import org.json.JSONObject;
 public interface IMessagingConnector {
 	
 	boolean isConnected();
+	boolean isChannelConnected();
 	void send(String messageType, JSONObject message);
 	void disconnect();
 	void connect();
