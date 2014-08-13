@@ -246,6 +246,7 @@ var FluxEditor = (function() {
 			return { 'project' : project, 'path' : location };
 		},
 		sendMessage : function(type, message, callbacks) {
+			console.log('sendMessage: ', type, message);
 //			if (this._connectedToChannel) {
 				if (callbacks) {
 					message.callback_id = generateCallbackId();

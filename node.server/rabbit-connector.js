@@ -167,7 +167,7 @@ RabbitConnector.prototype.initialize = function () {
 					.then(function() {
 						console.log('Connected '+self.inbox+' to topic ' + topic);
 						//send test message
-						self.channel.publish(self.outbox, topic, self.encode({type: 'test', data: "Test message"}));
+						// self.channel.publish(self.outbox, topic, self.encode({type: 'test', data: "Test message"}));
 						fn({
 							'connectedToChannel' : true
 						});

@@ -96,6 +96,15 @@ var FluxFileSystem = (function() {
 	FluxFileSystem.prototype = /**@lends eclipse.FluxFileSystem.prototype */
 	{
 		_createSocket: function (user) {
+			if (this._connectedToChannel) {
+				//Don't know why, but orion is calling us twice in a row and
+				//we end up in here a second time before we are done creating our socket.
+				//We should never create more than one socket, though. So bail out of here.
+				console.log('STOP! no second socket!');
+				return;
+			}
+			console.log('Create socket for ', user);
+			this._connectedToChannel = new Deferred();
 			this.socket = io.connect(this._host, {
 				port: this._port
 			});
@@ -108,8 +117,10 @@ var FluxFileSystem = (function() {
 						'channel' : user
 					}, function(answer) {
 						if (answer.connectedToChannel) {
-							self._connectedToChannel = true;
+							self._connectedToChannel.resolve();
 							console.log("FileSystem connected to FLUX channel: " + user);
+						} else {
+							self._connectedToChannel.reject(answer.error);
 						}
 					});
 	//			}
@@ -206,18 +217,23 @@ var FluxFileSystem = (function() {
 			return { 'project' : project, 'path' : location };
 		},
 		sendMessage : function(type, message, callbacks) {
-//			if (this._connectedToChannel) {
-				if (callbacks) {
-					message.callback_id = generateCallbackId();
-					callbacksCache[message.callback_id] = callbacks;
-				} else if (!message.callback_id) {
-					message.callback_id = 0;
-				}
-				this.socket.emit(type, message);
-				return true;
-//			} else {
-//				return false;
-//			}
+			var self = this;
+			//Avoid loosing messages by sending them before we are properly connected!
+			return self._connectedToChannel.then(function() {
+				console.log('sendMessage', type, message);
+	//			if (this._connectedToChannel) {
+					if (callbacks) {
+						message.callback_id = generateCallbackId();
+						callbacksCache[message.callback_id] = callbacks;
+					} else if (!message.callback_id) {
+						message.callback_id = 0;
+					}
+					self.socket.emit(type, message);
+					return true;
+	//			} else {
+	//				return false;
+	//			}
+			});
 		},
 		_handleMessage: function(data) {
 			var callbacks = callbacksCache[data.callback_id];
@@ -386,9 +402,9 @@ var FluxFileSystem = (function() {
 		 * @param {String} location the location of the workspace to load
 		 * @param {Function} onLoad the function to invoke when the workspace is loaded
 		 */
-		loadWorkspace: function(location) {
+		loadWorkspace: authorize(function(location) {
 			return this.getWorkspace(location);
-		},
+		}),
 
 		getWorkspace: authorize(function(location) {
 			var deferred = new Deferred();
