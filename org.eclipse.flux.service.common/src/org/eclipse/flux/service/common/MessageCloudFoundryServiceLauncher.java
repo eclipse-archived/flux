@@ -23,7 +23,7 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 	public MessageCloudFoundryServiceLauncher(MessageConnector messageConnector, URL cfControllerUrl, String orgName, String spaceName, String cfLogin, String cfPassword, String fluxUrl, String username, String password, String serviceID, int maxPoolSize, 
 			long timeout, File appLocation) throws IOException {
 		super(messageConnector, serviceID, maxPoolSize, timeout);
-		this.numberOfInstances = new AtomicInteger(0);
+		this.numberOfInstances = new AtomicInteger(maxPoolSize);
 		cfClient = new CloudFoundryClient(new CloudCredentials(cfLogin, cfPassword), cfControllerUrl, orgName, spaceName);
 		CloudApplication cfApp = cfClient.getApplication(serviceID);
 		if (cfApp != null) {
@@ -62,9 +62,15 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 	}
 
 	@Override
-	protected void addService(int n) {
+	protected void addService() {
 		CloudApplication cfApp = cfClient.getApplication(serviceID);
-		cfApp.setRunningInstances(numberOfInstances.addAndGet(n));
+		cfApp.setRunningInstances(numberOfInstances.incrementAndGet());
+	}
+
+	@Override
+	protected void initServices() {
+		CloudApplication cfApp = cfClient.getApplication(serviceID);
+		cfApp.setRunningInstances(numberOfInstances.get());
 	}
 
 	@Override

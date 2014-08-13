@@ -19,13 +19,11 @@ public class MessageCliServiceLauncher extends MessageServiceLauncher {
 	}
 
 	@Override
-	protected void addService(int n) {
-		for (int i = 0; i < n; i++) {
-			try {
-				processBuilder.start();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+	protected void addService() {
+		try {
+			processBuilder.start();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 

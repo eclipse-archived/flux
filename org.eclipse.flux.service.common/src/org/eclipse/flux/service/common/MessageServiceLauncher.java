@@ -120,7 +120,7 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	public boolean startService(String user) {
 		try {
 			for (int i = 0; i < MAX_NUMBER_OF_TRIALS && active.get(); i++) {
-				addService(1);
+				addService();
 				String socketId = null;
 				while (socketId == null) {
 					synchronized (servicePoolLock) {
@@ -184,9 +184,7 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 		for (IMessageHandler messageHandler : MESSAGE_HANDLERS) {
 			messageConnector.addMessageHandler(messageHandler);
 		}
-		synchronized(servicePoolLock) {
-			addService(maxPoolSize);
-		}
+		initServices();
 	}
 	
 	@Override
@@ -210,6 +208,12 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 		}
 	}
 	
-	abstract protected void addService(int n);
+	protected void initServices() {
+		for (int i = 0; i < maxPoolSize; i++) {
+			addService();
+		}
+	}
+	
+	abstract protected void addService();
 
 }
