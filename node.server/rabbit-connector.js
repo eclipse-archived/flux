@@ -24,6 +24,7 @@ var connection = null;
  * This name is internal only, client code uses '*' in username
  */
 var EVERYONE = '$all$';
+var SUPER_USER = '$super$';
 
 function addLogging(prefix, eventSource) {
 	eventSource.on('error', function (err) {
@@ -212,6 +213,11 @@ RabbitConnector.prototype.messageReceived = function (msg) {
 
 RabbitConnector.prototype.configure = function() {
 
+	this.configureServiceBroadcast('serviceReady');
+	this.configureDirectRequest('startServiceRequest');
+	this.configureDirectResponse('startServiceResponse');
+	this.configureDirectRequest('shutdownService');
+
 	this.configureBroadcast('projectConnected');
 	this.configureBroadcast('projectDisconnected');
 
@@ -289,6 +295,42 @@ RabbitConnector.prototype.configureResponse = function(type) {
 		);
 	});
 };
+
+RabbitConnector.prototype.configureDirectRequest = function(type) {
+	var self = this;
+	var outbox = self.outbox;
+	this.socket.on(type, function (data) {
+		data.requestSenderID = self.inbox;
+		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		return self.channel.publish('', data.socketID,
+			self.encode({type: type, origin: self.inbox, data: data})
+		);
+	});
+};
+
+RabbitConnector.prototype.configureDirectResponse = function(type) {
+	var self = this;
+	this.socket.on(type, function (data) {
+		data.socketID = self.inbox;
+		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		//Deliver directly to inbox of the requester
+		self.channel.publish('', data.requestSenderID,
+			self.encode({type: type, origin: self.inbox, data: data})
+		);
+	});
+};
+
+RabbitConnector.prototype.configureServiceBroadcast = function(type) {
+	var self = this;
+	var outbox = self.outbox;
+	this.socket.on(type, function (data) {
+		data.socketID = self.inbox;
+		return self.channel.publish(outbox, usernameToRoutingKey(SUPER_USER),
+			self.encode({type: type, origin: self.inbox, data: data})
+		);
+	});
+};
+
 
 RabbitConnector.prototype.dispose = function () {
 	if (this.channel) {
