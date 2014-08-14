@@ -15,12 +15,16 @@
 	"jsonwebtoken"     :  "0.4.0",
 	"cookie"           :  "0.0.5",
 	"connect"          :  "2.7.2",
-	"orion"            :  "0.0.32",
 	"when"             :  "3.4.2",
-	"amqplib"          :  "0.2.0"
+	"amqplib"          :  "0.2.0",
+	"orion-flux"       :  "0.0.32"
+  },
+  "devDependencies" : {
+  	"bower"            :  "1.3.8"
   },
 
   "scripts": {
-  		"start": "node startup-all-in-one.js"
+  		"start": "node startup-all-in-one.js",
+  		"prepublish": "cd flux.orion.integration; $(npm bin)/bower install"
   }
 }
