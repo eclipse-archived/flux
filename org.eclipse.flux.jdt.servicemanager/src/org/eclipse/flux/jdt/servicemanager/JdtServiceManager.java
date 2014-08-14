@@ -136,7 +136,6 @@ public class JdtServiceManager {
 				sb.append("linux");
 				sb.append(File.separator);
 				sb.append("gtk");
-				
 			}
 			sb.append(File.separator);
 			sb.append("x86_64");
