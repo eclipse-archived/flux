@@ -12,107 +12,91 @@
 
 /*global require console module exports __dirname*/
 
-console.log('start-orion-node.js...');
-
 var isDir = require('./util/fileutil').isDir;
 var pathResolve = require('path').resolve;
 
-var createOrion;
-try {
-	createOrion = require('orion-flux');
-} catch (e) {
-	console.error(e);
-}
+var createOrion = require('orion-flux');
 
+module.exports = function (options) {
 
-if (createOrion) {
-	// exports a function to create and start orion-node instance on some port
-	module.exports = function (options) {
+	var port = options.port;
+	var fluxPlugin = options.fluxPlugin;
 
-		var port = options.port || 3001;
+	var fsStat= require('fs').statSync;
+	var fsMkdir= require('fs').mkdirSync;
+	var express = require('express');
 
-		var fluxPlugin = options.fluxPlugin;
+	var workspaceDir = pathResolve(__dirname, ".workspace");
 
+	if (!isDir(workspaceDir)) {
+		fsMkdir(workspaceDir);
+	}
 
-		var fsStat= require('fs').statSync;
-		var fsMkdir= require('fs').mkdirSync;
-		var express = require('express');
+	// set up all parameters for startServer
+	var params = {
+		port: port,
+		workspaceDir: workspaceDir,
+		passwordFile: null,
+		password: null,
+		configParams: {},
+		dev: null,
+		log: null
+	};
 
-		var workspaceDir = pathResolve(__dirname, ".workspace");
+	var orion = createOrion(params);
 
-		if (!isDir(workspaceDir)) {
-			fsMkdir(workspaceDir);
-		}
+	var app = express();
+	app.use(app.router); //our router first so we can override stuff from orion-node
 
-		// set up all parameters for startServer
-		var params = {
-			port: port,
-			workspaceDir: workspaceDir,
-			passwordFile: null,
-			password: null,
-			configParams: {},
-			dev: null,
-			log: null
-		};
-
-		var orion = createOrion(params);
-
-		var app = express();
-		app.use(app.router); //our router first so we can override stuff from orion-node
-
-		if (fluxPlugin) {
-			var defaultPlugins = {
-					//Copied from defaults.pref in orion-node
-					"/plugins":{
-						"plugins/fileClientPlugin.html":true,
-						"plugins/jslintPlugin.html":true,
-						"edit/content/imageViewerPlugin.html":true,
-						"edit/content/jsonEditorPlugin.html":true,
-						"plugins/webEditingPlugin.html":true,
-						"plugins/languages/arduino/arduinoPlugin.html":true,
-						"plugins/languages/c/cPlugin.html":true,
-						"plugins/languages/cpp/cppPlugin.html":true,
-						"plugins/languages/java/javaPlugin.html":true,
-						"plugins/languages/lua/luaPlugin.html":true,
-						"plugins/languages/php/phpPlugin.html":true,
-						"plugins/languages/python/pythonPlugin.html":true,
-						"plugins/languages/ruby/rubyPlugin.html":true,
-						"plugins/languages/xml/xmlPlugin.html":true,
-						"plugins/languages/xquery/xqueryPlugin.html":true,
-						"plugins/languages/yaml/yamlPlugin.html":true,
-						"plugins/pageLinksPlugin.html":true,
-						"webtools/plugins/webToolsPlugin.html":true,
-						"javascript/plugins/javascriptPlugin.html":true,
-						"shell/plugins/shellPagePlugin.html":true,
-						// "plugins/nodePlugin.html":true, // doesn't work at the moment needs socket.io added to the server
-						"search/plugins/searchPagePlugin.html":true
-					},
-					"/settingsContainer":{
-						"categories":{
-							"showUserSettings":false,
-							"showGitSettings":false
-						}
+	if (fluxPlugin) {
+		var defaultPlugins = {
+				//Copied from defaults.pref in orion-node
+				"/plugins":{
+					"plugins/fileClientPlugin.html":true,
+					"plugins/jslintPlugin.html":true,
+					"edit/content/imageViewerPlugin.html":true,
+					"edit/content/jsonEditorPlugin.html":true,
+					"plugins/webEditingPlugin.html":true,
+					"plugins/languages/arduino/arduinoPlugin.html":true,
+					"plugins/languages/c/cPlugin.html":true,
+					"plugins/languages/cpp/cppPlugin.html":true,
+					"plugins/languages/java/javaPlugin.html":true,
+					"plugins/languages/lua/luaPlugin.html":true,
+					"plugins/languages/php/phpPlugin.html":true,
+					"plugins/languages/python/pythonPlugin.html":true,
+					"plugins/languages/ruby/rubyPlugin.html":true,
+					"plugins/languages/xml/xmlPlugin.html":true,
+					"plugins/languages/xquery/xqueryPlugin.html":true,
+					"plugins/languages/yaml/yamlPlugin.html":true,
+					"plugins/pageLinksPlugin.html":true,
+					"webtools/plugins/webToolsPlugin.html":true,
+					"javascript/plugins/javascriptPlugin.html":true,
+					"shell/plugins/shellPagePlugin.html":true,
+					// "plugins/nodePlugin.html":true, // doesn't work at the moment needs socket.io added to the server
+					"search/plugins/searchPagePlugin.html":true
+				},
+				"/settingsContainer":{
+					"categories":{
+						"showUserSettings":false,
+						"showGitSettings":false
 					}
-			};
-			//Add the flux plugin to these defaults.
-			defaultPlugins["/plugins"][fluxPlugin] = true;
-			defaultPlugins = JSON.stringify(defaultPlugins, null, "   ");
+				}
+		};
+		//Add the flux plugin to these defaults.
+		defaultPlugins["/plugins"][fluxPlugin] = true;
+		defaultPlugins = JSON.stringify(defaultPlugins, null, "   ");
 
-			app.get("/defaults.pref", function (req, res) {
-				res.send(defaultPlugins);
-			});
-		}
+		app.get("/defaults.pref", function (req, res) {
+			res.send(defaultPlugins);
+		});
+	}
 
-		app.use(orion);
-		console.log('orion node port = ',params.port);
-		app.listen(params.port);
-	};
-} else { // no orion clone
-	module.exports = function () {
-		console.log("Orion node not found. It needs to be manually installed.");
-	};
-}
+	app.use(orion);
 
-console.log(module.exports);
-
-console.log('start-orion-node.js... LOADED');
+	//If port is given then start server, otherwise assume someone else is using this 'app'
+	// as a kind of servlet. It's up to them to wire things up and start the server.
+	if (port) {
+		app.listen(port);
+	}
+	return app;
+};
