@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.cloudfoundry.client.lib.CloudCredentials;
 import org.cloudfoundry.client.lib.CloudFoundryClient;
+import org.cloudfoundry.client.lib.CloudFoundryException;
 import org.cloudfoundry.client.lib.UploadStatusCallback;
 import org.cloudfoundry.client.lib.domain.CloudApplication;
 import org.cloudfoundry.client.lib.domain.Staging;
@@ -26,9 +27,13 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 		this.numberOfInstances = new AtomicInteger(maxPoolSize);
 		cfClient = new CloudFoundryClient(new CloudCredentials(cfLogin, cfPassword), cfControllerUrl, orgName, spaceName);
 		cfClient.login();
-		CloudApplication cfApp = cfClient.getApplication(serviceID);
-		if (cfApp != null) {
-			cfClient.deleteApplication(serviceID);
+		try {
+			CloudApplication cfApp = cfClient.getApplication(serviceID);
+			if (cfApp != null) {
+				cfClient.deleteApplication(serviceID);
+			}
+		} catch (CloudFoundryException e) {
+			e.printStackTrace();
 		}
 		cfClient.createApplication(serviceID, new Staging(), 1024, null, null);
 		cfClient.uploadApplication(serviceID , appLocation, new UploadStatusCallback() {
@@ -79,18 +84,18 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 	
 	private List<String> createEnv(String fluxUrl, String username, String password) {
 		List<String> env = new ArrayList<String>(3);
-		env.add("flux-host=" + fluxUrl);
-		env.add("flux.user.name=" + username);
-		env.add("flux.user.token=" + password);
-		env.add("flux.jdt.lazyStart=true");
+		env.add("FLUX_HOST=" + fluxUrl);
+		env.add("FLUX_USER_ID=" + username.replace("$", "\\$"));
+		env.add("FLUX_USER_TOKEN=" + password);
+		env.add("FLUX_LAZY_START=true");
 		return env;
 	}
 
 	@Override
 	public void dispose() {
 		super.dispose();
+		cfClient.login();
 		cfClient.stopApplication(serviceID);
-		cfClient.logout();
 	}
 	
 }

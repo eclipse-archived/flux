@@ -26,10 +26,20 @@ public class JDTComponent {
 	@Activate
 	public void activate(final ComponentContext context) throws Exception {
 		
-		boolean lazyStart = Boolean.getBoolean("flux.jdt.lazyStart");
-		String login = System.getProperty("flux.user.name", "defaultuser");
-		String token = System.getProperty("flux.user.token");
-		String host = System.getProperty("flux-host", "http://localhost:3000");
+		String lazyStartStr = System.getProperty("flux.jdt.lazyStart") == null ? System.getenv("FLUX_LAZY_START") : System.getProperty("flux.jdt.lazyStart");
+		boolean lazyStart = lazyStartStr != null && Boolean.valueOf(lazyStartStr);
+		
+		String login = System.getProperty("flux.user.name") == null ? System.getenv("FLUX_USER_ID") : System.getProperty("flux.user.name");
+		if (login == null) {
+			login = "defaultuser";
+		}
+		
+		String token = System.getProperty("flux.user.token") == null ? System.getenv("FLUX_USER_TOKEN") : System.getProperty("flux.user.token");
+		
+		String host = System.getProperty("flux-host") == null ? System.getenv("FLUX_HOST") : System.getProperty("flux-host");
+		if (host == null) {
+			host = "http://localhost:3000";
+		}
 		
 		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, !lazyStart);
 		

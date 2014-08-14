@@ -128,9 +128,16 @@ public class JdtServiceManager {
 			sb.append(File.separator);
 			sb.append("org.eclipse.flux.headless");
 			sb.append(File.separator);
-			sb.append("macosx");
-			sb.append(File.separator);
-			sb.append("cocoa");
+			if (cfUrl == null) {
+				sb.append("macosx");
+				sb.append(File.separator);
+				sb.append("cocoa");
+			} else {
+				sb.append("linux");
+				sb.append(File.separator);
+				sb.append("gtk");
+				
+			}
 			sb.append(File.separator);
 			sb.append("x86_64");
 			if (cfUrl != null) {
