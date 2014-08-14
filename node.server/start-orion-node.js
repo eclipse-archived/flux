@@ -12,22 +12,28 @@
 
 /*global require console module exports __dirname*/
 
+console.log('start-orion-node.js...');
+
 var isDir = require('./util/fileutil').isDir;
 var pathResolve = require('path').resolve;
 
-// is orion clone where we expect it?
-var haveOrionClone = isDir(pathResolve(__dirname, '../../orion.client'));
+var createOrion;
+try {
+	createOrion = require('orion-flux');
+} catch (e) {
+	console.error(e);
+}
 
-if (haveOrionClone) {
+
+if (createOrion) {
 	// exports a function to create and start orion-node instance on some port
 	module.exports = function (options) {
 
 		var port = options.port || 3001;
+
 		var fluxPlugin = options.fluxPlugin;
 
-		// TODO: should use require('orion') and declare dependency via package.json
-		//   but for now we need to use Alex's clone of orion.client.
-		var createOrion = require('../../orion.client/modules/orionode');
+
 		var fsStat= require('fs').statSync;
 		var fsMkdir= require('fs').mkdirSync;
 		var express = require('express');
@@ -98,10 +104,15 @@ if (haveOrionClone) {
 		}
 
 		app.use(orion);
+		console.log('orion node port = ',params.port);
 		app.listen(params.port);
 	};
 } else { // no orion clone
 	module.exports = function () {
-		console.log("Couldn't find clone of orion.client repo. \nNot starting orion node!");
+		console.log("Orion node not found. It needs to be manually installed.");
 	};
 }
+
+console.log(module.exports);
+
+console.log('start-orion-node.js... LOADED');

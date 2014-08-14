@@ -64,7 +64,7 @@ if (ENABLE_AUTH) {
 app.use(app.router);
 app.use("/client/js/URIjs", express['static'](__dirname + '/node_modules/URIjs/src'));
 app.use("/client", express['static'](__dirname + '/web-editor'));
-app.use("/orion-plugin",  express['static'](pathResolve(__dirname, '../flux.orion.integration')));
+app.use("/orion-plugin",  express['static'](pathResolve(__dirname, 'flux.orion.integration')));
 app.use("/", express['static'](pathResolve(__dirname, 'flux-static')));
 
 function redirectHome(req, res) {
@@ -113,13 +113,6 @@ app.get("/user",
 		}
 	}
 );
-
-app.get("/headers", function (req, res) {
-	res.statusCode = 200;
-	res.set('Content-Type', 'text/plain');
-	res.write("req.protocol = "+req.protocol);
-	res.send(JSON.stringify(req.headers, null, '   '));
-});
 
 ////////////////////////////////////////////////////////
 
