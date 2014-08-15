@@ -71,4 +71,9 @@ public class HeadlessEclipseServiceLauncher extends CommandLineServiceLauncher {
 		return osgiJar;
 	}
 
+	@Override
+	public boolean isInitializationFinished() {
+		return true;
+	}
+
 }

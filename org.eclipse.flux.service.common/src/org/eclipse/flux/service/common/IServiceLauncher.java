@@ -20,6 +20,8 @@ public interface IServiceLauncher {
 	
 	void init();
 	
+	boolean isInitializationFinished();
+	
 	/**
 	 * Starts IDE Tooling Service
 	 * 

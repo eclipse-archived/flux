@@ -65,11 +65,13 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 
 	@Override
 	protected void addService() {
+		cfClient.login();
 		cfClient.updateApplicationInstances(serviceID, numberOfInstances.incrementAndGet());
 	}
 
 	@Override
 	protected void initServices() {
+		cfClient.login();
 		cfClient.startApplication(serviceID);
 	}
 
@@ -77,7 +79,8 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 	protected boolean removeService(String socketId) {
 		boolean stopped = super.removeService(socketId);
 		if (stopped) {
-			numberOfInstances.decrementAndGet();
+//			cfClient.login();
+//			cfClient.updateApplicationInstances(serviceID, numberOfInstances.decrementAndGet());
 		}
 		return stopped;
 	}
@@ -88,6 +91,7 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 		env.add("FLUX_USER_ID=" + username.replace("$", "\\$"));
 		env.add("FLUX_USER_TOKEN=" + password);
 		env.add("FLUX_LAZY_START=true");
+		env.add("PATH=/bin:/usr/bin:/home/vcap/app/.java-buildpack/open_jdk_jre/bin");
 		return env;
 	}
 

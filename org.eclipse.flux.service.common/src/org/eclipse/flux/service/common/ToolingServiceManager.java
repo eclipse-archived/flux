@@ -37,6 +37,9 @@ import org.json.JSONObject;
  */
 final public class ToolingServiceManager {
 	
+	private static final long SERVICE_POOL_INITIALIZATION_TIMEOUT = 5 * 60 * 1000; // 5 minute
+	private static final long SERVICE_INITIALIZATION_TIME_INCREMENT = 1000; // 1 second
+	
 	/**
 	 * Service Manager is active
 	 */
@@ -225,6 +228,22 @@ final public class ToolingServiceManager {
 
 	private void doRun() {
 		boolean interruped = false;
+		long timer = 0;
+		System.out.print("\nInitializing service launcher");
+		while (timer < SERVICE_POOL_INITIALIZATION_TIMEOUT && !serviceLauncher.isInitializationFinished()) {
+			timer += SERVICE_INITIALIZATION_TIME_INCREMENT;
+			try {
+				Thread.sleep(SERVICE_INITIALIZATION_TIME_INCREMENT);
+			} catch (InterruptedException e) {
+				// ignore
+			}
+			System.out.print(".");
+		}
+		if (serviceLauncher.isInitializationFinished()) {
+			System.out.println("\nService launcher initialization has been successful");
+		} else {
+			System.out.println("\nWARNING: could not itinitialize service launcher comnpletely");
+		}
 		while (!interruped) {
 			try {
 

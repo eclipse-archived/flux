@@ -56,13 +56,16 @@ public final class MessageConnector {
 				@Override
 				public void onConnect() {
 					connected.compareAndSet(false, true);
+					String[] channelsArray = channels.toArray(new String[channels.size()]);
+					channels.clear();
+					for (String channel : channelsArray) {
+						connectToChannel(channel);
+					}
 				}
 	
 				@Override
 				public void onDisconnect() {
-					while (!channels.isEmpty()) {
-						String channel = channels.iterator().next();
-						channels.remove(channel);
+					for (String channel : channels) {
 						notifyChannelDisconnected(channel);
 					}
 					connected.compareAndSet(true, false);
@@ -72,6 +75,8 @@ public final class MessageConnector {
 				public void onError(SocketIOException ex) {
 					ex.printStackTrace();					
 					try {
+						onDisconnect();						
+						connected.compareAndSet(true, false);
 						socket = createSocket(host);
 						socket.connect(this);
 					} catch (MalformedURLException e) {
@@ -95,12 +100,8 @@ public final class MessageConnector {
 		}
 	}
 	
-	public void connect() {
-		
-	}
-	
 	public void connectToChannel(final String channel) {
-		if (channel != null && !channels.contains(channel)) {
+		if (isConnected() && channel != null && !channels.contains(channel)) {
 			try {
 				JSONObject message = new JSONObject();
 				message.put("channel", channel);
@@ -129,7 +130,7 @@ public final class MessageConnector {
 	
 	public void disconnectFromChannel(final String channel) {
 		boolean removed = channels.remove(channel);
-		if (removed) {
+		if (isConnected() && removed) {
 			try {
 				JSONObject message = new JSONObject();
 				message.put("channel", channel);
@@ -182,7 +183,7 @@ public final class MessageConnector {
 	}
 
 	public boolean isConnected(String channel) {
-		return channels.contains(channel);
+		return isConnected() && channels.contains(channel);
 	}
 	
 	public void addMessageHandler(IMessageHandler messageHandler) {

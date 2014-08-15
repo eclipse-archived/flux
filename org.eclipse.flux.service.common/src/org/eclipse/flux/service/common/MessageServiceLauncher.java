@@ -1,8 +1,7 @@
 package org.eclipse.flux.service.common;
 
-import java.util.Deque;
-import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.json.JSONException;
@@ -30,9 +29,7 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	
 	private ConcurrentHashMap<String, String> userToServiceCache = new ConcurrentHashMap<String, String>();
 	
-	private Deque<String> servicePoolQueue = new LinkedList<String>();
-	
-	private final Object servicePoolLock = new Object();
+	private ConcurrentLinkedDeque<String> servicePoolQueue = new ConcurrentLinkedDeque<String>();
 	
 	private final AtomicBoolean active = new AtomicBoolean(false);
 	
@@ -120,12 +117,12 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	public boolean startService(String user) {
 		try {
 			for (int i = 0; i < MAX_NUMBER_OF_TRIALS && active.get(); i++) {
-				addService();
+				if (servicePoolQueue.size() <= maxPoolSize) {
+					addService();
+				}
 				String socketId = null;
 				while (socketId == null) {
-					synchronized (servicePoolLock) {
-						socketId = servicePoolQueue.isEmpty() ? null : servicePoolQueue.poll();
-					}
+					socketId = servicePoolQueue.isEmpty() ? null : servicePoolQueue.poll();
 					if (socketId == null) {
 						Thread.sleep(TIME_STEP);
 						Thread current = Thread.currentThread();
@@ -179,7 +176,12 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 	
 
 	@Override
-	public void init() {
+	public boolean isInitializationFinished() {
+		return servicePoolQueue.size() >= maxPoolSize;
+	}
+
+	@Override
+	final public void init() {
 		active.compareAndSet(false, true);
 		for (IMessageHandler messageHandler : MESSAGE_HANDLERS) {
 			messageConnector.addMessageHandler(messageHandler);
@@ -198,10 +200,8 @@ public abstract class MessageServiceLauncher implements IServiceLauncher {
 		for (IMessageHandler messageHandler : MESSAGE_HANDLERS) {
 			messageConnector.removeMessageHandler(messageHandler);
 		}
-		synchronized(servicePoolLock) {
-			while (!servicePoolQueue.isEmpty()) {
-				removeService(servicePoolQueue.poll());
-			}
+		while (!servicePoolQueue.isEmpty()) {
+			removeService(servicePoolQueue.poll());
 		}
 		while (!userToServiceCache.isEmpty()) {
 			removeService(userToServiceCache.keys().nextElement());
