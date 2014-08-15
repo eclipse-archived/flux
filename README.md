@@ -233,13 +233,14 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
  __Note:__ if __-cfUrl__ parameter is not entered then JDT services would started as local processes.
  
  Flux JDT service jar that can be deployed on the Cloud Foundry can be created with these steps:
- 1. Navigate to _org.eclipse.flux.headless.releng_ folder
- 2. Execute _"mvn clean package"_
- 3. Navigate from current folder into _target/products/org.eclipse.flux.headless/linux/gtk/x86_64_
- 4. Execute _"jar xf plugins/org.eclipse.equinox.launcher_1.3.0.v20140415-2008.jar"_
- 5. Delete the META-INF folder
- 6. Execute _"jar cfe flux-jdt.jar org.eclipse.equinox.launcher.Main ."_
- 7. Find the _flux-jdt.jar_ file in the current folder
+ 
+1. Navigate to _org.eclipse.flux.headless.releng_ folder
+2. Execute _"mvn clean package"_
+3. Navigate from current folder into _target/products/org.eclipse.flux.headless/linux/gtk/x86_64_
+4. Execute _"jar xf plugins/org.eclipse.equinox.launcher_1.3.0.v20140415-2008.jar"_
+5. Delete the META-INF folder
+6. Execute _"jar cfe flux-jdt.jar org.eclipse.equinox.launcher.Main ."_
+7. Find the _flux-jdt.jar_ file in the current folder
        
 ## Status
 
