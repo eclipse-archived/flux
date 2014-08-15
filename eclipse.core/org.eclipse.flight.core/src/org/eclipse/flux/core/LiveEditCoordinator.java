@@ -273,7 +273,6 @@ public class LiveEditCoordinator {
 		for (IMessageHandler messageHanlder : messageHandlers) {
 			messagingConnector.removeMessageHandler(messageHanlder);
 		}
-		liveEditConnectors.clear();
 	}
 
 }
