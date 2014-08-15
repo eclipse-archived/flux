@@ -211,6 +211,25 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
  
  The prototype uses RabbitMQ to relay messages between clients. So you must create
  and bind a RabbitMQ service instance to your cloudfoundry app for it to work.
+ 
+## Service Manager for JDT services
+
+ Service Managers are applications listening to messages form Flux and starting/stopping services for users depending on the need of a service. Service Managers are deployed, started and shut down by Flux "admin" users.
+ 
+### JDT Service Manager
+
+ JDT Service Manager is meant to start JDT services for users requiring them and shut JDT services down for users that are not using them. The service manager lives in __org.eclipse.flux.jdt.servicemanager__ java project. It can be launched as Java application. The application accepts the following parameters:
+
+ * __-host__ Flux messaging server URL
+ * __-user__ Flux "admin" user id
+ * __-password__ Flux "admin" user client secret 
+ * __-cfUrl__ Cloud Foundry controller URL
+ * __-cfuser__ Cloud Foundry user id
+ * __-cfpassword__ Cloud Foundry user password
+ * __-org__ Cloud Foundry organization name
+ * __-space__ Cloud Foundry space name
+ 
+ __Note:__ if __-cfUrl__ parameter is not entered then JDT services would started as local processes.
        
 ## Status
 
