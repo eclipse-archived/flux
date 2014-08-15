@@ -29,6 +29,9 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 
 	var host = location.hostname;
 	var port = location.port || 80;
+	if (host.indexOf("cfapps.io")>0) {
+		port = 4443; // Cloudfoundry weirdness: all websocket traffic re-routed on this port.
+	}
 	var base = "flux://" + host + ":" + port + "/";
 
 	var contentTypes = ["application/javascript", "text/plain" ];

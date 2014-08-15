@@ -60,14 +60,17 @@ function authorize(methodBody) {
  * flux server (i.e. same server as where we got this plugin from).
  */
 function getUser() {
+	console.log('getUser()...');
 	return client('/user').then(function (response) {
 		if (response.status.code!=200) {
+			console.log('getUser() => FAIL');
 			//TODO: could check status code more precisely.
 			// Here we treat anything that's not ok as
 			// authentication failure and signal it as such
 			// to orion.
 			return when.reject({status: 401});
 		}
+		console.log('getUser() => ', response.entity.username);
 		return response.entity.username;
 	});
 }

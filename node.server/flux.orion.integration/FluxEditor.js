@@ -160,9 +160,9 @@ var FluxEditor = (function() {
 
 						var liveEditUnits = {};
 						liveEditUnits[resourceMetadata.project] = [{
-							'resource'           : resourceMetadata.resource,
-							'savePointTimestamp' : resourceMetadata.hash,
-							'savePointHash'      : resourceMetadata.timestamp
+							'resource'          	: resourceMetadata.resource,
+							'savePointHash' 		: resourceMetadata.hash,
+							'savePointTimestamp'	: resourceMetadata.timestamp
 						}];
 
 						self.sendMessage('getLiveResourcesResponse', {
@@ -246,6 +246,7 @@ var FluxEditor = (function() {
 			return { 'project' : project, 'path' : location };
 		},
 		sendMessage : function(type, message, callbacks) {
+			console.log('sendMessage: ', type, message);
 //			if (this._connectedToChannel) {
 				if (callbacks) {
 					message.callback_id = generateCallbackId();

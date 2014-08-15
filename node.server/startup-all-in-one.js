@@ -24,7 +24,8 @@ var pathResolve = require('path').resolve;
 
 var host = process.env.VCAP_APP_HOST || 'localhost';
 var port = process.env.VCAP_APP_PORT || '3000';
-var homepage = '/client/index.html';
+//var homepage = '/client/index.html'; //flux own simple home page
+var homepage = '/edit/edit.html'; //orion home page
 
 var isCloudFoundry = host!=='localhost';
 console.log('Starting flux on host: '+host);
@@ -59,12 +60,13 @@ if (ENABLE_AUTH) {
 	app.use(passport.initialize());
 	app.use(passport.session());
 	app.use('/client', authentication.ensureAuthenticated);
+	app.use('/edit', authentication.ensureAuthenticated);
 }
 
 app.use(app.router);
 app.use("/client/js/URIjs", express['static'](__dirname + '/node_modules/URIjs/src'));
 app.use("/client", express['static'](__dirname + '/web-editor'));
-app.use("/orion-plugin",  express['static'](pathResolve(__dirname, '../flux.orion.integration')));
+app.use("/orion-plugin",  express['static'](pathResolve(__dirname, 'flux.orion.integration')));
 app.use("/", express['static'](pathResolve(__dirname, 'flux-static')));
 
 function redirectHome(req, res) {
@@ -95,7 +97,8 @@ function userName(req) {
 	return req && req.user && req.user.username;
 }
 
-app.get("/", redirectHome);
+//Orion now being served at '/'
+//app.get("/", redirectHome);
 
 app.get("/user",
 	function (req, res) {
@@ -114,14 +117,13 @@ app.get("/user",
 	}
 );
 
-app.get("/headers", function (req, res) {
-	res.statusCode = 200;
-	res.set('Content-Type', 'text/plain');
-	res.write("req.protocol = "+req.protocol);
-	res.send(JSON.stringify(req.headers, null, '   '));
+////////////////////////////////////////////////////////
+
+var orion = require('./start-orion-node')({
+	fluxPlugin: "/orion-plugin/flux.html"
 });
 
-////////////////////////////////////////////////////////
+app.use(orion);
 
 var server = app.listen(port, host);
 console.log('Express server started on port ' + port);
@@ -193,9 +195,4 @@ MongoClient.connect("mongodb://localhost:27017/flight-db", function(err, db) {
 		});
 	});
 
-});
-
-require('./start-orion-node')({
-	port: 3001,
-	fluxPlugin: "http://"+host+":"+port+"/orion-plugin/flux.html"
 });
