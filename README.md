@@ -230,9 +230,9 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
  * __-space__ Cloud Foundry space name
  * __-app__ Application location (either the .jar to be deployed on Cloud Foundry or the JDT service product folder)
  
- __Note:__ if __-cfUrl__ parameter is not entered then JDT services would started as local processes.
+__Note:__ if __-cfUrl__ parameter is not entered then JDT services would started as local processes.
  
- Flux JDT service jar that can be deployed on the Cloud Foundry can be created with these steps:
+Flux JDT service jar that can be deployed on the Cloud Foundry can be created with these steps:
  
 1. Navigate to _org.eclipse.flux.headless.releng_ folder
 2. Execute _"mvn clean package"_
