@@ -212,9 +212,9 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
  The prototype uses RabbitMQ to relay messages between clients. So you must create
  and bind a RabbitMQ service instance to your cloudfoundry app for it to work.
  
-## Service Manager for JDT services
+## Service Manager for IDE services
 
- Service Managers are applications listening to messages form Flux and starting/stopping services for users depending on the need of a service. Service Managers are deployed, started and shut down by Flux "admin" users.
+Service Managers are applications listening to messages form Flux and starting/stopping services for users depending on the need of a service. Service Managers are deployed, started and shut down by Flux "admin" users.
  
 ### JDT Service Manager
 
