@@ -160,9 +160,9 @@ var FluxEditor = (function() {
 
 						var liveEditUnits = {};
 						liveEditUnits[resourceMetadata.project] = [{
-							'resource'           : resourceMetadata.resource,
-							'savePointTimestamp' : resourceMetadata.hash,
-							'savePointHash'      : resourceMetadata.timestamp
+							'resource'          	: resourceMetadata.resource,
+							'savePointHash' 		: resourceMetadata.hash,
+							'savePointTimestamp'	: resourceMetadata.timestamp
 						}];
 
 						self.sendMessage('getLiveResourcesResponse', {
