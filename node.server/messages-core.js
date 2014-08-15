@@ -72,15 +72,9 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 	this.configureResponse(socket, sockets, 'renameinfileresponse');
 
 	socket.on('disconnect', function () {
-		console.log(arguments.length);
 		console.log('client disconnected from update notifications');
 	});
 
-	socket.on('error', function (err) { 
-		console.log("Socket.IO Error"); 
-		console.log(err.stack); // this is changed from your code in last comment
-	});
-	
 	socket.on('connectToChannel', function(data, fn) {
 		var channel = data.channel;
 		authentication.checkChannelJoin(socket, data, function (err) {
