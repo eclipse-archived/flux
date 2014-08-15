@@ -79,6 +79,16 @@ public abstract class CommandLineServiceLauncher implements IServiceLauncher {
 		return serviceHomeDirectory;
 	}
 	
+	@Override
+	public void init() {
+		// nothing
+	}
+
+	@Override
+	public void dispose() {
+		// nothing
+	}
+	
 	abstract protected List<String> getCommand(String user);
 
 }

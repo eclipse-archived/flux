@@ -18,6 +18,10 @@ package org.eclipse.flux.service.common;
  */
 public interface IServiceLauncher {
 	
+	void init();
+	
+	boolean isInitializationFinished();
+	
 	/**
 	 * Starts IDE Tooling Service
 	 * 
@@ -33,5 +37,7 @@ public interface IServiceLauncher {
 	 * @return <code>true</code> if service has been stopped successfully
 	 */
 	boolean stopService(String user);
+	
+	void dispose();
 	
 }

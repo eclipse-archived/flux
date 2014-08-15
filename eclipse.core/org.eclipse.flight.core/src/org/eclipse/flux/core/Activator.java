@@ -26,6 +26,7 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.internal.CloudSyncResourceListener;
+import org.eclipse.flux.core.internal.messaging.ChannelInitializersRegistry;
 import org.eclipse.flux.core.internal.messaging.SocketIOMessagingConnector;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
@@ -45,45 +46,99 @@ public class Activator implements BundleActivator {
 	// The shared instance
 	private static Activator plugin;
 
-	private IMessagingConnector messagingConnector;
-	private IMessagingConnector internalMessagingConnector;
+	private SocketIOMessagingConnector messagingConnector;
 	private Repository repository;
 	private LiveEditCoordinator liveEditCoordinator;
+	
+	private CloudSyncResourceListener resourceListener;
+	private CloudSyncMetadataListener metadataListener;
+	private IRepositoryListener repositoryListener;
+	private IResourceChangeListener workspaceListener;
+	
+	private final IChannelListener SERVICE_STARTER = new IChannelListener() {
+		@Override
+		public void connected(String userChannel) {
+			try {
+				plugin.initCoreService(userChannel);
+			} catch (CoreException e) {
+				e.printStackTrace();
+			}
+			ChannelInitializersRegistry.getInstance().connected(userChannel);
+		}
+
+		@Override
+		public void disconnected(String userChannel) {
+			ChannelInitializersRegistry.getInstance().disconnected(
+					userChannel);
+			disposeCoreServices(userChannel);
+		}
+	};
 	
 	@Override
 	public void start(BundleContext context) throws Exception {
 		plugin = this;
-		
-		String username = System.getProperty("flux.user.name", "defaultuser");
-		String token = System.getProperty("flux.user.token");
-		// TODO: change this username and token to preference and create some UI to set it
-		
-		messagingConnector = new SocketIOMessagingConnector(username, token);
-		
-		repository = new Repository(messagingConnector, username);
+	}
+
+	@Override
+	public void stop(BundleContext context) throws Exception {
+		if (messagingConnector != null) {
+			messagingConnector.disconnect();
+		}
+		plugin = null;
+	}
+	
+	public void startService(String host, final String login, String token, boolean connectToChannel) throws CoreException {
+		if (this.messagingConnector == null) {
+			this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
+			this.messagingConnector.addChannelListener(SERVICE_STARTER);
+			if (connectToChannel) {
+				messagingConnector.addConnectionListener(new IConnectionListener() {
+
+					@Override
+					public void connected() {
+						messagingConnector.removeConnectionListener(this);
+						messagingConnector.connectChannel(login);
+					}
+
+					@Override
+					public void disconnected() {
+						// TODO Auto-generated method stub
+						
+					}
+					
+				});
+			}
+			this.messagingConnector.connect();
+		}
+	}
+	
+	private void initCoreService(String userChannel) throws CoreException {
+		repository = new Repository(messagingConnector, userChannel);
 		liveEditCoordinator = new LiveEditCoordinator(messagingConnector);
 		
-		CloudSyncResourceListener resourceListener = new CloudSyncResourceListener(repository);
-		ResourcesPlugin.getWorkspace().addResourceChangeListener(resourceListener, IResourceChangeEvent.POST_CHANGE);
-
-		CloudSyncMetadataListener metadataListener = new CloudSyncMetadataListener(repository);
-		ResourcesPlugin.getWorkspace().addResourceChangeListener(metadataListener, IResourceChangeEvent.POST_BUILD);
-
-		getRepository()
-				.addRepositoryListener(new IRepositoryListener() {
-					@Override
-					public void projectDisconnected(IProject project) {
-						removeConnectedProjectPreference(project.getName());
-					}
-
-					@Override
-					public void projectConnected(IProject project) {
-						addConnectedProjectPreference(project.getName());
-					}
-				});
-
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
-		IResourceChangeListener listener = new IResourceChangeListener() {
+		
+		resourceListener = new CloudSyncResourceListener(repository);
+		workspace.addResourceChangeListener(resourceListener, IResourceChangeEvent.POST_CHANGE);
+
+		metadataListener = new CloudSyncMetadataListener(repository);
+		workspace.addResourceChangeListener(metadataListener, IResourceChangeEvent.POST_BUILD);
+		
+		this.repositoryListener = new IRepositoryListener() {
+			@Override
+			public void projectDisconnected(IProject project) {
+				removeConnectedProjectPreference(project.getName());
+			}
+
+			@Override
+			public void projectConnected(IProject project) {
+				addConnectedProjectPreference(project.getName());
+			}
+		};
+
+		getRepository().addRepositoryListener(repositoryListener);
+
+		workspaceListener = new IResourceChangeListener() {
 			public void resourceChanged(IResourceChangeEvent event) {
 				if (event.getResource() instanceof IProject) {
 					IResourceDelta delta = event.getDelta();
@@ -104,17 +159,23 @@ public class Activator implements BundleActivator {
 				}
 			}
 		};
-		workspace.addResourceChangeListener(listener);
+		workspace.addResourceChangeListener(workspaceListener);
 
 		updateProjectConnections();
-
 	}
-
-	@Override
-	public void stop(BundleContext context) throws Exception {
-		plugin = null;
+	
+	private void disposeCoreServices(String userChannel) {
+		if (userChannel.equals(repository.getUsername())) {
+			IWorkspace workspace = ResourcesPlugin.getWorkspace();
+			workspace.removeResourceChangeListener(workspaceListener);
+			workspace.removeResourceChangeListener(resourceListener);
+			workspace.removeResourceChangeListener(metadataListener);
+			repository.removeRepositoryListener(repositoryListener);
+			liveEditCoordinator.dispose();
+			repository.dispose();
+		}
 	}
-
+	
 	private void updateProjectConnections() throws CoreException {
 		String[] projects = getConnectedProjectPreferences();
 		for (String projectName : projects) {
@@ -199,5 +260,5 @@ public class Activator implements BundleActivator {
 	public static void log(Throwable ex) {
 		ex.printStackTrace();
 	}
-
+	
 }

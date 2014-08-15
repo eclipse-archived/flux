@@ -34,18 +34,19 @@ public class RenameService {
 
 	private LiveEditUnits liveEditUnits;
 	private IMessagingConnector messagingConnector;
+	private IMessageHandler contentAssistRequestHandler;
 
 	public RenameService(IMessagingConnector messagingConnector, LiveEditUnits liveEditUnits) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditUnits = liveEditUnits;
 
-		IMessageHandler contentAssistRequestHandler = new AbstractMessageHandler("renameinfilerequest") {
+		this.contentAssistRequestHandler = new AbstractMessageHandler("renameinfilerequest") {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
 				handleRenameInFileRequest(message);
 			}
 		};
-		messagingConnector.addMessageHandler(contentAssistRequestHandler);
+		messagingConnector.addMessageHandler(this.contentAssistRequestHandler);
 	}
 
 	protected void handleRenameInFileRequest(JSONObject message) {
@@ -125,6 +126,10 @@ public class RenameService {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	public void dispose() {
+		messagingConnector.removeMessageHandler(contentAssistRequestHandler);
 	}
 
 }

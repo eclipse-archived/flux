@@ -16,6 +16,7 @@ import io.socket.SocketIO;
 import io.socket.SocketIOException;
 
 import java.net.MalformedURLException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 
@@ -25,6 +26,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.flux.core.Activator;
 import org.eclipse.flux.core.IMessagingConnector;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -43,107 +45,155 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 	}
 
 	private SocketIO socket;
-	private String host;
-	
-	private transient boolean connectedToUserspace;
-	private transient boolean connected;
-	private String username;
-	
-	public SocketIOMessagingConnector(final String username, final String token) {
-		this.username = username;
-		host = System.getProperty("flux-host", "http://localhost:3000");
-
+	private String host;	
+	private AtomicBoolean connectedToUserspace = new AtomicBoolean(false);;
+	private AtomicBoolean connected = new AtomicBoolean(false);
+	private String userChannel;
+	private String login;
+	private String token;
+		
+	public SocketIOMessagingConnector(String host, final String login, final String token) {
+		this.host = host;
+		this.login = login;
+		this.token = token;
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
-			socket = createSocket(username, token);
-			socket.connect(new IOCallback() {
-
-				private long delay = INITIAL_DELAY;
-
-				@Override
-				public void onMessage(JSONObject arg0, IOAcknowledge arg1) {
-				}
-
-				@Override
-				public void onMessage(String arg0, IOAcknowledge arg1) {
-				}
-
-				@Override
-				public void onError(SocketIOException ex) {
-					final IOCallback self = this;
-					Activator.log(ex);
-					new Job("Reconnect web-socket") {
-						@Override
-						protected IStatus run(IProgressMonitor arg0) {
-							try {
-								socket = createSocket(username, token);
-								socket.connect(self);
-							} catch (MalformedURLException e) {
-								e.printStackTrace();
-							}
-							return Status.OK_STATUS;
-						}
-					}.schedule(reconnectDelay());
-				}
-
-				private long reconnectDelay() {
-					long r = this.delay;
-					this.delay = (long)((this.delay+1000)*1.1);
-					return r;
-				}
-
-				@Override
-				public void onConnect() {
-					try {
-						connected = true;
-						delay = INITIAL_DELAY;
-						
-						JSONObject message = new JSONObject();
-						message.put("channel", username);
-
-						socket.emit("connectToChannel", new IOAcknowledge() {
-							@Override
-							public void ack(Object... answer) {
-								try {
-									if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("connectedToChannel")) {
-										connectedToUserspace = true;
-										notifyConnected();
-									}
-								}
-								catch (Exception e) {
-									e.printStackTrace();
-								}
-							}
-						}, message);
-					}
-					catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-
-				@Override
-				public void onDisconnect() {
-					connected = false;
-					notifyDisconnected();
-				}
-
-				@Override
-				public void on(String event, IOAcknowledge ack, Object... data) {
-					if (data.length == 1 && data[0] instanceof JSONObject) {
-						handleIncomingMessage(event, (JSONObject)data[0]);
-					}
-				}
-
-			});
+			socket = createSocket();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
+	
+	public void connect() {
+		socket.connect(new IOCallback() {
+			
+			private long delay = INITIAL_DELAY;
 
-	private SocketIO createSocket(String username, String token) throws MalformedURLException {
+			@Override
+			public void onMessage(JSONObject arg0, IOAcknowledge arg1) {
+			}
+
+			@Override
+			public void onMessage(String arg0, IOAcknowledge arg1) {
+			}
+
+			@Override
+			public void onError(SocketIOException ex) {
+				final IOCallback self = this;
+				Activator.log(ex);
+				new Job("Reconnect web-socket") {
+					@Override
+					protected IStatus run(IProgressMonitor arg0) {
+						try {
+							String channel = userChannel;
+							if (userChannel != null) {
+								processDisconnectChannel();
+							}
+							notifyDisconnected();
+							socket = createSocket();
+							socket.connect(self);
+							if (channel != null) {
+								connectChannel(channel);
+							}
+						} catch (MalformedURLException e) {
+							e.printStackTrace();
+						}
+						return Status.OK_STATUS;
+					}
+				}.schedule(reconnectDelay());
+			}
+
+			private long reconnectDelay() {
+				long r = this.delay;
+				this.delay = (long)((this.delay+1000)*1.1);
+				return r;
+			}
+
+			@Override
+			public void onConnect() {
+				try {
+					connected.compareAndSet(false, true);
+					delay = INITIAL_DELAY;
+					notifyConnected();
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+			@Override
+			public void onDisconnect() {
+				processDisconnectChannel();
+				notifyDisconnected();
+				connected.compareAndSet(true, false);
+			}
+
+			@Override
+			public void on(String event, IOAcknowledge ack, Object... data) {
+				if (data.length == 1 && data[0] instanceof JSONObject) {
+					handleIncomingMessage(event, (JSONObject)data[0]);
+				}
+			}
+
+		});
+	}
+	
+	public void connectChannel(final String userChannel) {
+		if (this.userChannel == userChannel || (this.userChannel != null && this.userChannel.equals(userChannel))) {
+			return;
+		}
+		if (this.userChannel != null) {
+			switchChannel(userChannel);
+		} else {
+			try {
+				connectToChannel(userChannel);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private void processConnectChannel(String userChannel) {
+		this.connectedToUserspace.compareAndSet(false, true);
+		if (userChannel != null) {
+			this.userChannel = userChannel;
+			notifyChannelConnected(userChannel);
+		}
+	}
+	
+	private void processDisconnectChannel() {
+		this.connectedToUserspace.compareAndSet(true, false);
+		if (this.userChannel != null) {
+			String userChannel = this.userChannel;
+			this.userChannel = null;
+			notifyChannelDisconnected(userChannel);
+		}
+	}
+	
+	private void connectToChannel(final String userChannel) throws JSONException {
+		JSONObject message = new JSONObject();
+		message.put("channel", userChannel);
+
+		socket.emit("connectToChannel", new IOAcknowledge() {
+			@Override
+			public void ack(Object... answer) {
+				try {
+					if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("connectedToChannel")) {
+						processConnectChannel(userChannel);
+					}
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}, message);
+	}
+
+	private SocketIO createSocket() throws MalformedURLException {
 		SocketIO socket = new SocketIO(host);
 		if (token!=null) {
-			socket.addHeader("X-flux-user-name", username);
+			socket.addHeader("X-flux-user-name", login);
 			socket.addHeader("X-flux-user-token", token);
 		}
 		return socket;
@@ -156,11 +206,54 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 
 	@Override
 	public boolean isConnected() {
-		return connected && connectedToUserspace;
+		return connected.get();
 	}
 	
-	@Override
-	public String getUserName() {
-		return username;
+	public boolean isChannelConnected() {
+		return connectedToUserspace.get();
 	}
+	
+	public String getLogin() {
+		return login;
+	}
+	
+	public String getToken() {
+		return token;
+	}
+	
+	public String getHost() {
+		return host;
+	}
+
+	@Override
+	public void disconnect() {
+		socket.disconnect();
+	}
+	
+	private void switchChannel(final String userChannel) {
+		try {
+			JSONObject message = new JSONObject();
+			message.put("channel", this.userChannel);
+				
+			socket.emit("disconnectFromChannel", new IOAcknowledge() {
+				@Override
+				public void ack(Object... answer) {
+					try {
+						if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("disconnectedFromChannel")) {
+							processDisconnectChannel();
+							if (userChannel != null) {
+								connectToChannel(userChannel);
+							}
+						}
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}, message);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+	}
+
 }

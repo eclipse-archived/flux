@@ -14,7 +14,7 @@ package org.eclipse.flux.core;
  * @author Martin Lippert
  */
 public interface IConnectionListener {
-
+	
 	void connected();
 	void disconnected();
 

@@ -18,10 +18,16 @@ import org.json.JSONObject;
 public interface IMessagingConnector {
 	
 	boolean isConnected();
+	boolean isChannelConnected();
 	void send(String messageType, JSONObject message);
+	void disconnect();
+	void connect();
+	void connectChannel(String channel);
 
 	void addConnectionListener(IConnectionListener connectionListener);
 	void removeConnectionListener(IConnectionListener connectionListener);
+	void addChannelListener(IChannelListener channelListener);
+	void removeChannelListener(IChannelListener channelListener);
 	void addMessageHandler(IMessageHandler messageHandler);
 	void removeMessageHandler(IMessageHandler messageHandler);
 

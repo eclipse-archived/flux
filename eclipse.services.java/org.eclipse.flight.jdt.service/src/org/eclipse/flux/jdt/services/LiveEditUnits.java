@@ -12,6 +12,7 @@ package org.eclipse.flux.jdt.services;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarkerDelta;
@@ -25,8 +26,8 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.flux.core.CallbackIDAwareMessageHandler;
-import org.eclipse.flux.core.IConnectionListener;
 import org.eclipse.flux.core.ILiveEditConnector;
+import org.eclipse.flux.core.IMessageHandler;
 import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.IRepositoryListener;
 import org.eclipse.flux.core.LiveEditCoordinator;
@@ -54,6 +55,11 @@ public class LiveEditUnits {
 	private Repository repository;
 	private IMessagingConnector messagingConnector;
 	private LiveEditCoordinator liveEditCoordinator;
+	
+	private ILiveEditConnector liveEditConnector;
+	private IRepositoryListener repositoryListener;
+	private IResourceChangeListener metadataChangeListener;
+	private IMessageHandler liveResourcesResponseHandler;
 
 	public LiveEditUnits(IMessagingConnector messagingConnector, LiveEditCoordinator liveEditCoordinator, Repository repository) {
 		this.messagingConnector = messagingConnector;
@@ -62,7 +68,7 @@ public class LiveEditUnits {
 
 		this.liveEditUnits = new ConcurrentHashMap<String, ICompilationUnit>();
 
-		ILiveEditConnector liveEditConnector = new ILiveEditConnector() {
+		this.liveEditConnector = new ILiveEditConnector() {
 			@Override
 			public String getConnectorID() {
 				return LIVE_EDIT_CONNECTOR_ID;
@@ -89,21 +95,9 @@ public class LiveEditUnits {
 				// Do nothing since JDT service is not a host for editors
 			}
 		};
-		liveEditCoordinator.addLiveEditConnector(liveEditConnector);
-
-		this.messagingConnector.addConnectionListener(new IConnectionListener() {
-			@Override
-			public void connected() {
-				startup();
-			}
-
-			@Override
-			public void disconnected() {
-				disconnect();
-			}
-		});
-
-		this.repository.addRepositoryListener(new IRepositoryListener() {
+		liveEditCoordinator.addLiveEditConnector(this.liveEditConnector);
+		
+		this.repositoryListener = new IRepositoryListener() {
 			@Override
 			public void projectConnected(IProject project) {
 				startupConnectedProject(project);
@@ -112,20 +106,20 @@ public class LiveEditUnits {
 			@Override
 			public void projectDisconnected(IProject project) {
 			}
-		});
+		};
+		this.repository.addRepositoryListener(this.repositoryListener);
 
-		if (this.messagingConnector.isConnected()) {
-			startup();
-		}
-
-		messagingConnector.addMessageHandler(new CallbackIDAwareMessageHandler("getLiveResourcesResponse", GET_LIVE_RESOURCES_CALLBACK) {
+		startup();
+		
+		this.liveResourcesResponseHandler = new CallbackIDAwareMessageHandler("getLiveResourcesResponse", GET_LIVE_RESOURCES_CALLBACK) {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
 				startupLiveUnits(message);
 			}
-		});
+		};
+		messagingConnector.addMessageHandler(this.liveResourcesResponseHandler);
 
-		IResourceChangeListener metadataChangeListener = new IResourceChangeListener() {
+		this.metadataChangeListener = new IResourceChangeListener() {
 			@Override
 			public void resourceChanged(IResourceChangeEvent event) {
 				try {
@@ -141,7 +135,7 @@ public class LiveEditUnits {
 				}
 			}
 		};
-		ResourcesPlugin.getWorkspace().addResourceChangeListener(metadataChangeListener, IResourceChangeEvent.POST_BUILD);
+		ResourcesPlugin.getWorkspace().addResourceChangeListener(this.metadataChangeListener, IResourceChangeEvent.POST_BUILD);
 	}
 
 	protected void startup() {
@@ -314,6 +308,14 @@ public class LiveEditUnits {
 				}
 			}
 		}
+	}
+	
+	public void dispose() {
+		messagingConnector.removeMessageHandler(liveResourcesResponseHandler);
+		liveEditCoordinator.removeLiveEditConnector(liveEditConnector);
+		repository.removeRepositoryListener(repositoryListener);
+		ResourcesPlugin.getWorkspace().removeResourceChangeListener(this.metadataChangeListener);
+		liveEditUnits.clear();
 	}
 
 }

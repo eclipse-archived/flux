@@ -11,30 +11,65 @@
  *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
-import org.eclipse.flux.core.IMessagingConnector;
-import org.eclipse.flux.core.LiveEditCoordinator;
-import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.ServiceConnector;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Deactivate;
 
 /**
  * This component connects Java development tools (JDT) services to the Flux message bus.
  */
 public class JDTComponent {
+	
+	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
+	
 	@Activate
-	public void activate(ComponentContext context) {
-		IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator.getDefault().getMessagingConnector();
-		Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
-		LiveEditCoordinator liveEditCoordinator = org.eclipse.flux.core.Activator.getDefault().getLiveEditCoordinator();
-
-		LiveEditUnits liveEditUnits = new LiveEditUnits(messagingConnector, liveEditCoordinator, repository);
-		new ContentAssistService(messagingConnector, liveEditUnits);
-		new NavigationService(messagingConnector, liveEditUnits);
-		new RenameService(messagingConnector, liveEditUnits);
-
-		if (Boolean.getBoolean("flux-initjdt")) {
-			InitializeServiceEnvironment initializer = new InitializeServiceEnvironment(messagingConnector, repository);
-			initializer.start();
+	public void activate(final ComponentContext context) throws Exception {
+		
+		String lazyStartStr = System.getProperty("flux.jdt.lazyStart") == null ? System.getenv("FLUX_LAZY_START") : System.getProperty("flux.jdt.lazyStart");
+		boolean lazyStart = lazyStartStr != null && Boolean.valueOf(lazyStartStr);
+		
+		String login = System.getProperty("flux.user.name") == null ? System.getenv("FLUX_USER_ID") : System.getProperty("flux.user.name");
+		if (login == null) {
+			login = "defaultuser";
 		}
+		
+		String token = System.getProperty("flux.user.token") == null ? System.getenv("FLUX_USER_TOKEN") : System.getProperty("flux.user.token");
+		
+		String host = System.getProperty("flux-host") == null ? System.getenv("FLUX_HOST") : System.getProperty("flux-host");
+		if (host == null) {
+			host = "http://localhost:3000";
+		}
+		
+		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, !lazyStart);
+		
+		if (lazyStart) {
+			 new ServiceConnector(org.eclipse.flux.core.Activator
+				.getDefault().getMessagingConnector(), JDT_SERVICE_ID) {
+
+				@Override
+				public void startService(String user) {
+					org.eclipse.flux.core.Activator.getDefault().getMessagingConnector().connectChannel(user);
+				}
+
+				@Override
+				public void stopService() {
+					try {
+//						context.getBundleContext().getBundle(0L).stop();
+						System.exit(0);
+					} catch (Throwable e) {
+						e.printStackTrace();
+					}
+				}
+				
+			};			
+		}
+		
 	}
+	
+	@Deactivate
+	public void deactivate(final ComponentContext context) {
+		
+	}
+	
 }

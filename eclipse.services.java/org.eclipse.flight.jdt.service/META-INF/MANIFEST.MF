@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: JDT as a service
-Bundle-SymbolicName: org.eclipse.flux.jdt.service
+Bundle-SymbolicName: org.eclipse.flux.jdt.service;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Require-Bundle: org.eclipse.flux.core,

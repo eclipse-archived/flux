@@ -13,6 +13,7 @@ package org.eclipse.flux.core;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -46,6 +47,7 @@ public class Repository {
 
 	private String username;
 	private IMessagingConnector messagingConnector;
+	private Collection<IMessageHandler> messageHandlers;
 
 	private ConcurrentMap<String, ConnectedProject> syncedProjects;
 	private Collection<IRepositoryListener> repositoryListeners;
@@ -60,15 +62,7 @@ public class Repository {
 		this.syncedProjects = new ConcurrentHashMap<String, ConnectedProject>();
 		this.repositoryListeners = new ConcurrentLinkedDeque<>();
 		
-		this.messagingConnector.addConnectionListener(new IConnectionListener() {
-			@Override
-			public void connected() {
-				connect();
-			}
-			@Override
-			public void disconnected() {
-			}
-		});
+		this.messageHandlers = new ArrayList<IMessageHandler>(9);
 		
 		IMessageHandler resourceChangedHandler = new AbstractMessageHandler("resourceChanged") {
 			@Override
@@ -77,6 +71,7 @@ public class Repository {
 			}
 		};
 		this.messagingConnector.addMessageHandler(resourceChangedHandler);
+		messageHandlers.add(resourceChangedHandler);
 		
 		IMessageHandler resourceCreatedHandler = new AbstractMessageHandler("resourceCreated") {
 			@Override
@@ -85,6 +80,7 @@ public class Repository {
 			}
 		};
 		this.messagingConnector.addMessageHandler(resourceCreatedHandler);
+		this.messageHandlers.add(resourceCreatedHandler);
 		
 		IMessageHandler resourceDeletedHandler = new AbstractMessageHandler("resourceDeleted") {
 			@Override
@@ -93,6 +89,7 @@ public class Repository {
 			}
 		};
 		this.messagingConnector.addMessageHandler(resourceDeletedHandler);
+		this.messageHandlers.add(resourceDeletedHandler);
 
 		IMessageHandler getProjectsRequestHandler = new AbstractMessageHandler("getProjectsRequest") {
 			@Override
@@ -101,6 +98,7 @@ public class Repository {
 			}
 		};
 		this.messagingConnector.addMessageHandler(getProjectsRequestHandler);
+		this.messageHandlers.add(getProjectsRequestHandler);
 		
 		IMessageHandler getProjectRequestHandler = new AbstractMessageHandler("getProjectRequest") {
 			@Override
@@ -109,6 +107,7 @@ public class Repository {
 			}
 		};
 		this.messagingConnector.addMessageHandler(getProjectRequestHandler);
+		this.messageHandlers.add(getProjectRequestHandler);
 		
 		IMessageHandler getProjectResponseHandler = new CallbackIDAwareMessageHandler("getProjectResponse", Repository.GET_PROJECT_CALLBACK) {
 			@Override
@@ -117,6 +116,7 @@ public class Repository {
 			}
 		};
 		this.messagingConnector.addMessageHandler(getProjectResponseHandler);
+		this.messageHandlers.add(getProjectResponseHandler);
 		
 		IMessageHandler getResourceRequestHandler = new AbstractMessageHandler("getResourceRequest") {
 			@Override
@@ -136,6 +136,7 @@ public class Repository {
 			}
 		};
 		this.messagingConnector.addMessageHandler(getResourceRequestHandler);
+		this.messageHandlers.add(getResourceRequestHandler);
 		
 		IMessageHandler getResourceResponseHandler = new CallbackIDAwareMessageHandler("getResourceResponse", Repository.GET_RESOURCE_CALLBACK) {
 			@Override
@@ -144,6 +145,7 @@ public class Repository {
 			}
 		};
 		this.messagingConnector.addMessageHandler(getResourceResponseHandler);
+		this.messageHandlers.add(getResourceResponseHandler);
 		
 		IMessageHandler getMetadataRequestHandler = new AbstractMessageHandler("getMetadataRequest") {
 			@Override
@@ -152,6 +154,7 @@ public class Repository {
 			}
 		};
 		this.messagingConnector.addMessageHandler(getMetadataRequestHandler);
+		this.messageHandlers.add(getMetadataRequestHandler);
 	}
 	
 	public String getUsername() {
@@ -166,7 +169,7 @@ public class Repository {
 	}
 
 	public boolean isConnected() {
-		return messagingConnector.isConnected();
+		return messagingConnector.isChannelConnected();
 	}
 
 	public ConnectedProject getProject(IProject project) {
@@ -375,7 +378,7 @@ public class Repository {
 					
 					boolean newFolder = type != null && type.equals("folder") && !connectedProject.containsResource(resourcePath);
 					boolean updatedFolder = type != null && type.equals("folder") && connectedProject.containsResource(resourcePath)
-							&& !connectedProject.getHash(resourcePath).equals(hash) && connectedProject.getTimestamp(resourcePath) < timestamp;
+							&& !(connectedProject.getHash(resourcePath) == null || connectedProject.getHash(resourcePath).equals(hash)) && connectedProject.getTimestamp(resourcePath) < timestamp;
 
 					if (newFolder) {
 						IProject project = connectedProject.getProject();
@@ -945,6 +948,13 @@ public class Repository {
 		for (IRepositoryListener listener : this.repositoryListeners) {
 			listener.projectDisconnected(project);
 		}
+	}
+	
+	public void dispose() {
+		for (IMessageHandler messageHandler : messageHandlers) {
+			messagingConnector.removeMessageHandler(messageHandler);
+		}
+		syncedProjects.clear();
 	}
 
 }

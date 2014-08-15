@@ -10,10 +10,21 @@
 *******************************************************************************/
 package org.eclipse.flux.jdt.servicemanager;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.eclipse.flux.service.common.HeadlessEclipseServiceLauncher;
+import org.eclipse.flux.service.common.IServiceLauncher;
+import org.eclipse.flux.service.common.MessageCliServiceLauncher;
+import org.eclipse.flux.service.common.MessageCloudFoundryServiceLauncher;
+import org.eclipse.flux.service.common.MessageConnector;
 import org.eclipse.flux.service.common.ToolingServiceManager;
+import org.eclipse.flux.service.common.Utils;
 
 /**
  * Starts and Stops JDT Flux service per user. JDT Tooling resources are considered to be all *.java and *.class resources.
@@ -22,10 +33,16 @@ import org.eclipse.flux.service.common.ToolingServiceManager;
  *
  */
 public class JdtServiceManager {
+	
+	private static final String JDT_SERVICE_CLEANUP_THREAD_ID = "Cleanup-JDT-Services";
 
-	private static final int CLEANUP_JDT_SERVICES_CALLBACK = "Cleanup-JDT-Services".hashCode();
+	private static final int CLEANUP_JDT_SERVICES_CALLBACK = JDT_SERVICE_CLEANUP_THREAD_ID.hashCode();
+	
+	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
 	
 	private static final String JDT_RESOURCE_REGEX = ".*\\.java|.*\\.class";
+	
+	private static final String DEFAULT_FLUX_URL = "http://localhost:3000";
 
 	/**
 	 * Launches the application. If command line arguments are present, the
@@ -35,36 +52,68 @@ public class JdtServiceManager {
 	 */
 	public static void main(String[] args) {
 		
-		String host = null;
+		URL host = null;
 		String serviceFolderPath = null;
-		String workspaceFolderPath = null;
+		URL cfUrl = null;
+		String orgName = null;
+		String spaceName = null;
+		String username = null;
+		String password = "";
+		String cfUsername = null;
+		String cfPassword = "";
+		IServiceLauncher serviceLauncher = null;
 		
 		for (int i = 0; i < args.length; i+=2) {
 			if ("-host".equals(args[i])) {
-				if (i < args.length - 2) {
-					host = args[i+1];
-				} else {
-					throw new RuntimeException("Argument value expected after '" + args[i] + "'");
+				validateArgument(args, i);
+				try {
+					host = new URL(args[i+1]);
+				} catch (MalformedURLException e) {
+					throw new IllegalArgumentException("Invalid Flux messaging server URL", e);
 				}
-			} else if ("-serviceFolder".equals(args[i])) {
-				if (i < args.length - 2) {
-					serviceFolderPath = args[i+1];
-				} else {
-					throw new RuntimeException("Argument value expected after '" + args[i] + "'");
+			} else if ("-app".equals(args[i])) {
+				validateArgument(args, i);
+				serviceFolderPath = args[i+1];
+			} else if ("-cfUrl".equals(args[i])) {
+				validateArgument(args, i);
+				try {
+					cfUrl = new URL(args[i+1]);
+				} catch (MalformedURLException e) {
+					throw new IllegalArgumentException("Invalid Cloud Foundry controller URL", e);
 				}
-			} else if ("-workspacesFolder".equals(args[i])) {
-				if (i < args.length - 2) {
-					workspaceFolderPath = args[i+1];
-				} else {
-					throw new RuntimeException("Argument value expected after '" + args[i] + "'");
-				}
+			} else if ("-org".equals(args[i])) {
+				validateArgument(args, i);
+				orgName = args[i+1];
+			} else if ("-space".equals(args[i])) {
+				validateArgument(args, i);
+				spaceName = args[i+1];
+			} else if ("-user".equals(args[i])) {
+				validateArgument(args, i);
+				username = args[i+1];
+			} else if ("-password".equals(args[i])) {
+				validateArgument(args, i);
+				password = args[i+1];
+			} else if ("-cfuser".equals(args[i])) {
+				validateArgument(args, i);
+				cfUsername = args[i+1];
+			} else if ("-cfpassword".equals(args[i])) {
+				validateArgument(args, i);
+				cfPassword = args[i+1];
 			} else {
-				throw new RuntimeException("Invalid argument '" + args[i] + "'");
+				throw new IllegalArgumentException("Invalid argument '" + args[i] + "'");
 			}
 		}
 		
+		if (username == null) {
+			throw new IllegalStateException("Login credentials are not provided.");
+		}
+		
 		if (host == null) {
-			host = "http://localhost:3000"; // default Flux server URL
+			try {
+				host = new URL(DEFAULT_FLUX_URL); // default Flux server URL
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			} 
 		}
 		
 		if (serviceFolderPath == null) {
@@ -79,37 +128,79 @@ public class JdtServiceManager {
 			sb.append(File.separator);
 			sb.append("org.eclipse.flux.headless");
 			sb.append(File.separator);
-			sb.append("macosx");
-			sb.append(File.separator);
-			sb.append("cocoa");
+			if (cfUrl == null) {
+				sb.append("macosx");
+				sb.append(File.separator);
+				sb.append("cocoa");
+			} else {
+				sb.append("linux");
+				sb.append(File.separator);
+				sb.append("gtk");
+			}
 			sb.append(File.separator);
 			sb.append("x86_64");
+			if (cfUrl != null) {
+				sb.append(File.separator);
+				sb.append("flux-jdt.jar");
+			}
 			serviceFolderPath = sb.toString();
 		}
 		
-		if (workspaceFolderPath == null) {
-			workspaceFolderPath = serviceFolderPath + File.separator + "workspaces";
-		}
-		
-		File workspaceFolder = new File(workspaceFolderPath);
-		if (workspaceFolder.exists()) {
-//			if (workspaceFolder.isDirectory()) {
-//				deleteFolder(workspaceFolder, false);
-//			} else {
-//				workspaceFolder.delete();
-//			}
+		final MessageConnector messageConnector = new MessageConnector(
+				host.toString(), username, password);
+
+		if (cfUrl == null) {
+			serviceLauncher = createCFImmitationServiceLauncher(
+					messageConnector, serviceFolderPath, username, password);
 		} else {
-			workspaceFolder.mkdir();
+			try {
+				if (cfUsername == null) {
+					throw new IllegalStateException("Cloud Foundry login credentials are not provided!");
+				}
+				serviceLauncher = createCloudFoundryServiceLauncher(
+						messageConnector, cfUrl, orgName, spaceName,
+						cfUsername, cfPassword, host.toString(), username,
+						password, serviceFolderPath);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
+
+		final ToolingServiceManager jdtServiceManager = new ToolingServiceManager(
+				messageConnector, serviceLauncher)
+				.cleanupCallbackId(CLEANUP_JDT_SERVICES_CALLBACK)
+				.fileFilters(JDT_RESOURCE_REGEX)
+				.cleanupThreadId(JDT_SERVICE_CLEANUP_THREAD_ID);
 		
-		ToolingServiceManager jdtServiceManager = new ToolingServiceManager(
-				host, new HeadlessEclipseServiceLauncher(
-						serviceFolderPath , host,
-						workspaceFolderPath, null))
-				.cleanupCallbackId(CLEANUP_JDT_SERVICES_CALLBACK).fileFilters(
-						JDT_RESOURCE_REGEX);
 		
+		System.out.print("\nConnecting to Flux server: " + host.toString() + " ...");
+		while (!messageConnector.isConnected()) {
+			try {
+				System.out.print('.');
+				Thread.sleep(200L);
+			} catch (InterruptedException e) {
+				// ignore
+			}
+		}
+		System.out.println();
+		
+		System.out.println("Starting JDT service manager...");
 		jdtServiceManager.start();
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		System.out.println("Type 'stop' to stop JDT services.");
+		String userInput = "";
+		while (!"stop".equalsIgnoreCase(userInput)) {
+			try {
+				userInput = br.readLine();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		jdtServiceManager.stop();
+		messageConnector.disconnect();
+		// Workaround for a defect coming from Socket IO. SocketIO doesn't terminate all threads on disconnect.
+		System.exit(0);
 	}
 
 	public static void deleteFolder(File folder, boolean includeFolder) {
@@ -126,5 +217,39 @@ public class JdtServiceManager {
 	    if (includeFolder) {
 	    	folder.delete();
 	    }
+	}
+	
+	private static MessageCliServiceLauncher createCFImmitationServiceLauncher(MessageConnector messageConnector, String serviceFolder, String login, String password) {
+		List<String> command = new ArrayList<String>();
+		command.add("java");
+//		command.add("-Xdebug");
+//		command.add("-Xrunjdwp:transport=dt_socket,address=8001,server=y,suspend=y");
+		command.add("-jar");
+		command.add("-Dflux-host=" + messageConnector.getHost());
+		command.add("-Dflux.user.name=" + login);
+		command.add("-Dflux.user.token=" + password);
+		command.add("-Dflux.jdt.lazyStart=true");
+		command.add(Utils.getEquinoxLauncherJar(serviceFolder));
+		command.add("-data");
+		command.add(serviceFolder + File.separator + "workspace_" + System.currentTimeMillis());
+		MessageCliServiceLauncher launcher = new MessageCliServiceLauncher(messageConnector, JDT_SERVICE_ID, 3, 500L, new File(serviceFolder), command);
+		return launcher;
+	}
+	
+	private static MessageCloudFoundryServiceLauncher createCloudFoundryServiceLauncher(
+			MessageConnector messageConnector, URL cfControllerUrl,
+			String orgName, String spaceName, String cfUsername,
+			String cfPassword, String fluxUrl, String username,
+			String password, String serviceFolder) throws IOException {
+		return new MessageCloudFoundryServiceLauncher(messageConnector,
+				cfControllerUrl, orgName, spaceName, cfUsername, cfPassword,
+				fluxUrl, username, password, JDT_SERVICE_ID, 3, 500L, new File(
+						serviceFolder));
+	}
+	
+	private static void validateArgument(String args[], int index) {
+		if (index > args.length - 2) {
+			throw new RuntimeException("Argument value expected after '" + args[index] + "'");
+		}
 	}
 }
