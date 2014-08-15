@@ -51,7 +51,7 @@ public abstract class ServiceConnector implements IServiceConnector {
 		boolean interrupted = false;
 		while (!serviceConnector.isConnected() && !interrupted) {
 			try {
-				Thread.sleep(500);
+				Thread.sleep(50);
 			} catch (InterruptedException e) {
 				interrupted = true;
 				e.printStackTrace();
@@ -59,7 +59,7 @@ public abstract class ServiceConnector implements IServiceConnector {
 			
 		}
 		try {
-			Thread.sleep(100);
+			Thread.sleep(2000);
 		} catch (InterruptedException e1) {
 			// ignore
 		}
