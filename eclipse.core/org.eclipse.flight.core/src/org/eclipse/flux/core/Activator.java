@@ -26,7 +26,7 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.internal.CloudSyncResourceListener;
-import org.eclipse.flux.core.internal.messaging.ConnectionInitializersRegistry;
+import org.eclipse.flux.core.internal.messaging.ChannelInitializersRegistry;
 import org.eclipse.flux.core.internal.messaging.SocketIOMessagingConnector;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
@@ -63,12 +63,12 @@ public class Activator implements BundleActivator {
 			} catch (CoreException e) {
 				e.printStackTrace();
 			}
-			ConnectionInitializersRegistry.getInstance().connected(userChannel);
+			ChannelInitializersRegistry.getInstance().connected(userChannel);
 		}
 
 		@Override
 		public void disconnected(String userChannel) {
-			ConnectionInitializersRegistry.getInstance().disconnected(
+			ChannelInitializersRegistry.getInstance().disconnected(
 					userChannel);
 			disposeCoreServices(userChannel);
 		}

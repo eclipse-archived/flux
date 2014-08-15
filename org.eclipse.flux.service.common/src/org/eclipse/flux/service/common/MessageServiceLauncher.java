@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2014 Pivotal Software, Inc. and others.
+ * All rights reserved. This program and the accompanying materials are made 
+ * available under the terms of the Eclipse Public License v1.0 
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
+ *
+ * Contributors:
+ *     Pivotal Software, Inc. - initial API and implementation
+*******************************************************************************/
 package org.eclipse.flux.service.common;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -7,6 +17,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * Starts and stops services using Flux messaging system. Maintains a pool of
+ * services not connected to a user channel
+ * 
+ * @author aboyko
+ *
+ */
 public abstract class MessageServiceLauncher implements IServiceLauncher {
 	
 	private static final long MIN_TIMEOUT = 500L;

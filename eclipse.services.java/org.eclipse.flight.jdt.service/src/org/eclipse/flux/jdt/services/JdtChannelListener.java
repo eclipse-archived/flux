@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2014 Pivotal Software, Inc. and others.
+ * All rights reserved. This program and the accompanying materials are made 
+ * available under the terms of the Eclipse Public License v1.0 
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
+ *
+ * Contributors:
+ *     Pivotal Software, Inc. - initial API and implementation
+*******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
 import org.eclipse.flux.core.IChannelListener;
@@ -5,6 +15,12 @@ import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.Repository;
 
+/**
+ * JDT service user channel listener
+ * 
+ * @author aboyko
+ *
+ */
 public class JdtChannelListener implements IChannelListener {
 	
 	private LiveEditUnits liveEditUnits;

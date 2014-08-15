@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2014 Pivotal Software, Inc. and others.
+ * All rights reserved. This program and the accompanying materials are made 
+ * available under the terms of the Eclipse Public License v1.0 
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
+ *
+ * Contributors:
+ *     Pivotal Software, Inc. - initial API and implementation
+*******************************************************************************/
 package org.eclipse.flux.core.internal.messaging;
 
 import java.util.ArrayList;
@@ -11,24 +21,30 @@ import org.eclipse.core.runtime.InvalidRegistryObjectException;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.flux.core.IChannelListener;
 
-public class ConnectionInitializersRegistry implements IChannelListener {
+/**
+ * Loads channel listeners from extension point
+ * 
+ * @author aboyko
+ *
+ */
+public class ChannelInitializersRegistry implements IChannelListener {
 	
 	private final static String EXT_PT_ID = "org.eclipse.flux.core.connectionInitialListeners";
 	private final static String ATTR_CLASS = "class";
 	private final static String ATTR_PRIORITY = "priority";
 	
-	private static ConnectionInitializersRegistry instance = null;
+	private static ChannelInitializersRegistry instance = null;
 	
 	private List<ListenerDescriptor> descriptors;
 	
-	public static ConnectionInitializersRegistry getInstance() {
+	public static ChannelInitializersRegistry getInstance() {
 		if (instance == null) {
-			instance = new ConnectionInitializersRegistry();
+			instance = new ChannelInitializersRegistry();
 		}
 		return instance;
 	}
 	
-	private ConnectionInitializersRegistry() {
+	private ChannelInitializersRegistry() {
 		IConfigurationElement[] configurationElementsFor = Platform.getExtensionRegistry().getConfigurationElementsFor(EXT_PT_ID);
 		descriptors = new ArrayList<ListenerDescriptor>(configurationElementsFor.length);
 		for (IConfigurationElement element : configurationElementsFor) {
