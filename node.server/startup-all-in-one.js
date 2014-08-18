@@ -63,11 +63,18 @@ if (ENABLE_AUTH) {
 	app.use('/edit', authentication.ensureAuthenticated);
 }
 
+function express_static(path) {
+	//Allow browser to cache static content for one whole day. Much improved speed for
+	// loading stuff!
+	var oneDay = 86400000;
+	return express['static'](path, {maxAge: oneDay});
+}
+
 app.use(app.router);
-app.use("/client/js/URIjs", express['static'](__dirname + '/node_modules/URIjs/src'));
-app.use("/client", express['static'](__dirname + '/web-editor'));
-app.use("/orion-plugin",  express['static'](pathResolve(__dirname, 'flux.orion.integration')));
-app.use("/", express['static'](pathResolve(__dirname, 'flux-static')));
+app.use("/client/js/URIjs", express_static(__dirname + '/node_modules/URIjs/src'));
+app.use("/client", express_static(__dirname + '/web-editor'));
+app.use("/orion-plugin",  express_static(pathResolve(__dirname, 'flux.orion.integration')));
+app.use("/", express_static(pathResolve(__dirname, 'flux-static')));
 
 function redirectHome(req, res) {
 	var target = URI(homepage).query({user: userName(req)}).toString();
@@ -196,3 +203,6 @@ MongoClient.connect("mongodb://localhost:27017/flight-db", function(err, db) {
 	});
 
 });
+
+
+

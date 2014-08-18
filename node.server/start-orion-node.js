@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @license
- * Copyright (c) 2013, 2014 Pivotal Software, Inc. and others.
+ * Copyright (c) 2014 Pivotal Software, Inc. and others.
  * All rights reserved. This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License v1.0
  * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution
@@ -15,7 +15,19 @@
 var isDir = require('./util/fileutil').isDir;
 var pathResolve = require('path').resolve;
 
-var createOrion = require('orion-flux');
+var createOrion;
+try {
+	//In 'development mode' use 'hacked' orionode copy from local
+	// filesystem directly.
+	createOrion = require('../../orion.client/modules/orionode');
+	console.log('Development mode: using local clone of orionode');
+} catch (e) {
+	console.log("Using 'orion-flux' from 'package.json'");
+	//When deployed on CF the above orion.client git clone won't
+	//be found so we'll consume a 'released' version installed via package.json
+	//dependency:
+	createOrion = require('orion-flux');
+}
 
 module.exports = function (options) {
 
@@ -52,7 +64,8 @@ module.exports = function (options) {
 		var defaultPlugins = {
 				//Copied from defaults.pref in orion-node
 				"/plugins":{
-					"plugins/fileClientPlugin.html":true,
+					//Removed we just want to use our own:
+					//"plugins/fileClientPlugin.html":true,
 					"plugins/jslintPlugin.html":true,
 					"edit/content/imageViewerPlugin.html":true,
 					"edit/content/jsonEditorPlugin.html":true,
