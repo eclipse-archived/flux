@@ -205,13 +205,51 @@ RabbitConnector.prototype.messageReceived = function (msg) {
 		//This mimicks how socketio works.
 		return;
 	}
-	console.log('rabbit ['+self.inbox+'] => ', msg);
+	//console.log('rabbit ['+self.inbox+'] => ', msg);
 
 	var socket = self.socket;
 	socket.emit(msg.type, msg.data);
 };
 
 RabbitConnector.prototype.configure = function() {
+
+	this.configureRequest('discoverServiceRequest');
+	/*
+	  'disoverServiceRequest' is sent when a process wants to discover
+	  providers that are available for a given service.
+	  info in this message: {
+	      username: 'kdvolder',
+          service: 'org.eclipse.flux.jdt'
+          ... calback id etc...
+	   }
+     */
+     this.configureResponse('discoverServiceResponse');
+	/*
+	info in this message: {
+	    username: 'kdvolder',
+	    service: 'org.eclipse.flux.jdt'
+	    status: 'available' | 'ready' | 'unavailable',
+	    providerId: <id-of-provider-who-sent-the-response>,
+	}
+
+	These status codes have the following meaning:
+	 - available: A reply sent by a service provider that has the capability
+	              to provide the requested service but is not yet ready
+	              to do so. It is the responsibility of the client
+	              to decide whether they want this particular provider
+	              start providing the service by sending a 'startService' request
+	              to them.
+	 - starting:  Sent by a service provider that has already begun the process
+	              of intializing itself to provide the requested service but
+	              is not yet ready to do so.
+	 - ready:     A reply sent by a service provider that is ready
+	              to respond to requests right away.
+	 - unavailable: Provider is not able to provide the requested service.
+	              The message may contain an additional 'error' field explaining
+	              why the service is not available.
+	              Service providers may elect not to respond at all rather than
+	              explicitly explain their unavailability.
+    */
 
 	this.configureServiceBroadcast('serviceReady');
 	this.configureDirectRequest('startServiceRequest');

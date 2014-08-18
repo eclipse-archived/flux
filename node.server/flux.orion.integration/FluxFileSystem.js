@@ -220,7 +220,7 @@ var FluxFileSystem = (function() {
 			var self = this;
 			//Avoid loosing messages by sending them before we are properly connected!
 			return self._connectedToChannel.then(function() {
-				console.log('sendMessage', type, message);
+				console.log('==>', type, message);
 	//			if (this._connectedToChannel) {
 					if (callbacks) {
 						message.callback_id = generateCallbackId();
