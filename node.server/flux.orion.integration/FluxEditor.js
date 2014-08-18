@@ -66,7 +66,6 @@ var FluxEditor = (function() {
 		this._host = host;
 	}
 
-
 	FluxEditor.prototype = /**@lends eclipse.FluxEditor.prototype */
 	{
 		_createSocket: function (user) {
@@ -78,6 +77,7 @@ var FluxEditor = (function() {
 			this._resourceUrl = null;
 
 			var self = this;
+			self.username = user;
 
 			this.socket.on('connect', function() {
 				self.socket.emit('connectToChannel', {
@@ -447,15 +447,30 @@ var FluxEditor = (function() {
 		},
 
 		startEdit: authorize(function(editorContext, options) {
+			this.jdtInitializer = this._initializeJDT(editorContext);
 			var url = options ? options.title : null;
 			return this._setEditorInput(url, editorContext);
 		}),
 
 		endEdit: function(resourceUrl) {
+			if (this.jdtInitializer) {
+				this.jdtInitializer.dispose();
+				delete this.jdtInitializer;
+			}
 			this._setEditorInput(null, null);
+		},
+
+		/**
+		 * This function ensures the JDT service is started and shows a status message when
+		 * it is ready (or an error if it failed).
+		 */
+		_initializeJDT: function (editorContext) {
+			return require('jdt-initializer')(editorContext, this.socket);
 		}
 
 	};
+
+
 
 	return FluxEditor;
 }());
