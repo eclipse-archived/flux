@@ -251,7 +251,7 @@ RabbitConnector.prototype.configure = function() {
 	              explicitly explain their unavailability.
     */
 
-	this.configureServiceBroadcast('serviceReady');
+	this.configureBroadcast('serviceReady');
 	this.configureDirectRequest('startServiceRequest');
 	this.configureDirectResponse('startServiceResponse');
 	this.configureDirectRequest('shutdownService');
@@ -326,6 +326,7 @@ RabbitConnector.prototype.configureBroadcast = function (type) {
 RabbitConnector.prototype.configureResponse = function(type) {
 	var self = this;
 	this.socket.on(type, function (data) {
+		data.responseSenderID = self.inbox;
 		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
 		//Deliver directly to inbox of the requester
 		self.channel.publish('', data.requestSenderID,
@@ -349,7 +350,8 @@ RabbitConnector.prototype.configureDirectRequest = function(type) {
 RabbitConnector.prototype.configureDirectResponse = function(type) {
 	var self = this;
 	this.socket.on(type, function (data) {
-		data.socketID = self.inbox;
+		data.responseSenderID = self.inbox;
+		data.socketID = self.inbox; //Deprecate: use 'responseSenderID instead.
 		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
 		//Deliver directly to inbox of the requester
 		self.channel.publish('', data.requestSenderID,
@@ -358,16 +360,18 @@ RabbitConnector.prototype.configureDirectResponse = function(type) {
 	});
 };
 
-RabbitConnector.prototype.configureServiceBroadcast = function(type) {
-	var self = this;
-	var outbox = self.outbox;
-	this.socket.on(type, function (data) {
-		data.socketID = self.inbox;
-		return self.channel.publish(outbox, usernameToRoutingKey(SUPER_USER),
-			self.encode({type: type, origin: self.inbox, data: data})
-		);
-	});
-};
+
+// Why do we need that? 
+//RabbitConnector.prototype.configureServiceBroadcast = function(type) {
+//	var self = this;
+//	var outbox = self.outbox;
+//	this.socket.on(type, function (data) {
+//		data.socketID = self.inbox;
+//		return self.channel.publish(outbox, usernameToRoutingKey(SUPER_USER),
+//			self.encode({type: type, origin: self.inbox, data: data})
+//		);
+//	});
+//};
 
 
 RabbitConnector.prototype.dispose = function () {

@@ -465,7 +465,7 @@ var FluxEditor = (function() {
 		 * it is ready (or an error if it failed).
 		 */
 		_initializeJDT: function (editorContext) {
-			return require('jdt-initializer')(editorContext, this.socket);
+			return require('jdt-initializer')(editorContext, this.socket, this.username);
 		}
 
 	};

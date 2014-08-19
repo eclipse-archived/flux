@@ -92,7 +92,7 @@ function Service(socket, startServiceRequest) {
 Service.prototype.becomeReady = function () {
 	var self = this;
 	self.status = 'ready';
-	self.socket.emit('discoverServiceResponse', {
+	self.socket.emit('serviceReady', {
 		username: self.username,
 		service: SERVICE_TYPE_ID
 	});
@@ -114,12 +114,14 @@ createClientSocket().done(function (socket) {
 				if (service.username === requestingUser) {
 					socket.emit('discoverServiceResponse', {
 						username: msg.username,
+						service: SERVICE_TYPE_ID,
 						requestSenderID: msg.requestSenderID,
 						status: service.status
 					});
 				} else {
 					socket.emit('discoverServiceResponse', {
 						username: msg.username,
+						service: SERVICE_TYPE_ID,
 						requestSenderID: msg.requestSenderID,
 						status: 'unavailable',
 						error: 'Service provider is already assigned to another user'
@@ -129,6 +131,7 @@ createClientSocket().done(function (socket) {
 				//no service instance yet (or already shutdown).
 				socket.emit('discoverServiceResponse', {
 						username: msg.username,
+						service: SERVICE_TYPE_ID,
 						requestSenderID: msg.requestSenderID,
 						status: 'available'
 				});
@@ -148,6 +151,7 @@ createClientSocket().done(function (socket) {
 				// to establish a connection after they both discovered this available
 				// instance before either one could request to start the service.
 				socket.emit('startServiceResponse', {
+					requestSenderID: msg.requestSenderID,
 					username: msg.username,
 					service: msg.service,
 					status: 'unavailable',
@@ -156,6 +160,7 @@ createClientSocket().done(function (socket) {
 			} else {
 				service = new Service(socket, msg);
 				socket.emit('startServiceResponse', {
+					requestSenderID: msg.requestSenderID,
 					username: msg.username,
 					service: msg.service,
 					status: service.status
