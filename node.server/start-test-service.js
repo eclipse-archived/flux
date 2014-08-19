@@ -80,27 +80,42 @@ function Service(socket, startServiceRequest) {
 	self.startRequest = startServiceRequest;
 	self.username = startServiceRequest.username;
 	self.socket = socket;
-	self.status = 'starting';
+	self.setStatus('starting');
 	setTimeout(function () {
-		self.becomeReady();
+		self.setStatus('ready');
 		setTimeout(function () {
 			self.shutdown();
 		}, 60000);
 	}, 20000);
 }
 
-Service.prototype.becomeReady = function () {
+/**
+ * Change the service status. When switching to 'unavailable' status an
+ * error message can optionally be provided as an explanation to be
+ * sent out with the statusChange event.
+ */
+Service.prototype.setStatus = function (status, error) {
+	console.log('setStatus', status, error);
 	var self = this;
-	self.status = 'ready';
-	self.socket.emit('serviceReady', {
+	if (self.status===status) {
+		//no change
+		return;
+	}
+	var oldStatus = self.status;
+	self.status = status;
+	console.log('send status message');
+	self.socket.emit('serviceStatusChange', {
 		username: self.username,
-		service: SERVICE_TYPE_ID
+		status: self.status,
+		oldStatus: oldStatus,
+		service: SERVICE_TYPE_ID,
+		error: error
 	});
 };
 
 Service.prototype.shutdown = function () {
 	var self = this;
-	self.status = 'stopped';
+	self.setStatus('unavailable', 'Shutdown');
 	service = null;
 };
 
@@ -135,10 +150,10 @@ createClientSocket().done(function (socket) {
 						requestSenderID: msg.requestSenderID,
 						status: 'available'
 				});
-				//possible issue, service is available now, but what if multiple users
+				//possible issue: service is available now, but what if multiple users
 				// are trying to grab the service at the same time?
 				//In that case the fastest one to actually 'grab' it will win.
-				//So clients the 'loosers' must be able to handle the fact that service
+				//So client-side the 'loosers' must be able to handle the fact that service
 				//may no longer be available by the time they attempt to 'grab' it.
 			}
 		}

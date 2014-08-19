@@ -14,7 +14,13 @@ define(function(require) {
 var SERVICE_TYPE_ID = 'foo.bar.test';
 var SERVICE_NAME = 'Foo Bar Testing Service';
 
-var DISCOVERY_TIMEOUT = 1000;
+var DISCOVERY_TIMEOUT = 1000; // Interval we wait for service discovery responses
+	                          // The time should be relatively short. Services providers
+	                          // should respond quickly with info about their status.
+
+var SERVICE_RESTART_DELAY = 5000;
+							  // After service becomes unavailable, we wait for a little
+							  // while and then we try to restart it.
 
 var when = require('when');
 
@@ -50,8 +56,6 @@ function intializeJDT(msgService, socket, username) {
 	 * will be the 'best' response received within the timeframe.
 	 */
 	function discover() {
-
-		var deferred = when.defer();
 
 		/**
 		 * We'll try to keep the 'best' response while listening for a short time.
@@ -98,6 +102,10 @@ function intializeJDT(msgService, socket, username) {
 		}
 
 		//body of 'discover'
+		var deferred = when.defer();
+		
+		msgService.showProgressMessage("Looking for "+SERVICE_NAME);
+
 		on('discoverServiceResponse', handleDiscoveryResponse);
 		socket.emit('discoverServiceRequest', {
 			username: username,
@@ -110,68 +118,75 @@ function intializeJDT(msgService, socket, username) {
 		return deferred.promise;
 	} // end of 'discover'
 
-	/**
-	 * Send a request to start a particular service to a provider identified by given
-	 * discoveryResponse
-	 */
-	function requestToStart(discoveryResponse) {
-		var provider = discoveryResponse.responseSenderID;
-		socket.emit({
-			username: discoveryResponse.username,
-			service: discoveryResponse.service,
-			socketID: discoveryResponse.responseSenderID
-		});
-	}
-
 	function showStatus(fluxMsg) {
 		var status = fluxMsg.status;
 		switch (status) {
 			case 'ready':
-				msgService.showProgressResult('JDT Service is Ready!');
+				msgService.showProgressResult(SERVICE_NAME+' is Ready!');
 				break;
 			case 'unavailable':
-				var msg = 'JDT Service Unavailable';
+				var msg = SERVICE_NAME+' Unavailable';
 				if (fluxMsg.error) {
 					msg = msg+": "+fluxMsg.error;
 				}
 				msgService.showProgressError(msg);
 				break;
+			case 'available':
+				//Don't display. Confusing to users since it says 'available' but
+				// it doesn't mean 'ready to use', only 'available to start'.
+				//A 'starting message should appear shorthy thereafter anyhow.
+				break;
 			default:
-				msgService.showProgressMessage('JDT Service is '+status);
+				msgService.showProgressMessage(SERVICE_NAME+' is '+status);
+		}
+	}
+	
+	var lastKnownStatus = null; //safety to avoid double handling if we receive spurious 'change' events.
+	function handleServiceStatusChange(data) {
+		if (data.service===SERVICE_TYPE_ID && data.username===username) {
+			showStatus(data);
+			
+			if (data.status!==lastKnownStatus) {
+				lastKnownStatus = data.status;
+				if (data.status==='unavailable') {
+					//Not really sure if this is such a good idea.
+					// Maybe for failed start requests, but not if a service we where
+					// using goes down.
+					
+					//Service died?
+					// Wait a little and then try to bring it back up
+					setTimeout(startService, SERVICE_RESTART_DELAY);
+				}
+			}
 		}
 	}
 
 	//begin 'intializeJDT' function body
 	
-	on('serviceReady', function (data) {
-		data.status = 'ready';
-		showStatus({status: 'ready', service: data.service, username: data.username});
-	});
-	on('startServiceResponse', function (data) {
-		showStatus(data);
-		//TODO: In some cases this might fail because someone else grabbed the same
-		// instance right at the same time. Should we attempt to discover another provider
-		// and try again.
-	});
+	on('serviceStatusChange', handleServiceStatusChange);
 	
-	discover().then(function (discoveryResponse) {
-		if (!discoveryResponse) {
-			msgService.showProgressError("Looking for "+SERVICE_NAME+": Timed Out");
-		} else {
-			showStatus(discoveryResponse);
-		}
-
-		if (discoveryResponse.status === 'available') {
-			//instance is available but not yet started. Must ask to start it
-			socket.emit('startServiceRequest', {
-				service: discoveryResponse.service,
-				username: username,
-				socketID: discoveryResponse.responseSenderID
-			});
-		}
-		
-	});
+	//We don't really care since it also sends the same info in 'serviceStatusChange'
+	//on('startServiceResponse', handleServiceStatusChange);
 	
+	function startService() {
+		discover().then(function (discoveryResponse) {
+			if (!discoveryResponse) {
+				msgService.showProgressError("Looking for "+SERVICE_NAME+": Timed Out");
+			} else {
+				showStatus(discoveryResponse);
+				if (discoveryResponse.status === 'available') {
+					//instance is available but not yet started. Must ask to start it
+					socket.emit('startServiceRequest', {
+						service: discoveryResponse.service,
+						username: username,
+						socketID: discoveryResponse.responseSenderID
+					});
+				}
+			}
+		});
+	}
+	
+	startService();
 
 	return {
 		dispose: function () {

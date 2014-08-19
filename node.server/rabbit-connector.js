@@ -224,12 +224,11 @@ RabbitConnector.prototype.configure = function() {
 	   }
      */
      this.configureResponse('discoverServiceResponse');
-	/*
-	info in this message: {
+	/* {
 	    username: 'kdvolder',
 	    service: 'org.eclipse.flux.jdt'
-	    status: 'available' | 'ready' | 'unavailable',
-	    providerId: <id-of-provider-who-sent-the-response>,
+	    status: 'available' | 'starting' | 'ready' | 'unavailable',
+	    responseSenderID: <id-of-flux-client-who-sent-the-response>
 	}
 
 	These status codes have the following meaning:
@@ -250,8 +249,16 @@ RabbitConnector.prototype.configure = function() {
 	              Service providers may elect not to respond at all rather than
 	              explicitly explain their unavailability.
     */
+    
+    this.configureBroadcast('serviceStatusChange');
+    /* {
+	    username: 'kdvolder',
+	    service: 'org.eclipse.flux.jdt'
+	    status: 'available' | 'starting' | 'ready' | 'unavailable',
+	    senderID: <id-of-flux-client-who-sent-the-response>
+    } */
 
-	this.configureBroadcast('serviceReady');
+	this.configureServiceBroadcast('serviceReady');
 	this.configureDirectRequest('startServiceRequest');
 	this.configureDirectResponse('startServiceResponse');
 	this.configureDirectRequest('shutdownService');
@@ -314,9 +321,8 @@ RabbitConnector.prototype.configureBroadcast = function (type) {
 	this.socket.on(type, function (data) {
 		//'data' from websocket client.
 		//Must send it to rabbit mq.
-
-		// broadcast type messages don't expect a reply back. So need to set
-		// 'requestSenderID'
+		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		data.senderID = self.inbox;
 		return self.channel.publish(outbox, usernameToRoutingKey(data.username),
 			self.encode({type: type, origin: self.inbox, data: data})
 		);
@@ -361,17 +367,17 @@ RabbitConnector.prototype.configureDirectResponse = function(type) {
 };
 
 
-// Why do we need that? 
-//RabbitConnector.prototype.configureServiceBroadcast = function(type) {
-//	var self = this;
-//	var outbox = self.outbox;
-//	this.socket.on(type, function (data) {
-//		data.socketID = self.inbox;
-//		return self.channel.publish(outbox, usernameToRoutingKey(SUPER_USER),
-//			self.encode({type: type, origin: self.inbox, data: data})
-//		);
-//	});
-//};
+//TODO: Why do we need that?
+RabbitConnector.prototype.configureServiceBroadcast = function(type) {
+	var self = this;
+	var outbox = self.outbox;
+	this.socket.on(type, function (data) {
+		data.socketID = self.inbox;
+		return self.channel.publish(outbox, usernameToRoutingKey(SUPER_USER),
+			self.encode({type: type, origin: self.inbox, data: data})
+		);
+	});
+};
 
 
 RabbitConnector.prototype.dispose = function () {
