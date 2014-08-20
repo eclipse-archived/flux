@@ -11,6 +11,7 @@
 package org.eclipse.flux.core;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 
 /**
  * @author Martin Lippert
@@ -19,5 +20,6 @@ public interface IRepositoryListener {
 	
 	void projectConnected(IProject project);
 	void projectDisconnected(IProject project);
+	void resourceChanged(IResource resource);
 
 }

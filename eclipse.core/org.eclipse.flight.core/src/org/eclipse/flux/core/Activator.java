@@ -15,6 +15,7 @@ import java.util.HashSet;
 
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceChangeEvent;
 import org.eclipse.core.resources.IResourceChangeListener;
 import org.eclipse.core.resources.IResourceDelta;
@@ -133,6 +134,11 @@ public class Activator implements BundleActivator {
 			@Override
 			public void projectConnected(IProject project) {
 				addConnectedProjectPreference(project.getName());
+			}
+
+			@Override
+			public void resourceChanged(IResource resource) {
+				// nothing
 			}
 		};
 

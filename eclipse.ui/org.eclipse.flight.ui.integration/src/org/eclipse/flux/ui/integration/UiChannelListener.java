@@ -11,6 +11,7 @@
 package org.eclipse.flux.ui.integration;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.flux.core.IChannelListener;
 import org.eclipse.flux.core.IRepositoryListener;
 import org.eclipse.flux.core.LiveEditCoordinator;
@@ -38,6 +39,11 @@ public class UiChannelListener implements IChannelListener {
 		@Override
 		public void projectConnected(IProject project) {
 			updateProjectLabel(project);
+		}
+
+		@Override
+		public void resourceChanged(IResource resource) {
+			// nothing
 		}
 	};
 

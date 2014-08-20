@@ -22,6 +22,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.eclipse.core.filebuffers.FileBuffers;
 import org.eclipse.core.filebuffers.IFileBuffer;
 import org.eclipse.core.filebuffers.IFileBufferListener;
+import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -34,6 +35,7 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.flux.core.ConnectedProject;
 import org.eclipse.flux.core.ILiveEditConnector;
 import org.eclipse.flux.core.IRepositoryListener;
@@ -142,9 +144,17 @@ public class LiveEditConnector {
 					if (doc != null) {
 						doc.addDocumentListener(documentListener);
 					}
+					
+					// Send a message to get the latest edits.
+					Repository repository = LiveEditConnector.this.repository;
+					if (repository.isConnected(project)) {
+						ConnectedProject connectedProject = repository.getProject(project);
+						String hash = connectedProject.getHash(resourcePath);
+						long timestamp = connectedProject.getTimestamp(resourcePath);
+						
+						LiveEditConnector.this.liveEditCoordinator.sendLiveEditStartedMessage(LIVE_EDIT_CONNECTOR_ID, repository.getUsername(), project.getName(), resourcePath, hash, timestamp);
+					}
 				}
-				
-				System.out.println("content replaced by new version on the file system");
 			}
 			
 			@Override
@@ -177,6 +187,18 @@ public class LiveEditConnector {
 			@Override
 			public void projectDisconnected(IProject project) {
 				disconnectOpenEditors(project);
+			}
+			@Override
+			public void resourceChanged(IResource resource) {
+				// TODO Auto-generated method stub
+				IFileBuffer fileBuffer = FileBuffers.getTextFileBufferManager().getFileBuffer(resource.getLocation(), LocationKind.NORMALIZE);
+				if (fileBuffer != null) {
+					try {
+						fileBuffer.revert(new NullProgressMonitor());
+					} catch (CoreException e) {
+						e.printStackTrace();
+					}
+				}
 			}
 		};
 		
