@@ -27,6 +27,7 @@ public class JdtChannelListener implements IChannelListener {
 	private ContentAssistService contentAssistService;
 	private NavigationService navigationService;
 	private RenameService renameService;
+	private JavaDocService javadocService;
 	private InitializeServiceEnvironment initializer;
 
 	@Override
@@ -43,6 +44,7 @@ public class JdtChannelListener implements IChannelListener {
 		this.contentAssistService = new ContentAssistService(messagingConnector, liveEditUnits);
 		this.navigationService = new NavigationService(messagingConnector, liveEditUnits);
 		this.renameService = new RenameService(messagingConnector, liveEditUnits);
+		this.javadocService = new JavaDocService(messagingConnector, liveEditUnits);
 
 		this.initializer = new InitializeServiceEnvironment(
 				messagingConnector, repository);
@@ -56,6 +58,7 @@ public class JdtChannelListener implements IChannelListener {
 		navigationService.dispose();
 		renameService.dispose();
 		initializer.dispose();
+		javadocService.dispose();
 	}
 
 }

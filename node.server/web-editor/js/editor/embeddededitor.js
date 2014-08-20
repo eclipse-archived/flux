@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @license
- * Copyright (c) 2010, 2011 IBM Corporation and others.
+ * Copyright (c) 2010, 2014 IBM Corporation and others.
  * Copyright (c) 2012 VMware, Inc.
  * Copyright (c) 2013, 2014 Pivotal Software, Inc.
  * All rights reserved. This program and the accompanying materials are made
@@ -28,10 +28,11 @@ define([
 	"orion/editor/editorFeatures",
 	"orion/editor/contentAssist",
 	"editor/javaContentAssist",
+	"orion/editor/tooltip",
 	"orion/editor/linkedMode",
 	"editor/sha1"],
 
-function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGrammar, mEditor, mEditorFeatures, mContentAssist, mJavaContentAssist, mLinkedMode) {
+function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, mHtmlGrammar, mEditor, mEditorFeatures, mContentAssist, mJavaContentAssist, mTooltip, mLinkedMode) {
 	var editorDomNode = document.getElementById("editor");
 
 	var textViewFactory = function() {
@@ -117,6 +118,13 @@ function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, 
 		editor.getTextView().setAction("save", function(){
 				save(editor);
 				return true;
+		});
+
+		//Javadoc (F2)
+		editor.getTextView().setKeyBinding(new mKeyBinding.KeyBinding(113), "javadoc");
+		editor.getTextView().setAction("javadoc", function(){
+			javadoc(editor);
+			return true;
 		});
 
 		//Navigate to declaration (F3)
@@ -254,6 +262,28 @@ function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, 
 			linkedMode.enterLinkedMode(linkedModeModel);
 		}
 		console.log(data);
+	});
+
+	socket.on('javadocresponse', function(data) {
+		if (username === data.username && project === data.project
+				&& data.javadoc !== undefined) {
+			var javadoc = data.javadoc;
+			console.log(javadoc);
+			var tooltip = mTooltip.Tooltip.getTooltip(editor.getTextView());
+			if (!tooltip) {
+				return;
+			}
+			tooltip.setTarget({
+				getTooltipInfo : function() {
+					var info = {
+						x : editor._listener.lastMouseX,
+						y : editor._listener.lastMouseY,
+						contents : javadoc.javadoc
+					};
+					return info;
+				}
+			});
+		}
 	});
 
 	var username = "defaultuser";
@@ -586,4 +616,19 @@ function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, 
 			});
 		}, 0);
 	}
+	function javadoc(editor) {
+		setTimeout(function() {
+			var selection = editor.getSelection();
+			var offset = selection.start;
+			var length = selection.end - selection.start;
+			socket.emit('javadocrequest', {
+				'username' : username,
+				'project' : project,
+				'resource' : resource,
+				'offset' : offset,
+				'length' : length,
+				'callback_id' : 0
+			 	});
+		 	}, 0);
+		 }
 });
