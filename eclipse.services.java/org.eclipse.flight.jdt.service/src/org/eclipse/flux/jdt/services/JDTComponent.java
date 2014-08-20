@@ -11,6 +11,7 @@
  *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
+import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.ServiceConnector;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -22,6 +23,7 @@ import org.osgi.service.component.annotations.Deactivate;
 public class JDTComponent {
 	
 	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
+	private ServiceDiscoveryConnector discoveryConnector;
 	
 	@Activate
 	public void activate(final ComponentContext context) throws Exception {
@@ -43,13 +45,14 @@ public class JDTComponent {
 		
 		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, !lazyStart);
 		
+		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
+			.getDefault().getMessagingConnector();
 		if (lazyStart) {
-			 new ServiceConnector(org.eclipse.flux.core.Activator
-				.getDefault().getMessagingConnector(), JDT_SERVICE_ID) {
+			new ServiceConnector(messagingConnector, JDT_SERVICE_ID) {
 
 				@Override
 				public void startService(String user) {
-					org.eclipse.flux.core.Activator.getDefault().getMessagingConnector().connectChannel(user);
+					messagingConnector.connectChannel(user);
 				}
 
 				@Override
@@ -61,15 +64,18 @@ public class JDTComponent {
 						e.printStackTrace();
 					}
 				}
-				
-			};			
+			};
+		} else {
+			discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, login, JDT_SERVICE_ID);
 		}
 		
 	}
 	
 	@Deactivate
 	public void deactivate(final ComponentContext context) {
-		
+		if (discoveryConnector!=null) {
+			discoveryConnector.dispose();
+		}
 	}
 	
 }
