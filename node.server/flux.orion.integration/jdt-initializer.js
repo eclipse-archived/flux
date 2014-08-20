@@ -11,8 +11,8 @@
 
 define(function(require) {
 
-var SERVICE_TYPE_ID = 'foo.bar.test';
-var SERVICE_NAME = 'Foo Bar Testing Service';
+var SERVICE_TYPE_ID = 'org.eclipse.flux.jdt';
+var SERVICE_NAME = 'Flux JDT Service';
 
 var DISCOVERY_TIMEOUT = 1000; // Interval we wait for service discovery responses
 	                          // The time should be relatively short. Services providers
@@ -21,6 +21,7 @@ var DISCOVERY_TIMEOUT = 1000; // Interval we wait for service discovery response
 var SERVICE_RESTART_DELAY = 5000;
 							  // After service becomes unavailable, we wait for a little
 							  // while and then we try to restart it.
+							  // This time should probably be larger than 'DISCOVERY_TIMEOUT'.
 
 var when = require('when');
 
@@ -31,6 +32,7 @@ function intializeJDT(msgService, socket, username) {
 	//msgService.showProgressResult("JDT Service ready for user '"+username);
 	//msgService.showProgressError("Sorry, JDT Service Currently Unavailable");
 
+	var disposed = false;
 	var disposers = []; //things to do on dispose
 	function onDispose(todo) {
 		disposers.push(todo);
@@ -149,13 +151,14 @@ function intializeJDT(msgService, socket, username) {
 			if (data.status!==lastKnownStatus) {
 				lastKnownStatus = data.status;
 				if (data.status==='unavailable') {
+					//Service died?
+					// Wait a little and then try to bring it back up
+					setTimeout(startService, SERVICE_RESTART_DELAY);
+					
 					//Not really sure if this is such a good idea.
 					// Maybe for failed start requests, but not if a service we where
 					// using goes down.
 					
-					//Service died?
-					// Wait a little and then try to bring it back up
-					setTimeout(startService, SERVICE_RESTART_DELAY);
 				}
 			}
 		}
@@ -165,10 +168,15 @@ function intializeJDT(msgService, socket, username) {
 	
 	on('serviceStatusChange', handleServiceStatusChange);
 	
-	//We don't really care since it also sends the same info in 'serviceStatusChange'
+	//Line below is commented because same info is also received in 'serviceStatusChange':
 	//on('startServiceResponse', handleServiceStatusChange);
 	
 	function startService() {
+		if (disposed) {
+			//ignore restart attempt that may have been queued by a call to 'setTimeout' just prior to
+			//getting disposed.
+			return;
+		}
 		discover().then(function (discoveryResponse) {
 			if (!discoveryResponse) {
 				msgService.showProgressError("Looking for "+SERVICE_NAME+": Timed Out");
@@ -190,8 +198,12 @@ function intializeJDT(msgService, socket, username) {
 
 	return {
 		dispose: function () {
-			for (var i = 0; i < disposers.length; i++) {
-				disposers[i]();
+			disposed = true;
+			if (disposers) {
+				for (var i = 0; i < disposers.length; i++) {
+					disposers[i]();
+				}
+				disposers = null;
 			}
 		}
 	};
