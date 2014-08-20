@@ -548,6 +548,7 @@ public class Repository {
 						message.put("hash", updateHash);
 
 						messagingConnector.send("getResourceRequest", message);
+						notifyResourceChanged(resource);
 					}
 				}
 			}
@@ -694,6 +695,7 @@ public class Repository {
 					message.put("hash", updateHash);
 					message.put("type", "file");
 					messagingConnector.send("resourceStored", message);
+					notifyResourceChanged(resource);
 				}
 			}
 		} catch (Exception e) {
@@ -947,6 +949,12 @@ public class Repository {
 	protected void notifyProjectDisonnected(IProject project) {
 		for (IRepositoryListener listener : this.repositoryListeners) {
 			listener.projectDisconnected(project);
+		}
+	}
+	
+	protected void notifyResourceChanged(IResource resource) {
+		for (IRepositoryListener listener : this.repositoryListeners) {
+			listener.resourceChanged(resource);
 		}
 	}
 	

@@ -106,6 +106,11 @@ public class LiveEditUnits {
 			@Override
 			public void projectDisconnected(IProject project) {
 			}
+
+			@Override
+			public void resourceChanged(IResource resource) {
+				// nothing
+			}
 		};
 		this.repository.addRepositoryListener(this.repositoryListener);
 
