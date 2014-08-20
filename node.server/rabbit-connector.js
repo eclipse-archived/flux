@@ -35,6 +35,22 @@ function addLogging(prefix, eventSource) {
 	});
 }
 
+//For more focussed logging / debugging of flux messages
+var blacklisted = {
+	liveMetadataChanged: true,
+	liveResourceStarted: true,
+	getResourceResponse: true,
+	getResourceRequest: true,
+	getProjectRequest: true,
+	getProjectResponse: true,
+	getProjectsRequest: true,
+	getProjectsResponse: true
+};
+function logMsg(pre, type, data) {
+	if (blacklisted[type]) {return; }
+	console.log(pre, type, data);
+}
+
 /**
  * Get connection to AMQP message broker. This returns a promise.
  * The same connection is shared by everyone calling this function.
@@ -308,7 +324,7 @@ RabbitConnector.prototype.configureRequest = function(type) {
 	var outbox = self.outbox;
 	this.socket.on(type, function (data) {
 		data.requestSenderID = self.inbox;
-		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		return self.channel.publish(outbox, usernameToRoutingKey(data.username),
 			self.encode({type: type, origin: self.inbox, data: data})
 		);
@@ -321,7 +337,7 @@ RabbitConnector.prototype.configureBroadcast = function (type) {
 	this.socket.on(type, function (data) {
 		//'data' from websocket client.
 		//Must send it to rabbit mq.
-		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		data.senderID = self.inbox;
 		return self.channel.publish(outbox, usernameToRoutingKey(data.username),
 			self.encode({type: type, origin: self.inbox, data: data})
@@ -333,7 +349,7 @@ RabbitConnector.prototype.configureResponse = function(type) {
 	var self = this;
 	this.socket.on(type, function (data) {
 		data.responseSenderID = self.inbox;
-		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		//Deliver directly to inbox of the requester
 		self.channel.publish('', data.requestSenderID,
 			self.encode({type: type, origin: self.inbox, data: data})
@@ -346,7 +362,7 @@ RabbitConnector.prototype.configureDirectRequest = function(type) {
 	var outbox = self.outbox;
 	this.socket.on(type, function (data) {
 		data.requestSenderID = self.inbox;
-		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		return self.channel.publish('', data.socketID,
 			self.encode({type: type, origin: self.inbox, data: data})
 		);
@@ -358,7 +374,7 @@ RabbitConnector.prototype.configureDirectResponse = function(type) {
 	this.socket.on(type, function (data) {
 		data.responseSenderID = self.inbox;
 		data.socketID = self.inbox; //Deprecate: use 'responseSenderID instead.
-		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		//Deliver directly to inbox of the requester
 		self.channel.publish('', data.requestSenderID,
 			self.encode({type: type, origin: self.inbox, data: data})
