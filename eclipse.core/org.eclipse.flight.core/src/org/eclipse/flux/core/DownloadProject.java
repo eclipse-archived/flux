@@ -118,11 +118,15 @@ public class DownloadProject {
 					String type = resource.optString("type");
 
 					if (type.equals("folder")) {
-						IFolder folder = project.getFolder(new Path(resourcePath));
-						if (!folder.exists()) {
-							folder.create(true, true, null);
+						if (resourcePath.isEmpty()) {
+							project.setLocalTimeStamp(timestamp);
+						} else {
+							IFolder folder = project.getFolder(new Path(resourcePath));
+							if (!folder.exists()) {
+								folder.create(true, true, null);
+							}
+							folder.setLocalTimeStamp(timestamp);
 						}
-						folder.setLocalTimeStamp(timestamp);
 					} else if (type.equals("file")) {
 						requestedFileCount.incrementAndGet();
 					}

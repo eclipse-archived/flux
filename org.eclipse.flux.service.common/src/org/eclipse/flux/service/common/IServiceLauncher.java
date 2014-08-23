@@ -10,34 +10,10 @@
 *******************************************************************************/
 package org.eclipse.flux.service.common;
 
-/**
- * Starts and stops IDE Tooling Service
- * 
- * @author aboyko
- *
- */
 public interface IServiceLauncher {
 	
 	void init();
-	
-	boolean isInitializationFinished();
-	
-	/**
-	 * Starts IDE Tooling Service
-	 * 
-	 * @param user the user for which to start the service
-	 * @return <code>true</code> if service has been started successfully
-	 */
-	boolean startService(String user);
-	
-	/**
-	 * Stops IDE Tooling Service
-	 * 
-	 * @param user the user for which to stop the service
-	 * @return <code>true</code> if service has been stopped successfully
-	 */
-	boolean stopService(String user);
-	
+	void startService(int n);
 	void dispose();
-	
+
 }

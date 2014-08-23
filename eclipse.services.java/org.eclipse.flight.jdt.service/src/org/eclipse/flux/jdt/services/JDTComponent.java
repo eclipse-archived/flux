@@ -11,7 +11,9 @@
  *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
-import org.eclipse.flux.core.ServiceConnector;
+import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.core.ServiceDiscoveryConnector;
+import org.eclipse.flux.core.KeepAliveConnector;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Deactivate;
@@ -22,9 +24,18 @@ import org.osgi.service.component.annotations.Deactivate;
 public class JDTComponent {
 	
 	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
+	private ServiceDiscoveryConnector discoveryConnector;
+	private KeepAliveConnector keepAliveConnector;
+	
+	private static JDTComponent instance = null;
+	
+	static JDTComponent getInstance() {
+		return instance;
+	}
 	
 	@Activate
 	public void activate(final ComponentContext context) throws Exception {
+		instance = this;
 		
 		String lazyStartStr = System.getProperty("flux.jdt.lazyStart") == null ? System.getenv("FLUX_LAZY_START") : System.getProperty("flux.jdt.lazyStart");
 		boolean lazyStart = lazyStartStr != null && Boolean.valueOf(lazyStartStr);
@@ -43,33 +54,37 @@ public class JDTComponent {
 		
 		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, !lazyStart);
 		
+		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
+			.getDefault().getMessagingConnector();
+		
+		
+		
+		messagingConnector.connectChannel(login);
+		
+		while (!messagingConnector.isChannelConnected()) {
+			Thread.sleep(500);
+		}
+		
+		discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, login, JDT_SERVICE_ID, lazyStart);
 		if (lazyStart) {
-			 new ServiceConnector(org.eclipse.flux.core.Activator
-				.getDefault().getMessagingConnector(), JDT_SERVICE_ID) {
-
-				@Override
-				public void startService(String user) {
-					org.eclipse.flux.core.Activator.getDefault().getMessagingConnector().connectChannel(user);
-				}
-
-				@Override
-				public void stopService() {
-					try {
-//						context.getBundleContext().getBundle(0L).stop();
-						System.exit(0);
-					} catch (Throwable e) {
-						e.printStackTrace();
-					}
-				}
-				
-			};			
+			keepAliveConnector = new KeepAliveConnector(messagingConnector, login, JDT_SERVICE_ID);
 		}
 		
 	}
 	
+	public KeepAliveConnector getKeepAliveConnector() {
+		return keepAliveConnector;
+	}
+	
 	@Deactivate
 	public void deactivate(final ComponentContext context) {
-		
+		if (discoveryConnector!=null) {
+			discoveryConnector.dispose();
+		}
+		if (keepAliveConnector != null) {
+			keepAliveConnector.dispose();
+		}
+		instance = null;
 	}
 	
 }

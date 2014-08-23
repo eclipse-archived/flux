@@ -16,7 +16,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.cloudfoundry.client.lib.CloudCredentials;
 import org.cloudfoundry.client.lib.CloudFoundryClient;
@@ -25,34 +24,28 @@ import org.cloudfoundry.client.lib.UploadStatusCallback;
 import org.cloudfoundry.client.lib.domain.CloudApplication;
 import org.cloudfoundry.client.lib.domain.Staging;
 
-/**
- * Starts/Stops services on the Cloud Foundry
- * 
- * @author aboyko
- *
- */
-public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
-	
+public class CloudFoundryServiceLauncher implements IServiceLauncher {
+
 	private CloudFoundryClient cfClient;
-	
-	private AtomicInteger numberOfInstances;
-	
-	public MessageCloudFoundryServiceLauncher(MessageConnector messageConnector, URL cfControllerUrl, String orgName, String spaceName, String cfLogin, String cfPassword, String fluxUrl, String username, String password, String serviceID, int maxPoolSize, 
-			long timeout, File appLocation) throws IOException {
-		super(messageConnector, serviceID, maxPoolSize, timeout);
-		this.numberOfInstances = new AtomicInteger(maxPoolSize);
+	private String serviceId;
+	private int numberOfInstances;	
+
+	public CloudFoundryServiceLauncher(String serviceId, URL cfControllerUrl, String orgName, String spaceName, String cfLogin, String cfPassword, String fluxUrl, String username, String password, 
+			File appLocation) throws IOException {
+		this.serviceId = serviceId;
+		this.numberOfInstances = 0;
 		cfClient = new CloudFoundryClient(new CloudCredentials(cfLogin, cfPassword), cfControllerUrl, orgName, spaceName);
 		cfClient.login();
 		try {
-			CloudApplication cfApp = cfClient.getApplication(serviceID);
+			CloudApplication cfApp = cfClient.getApplication(serviceId);
 			if (cfApp != null) {
-				cfClient.deleteApplication(serviceID);
+				cfClient.deleteApplication(serviceId);
 			}
 		} catch (CloudFoundryException e) {
 			e.printStackTrace();
 		}
-		cfClient.createApplication(serviceID, new Staging(), 1024, null, null);
-		cfClient.uploadApplication(serviceID , appLocation, new UploadStatusCallback() {
+		cfClient.createApplication(serviceId, new Staging(), 1024, null, null);
+		cfClient.uploadApplication(serviceId, appLocation, new UploadStatusCallback() {
 			
 			@Override
 			public boolean onProgress(String arg0) {
@@ -75,47 +68,66 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 				System.out.println("Check resources!");
 			}
 		});		
-		cfClient.updateApplicationEnv(serviceID, createEnv(fluxUrl, username, password));
-		cfClient.updateApplicationInstances(serviceID, maxPoolSize);
+		cfClient.updateApplicationEnv(serviceId, createEnv(fluxUrl, username, password));
 	}
 
 	@Override
-	protected void addService() {
+	public void init() {
 		cfClient.login();
-		cfClient.updateApplicationInstances(serviceID, numberOfInstances.incrementAndGet());
-	}
-
-	@Override
-	protected void initServices() {
-		cfClient.login();
-		cfClient.startApplication(serviceID);
-	}
-
-	@Override
-	protected boolean removeService(String socketId) {
-		boolean stopped = super.removeService(socketId);
-		if (stopped) {
-//			cfClient.login();
-//			cfClient.updateApplicationInstances(serviceID, numberOfInstances.decrementAndGet());
+		cfClient.startApplication(serviceId);
+		numberOfInstances = 1;
+		
+		/*
+		 * HACK: wait until app instance is started. Not sure how to do that with CF client API
+		 */
+		boolean started = false;
+		while (!started) {
+			try {
+				cfClient.updateApplicationInstances(serviceId, numberOfInstances);
+				started = true;
+			} catch (Throwable t) {
+				try {
+					Thread.sleep(5000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
 		}
-		return stopped;
 	}
-	
+
+	@Override
+	public void startService(int n) {
+		cfClient.login();
+		boolean updated = false;
+		while (!updated) {
+			try {
+				cfClient.updateApplicationInstances(serviceId,
+						numberOfInstances + n);
+				numberOfInstances += n;
+				updated = true;
+			} catch (Throwable t) {
+				try {
+					Thread.sleep(2000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	@Override
+	public void dispose() {
+		cfClient.login();
+		cfClient.stopApplication(serviceId);
+	}
+
 	private List<String> createEnv(String fluxUrl, String username, String password) {
 		List<String> env = new ArrayList<String>(3);
 		env.add("FLUX_HOST=" + fluxUrl);
 		env.add("FLUX_USER_ID=" + username.replace("$", "\\$"));
 		env.add("FLUX_USER_TOKEN=" + password);
 		env.add("FLUX_LAZY_START=true");
-		env.add("PATH=/bin:/usr/bin:/home/vcap/app/.java-buildpack/open_jdk_jre/bin");
 		return env;
-	}
-
-	@Override
-	public void dispose() {
-		super.dispose();
-		cfClient.login();
-		cfClient.stopApplication(serviceID);
 	}
 	
 }

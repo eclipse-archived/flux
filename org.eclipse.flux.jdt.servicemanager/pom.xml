@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.eclipse.flux.jdt.servicemanager</groupId>
-  <artifactId>org.eclipse.flux.jdt.servicemanager</artifactId>
+  <groupId>org.eclipse.flux.jdt.service.provider</groupId>
+  <artifactId>org.eclipse.flux.jdt.service.provider</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>JDT Service Manager</name>
   <description>Starts/Stops JDT service per user on demand</description>
@@ -25,7 +25,7 @@
             <manifest>
 <!--               <addClasspath>true</addClasspath>
               <classpathPrefix>lib/</classpathPrefix>
- -->              <mainClass>org.eclipse.flux.jdt.servicemanager.JdtServiceManager</mainClass>
+ -->              <mainClass>org.eclipse.flux.jdt.service.provider.JdtServiceProvider</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -46,7 +46,7 @@
           </descriptorRefs>
           <archive>
             <manifest>
-              <mainClass>org.eclipse.flux.jdt.servicemanager.JdtServiceManager</mainClass>
+              <mainClass>org.eclipse.flux.jdt.service.provider.JdtServiceProvider</mainClass>
             </manifest>
           </archive>
         </configuration>

@@ -13,34 +13,36 @@ package org.eclipse.flux.service.common;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 
-/**
- * Launches process for a JDT service. Emulates Cloud Foundry JDT services
- * 
- * @author aboyko
- *
- */
-public class MessageCliServiceLauncher extends MessageServiceLauncher {
+public class LocalProcessServiceLauncher implements IServiceLauncher {
 	
 	private ProcessBuilder processBuilder;
-
-	public MessageCliServiceLauncher(MessageConnector messageConnector, String serviceID, int maxPoolSize, 
-			long timeout, File serviceFolder, List<String> command) {
-		super(messageConnector, serviceID, maxPoolSize, timeout);
-		int random = new Random().nextInt();
+	
+	public LocalProcessServiceLauncher(File serviceFolder, List<String> command) {
 		this.processBuilder = new ProcessBuilder(command).directory(serviceFolder)
-				.redirectOutput(new File(serviceFolder.getPath() + File.separator + random + ".out"))
-				.redirectError(new File(serviceFolder.getPath() + File.separator + random + ".err"));
+				.redirectOutput(new File(serviceFolder.getPath() + File.separator + "output.out"))
+				.redirectError(new File(serviceFolder.getPath() + File.separator + "output.err"));
 	}
 
 	@Override
-	protected void addService() {
-		try {
-			processBuilder.start();
-		} catch (IOException e) {
-			e.printStackTrace();
+	public void init() {
+		// nothing
+	}
+
+	@Override
+	public void startService(int n) {
+		for (int i = 0; i < n; i++) {
+			try {
+				processBuilder.start();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
+	}
+
+	@Override
+	public void dispose() {
+		// nothing
 	}
 
 }

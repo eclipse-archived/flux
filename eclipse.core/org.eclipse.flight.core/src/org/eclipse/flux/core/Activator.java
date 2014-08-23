@@ -59,19 +59,23 @@ public class Activator implements BundleActivator {
 	private final IChannelListener SERVICE_STARTER = new IChannelListener() {
 		@Override
 		public void connected(String userChannel) {
-			try {
-				plugin.initCoreService(userChannel);
-			} catch (CoreException e) {
-				e.printStackTrace();
+			if (!Constants.SUPER_USER.equals(userChannel)) {
+				try {
+					plugin.initCoreService(userChannel);
+				} catch (CoreException e) {
+					e.printStackTrace();
+				}
+				ChannelInitializersRegistry.getInstance().connected(userChannel);
 			}
-			ChannelInitializersRegistry.getInstance().connected(userChannel);
 		}
 
 		@Override
 		public void disconnected(String userChannel) {
-			ChannelInitializersRegistry.getInstance().disconnected(
-					userChannel);
-			disposeCoreServices(userChannel);
+			if (!Constants.SUPER_USER.equals(userChannel)) {
+				ChannelInitializersRegistry.getInstance().disconnected(
+						userChannel);
+				disposeCoreServices(userChannel);
+			}
 		}
 	};
 	

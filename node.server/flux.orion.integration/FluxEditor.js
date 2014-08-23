@@ -22,6 +22,10 @@ var io = require('lib/socket.io');
 var Deferred = require('orion/Deferred');
 var authorize = require('authorize');
 
+var SERVICE_TO_REGEXP = {
+	"org.eclipse.flux.jdt": new RegExp(".*\\.java|.*\\.class")
+};
+
 var editSession; //Does this belong here? should be a propery of FluxEditor object.
 
 var callbacksCache = {};
@@ -66,7 +70,6 @@ var FluxEditor = (function() {
 		this._host = host;
 	}
 
-
 	FluxEditor.prototype = /**@lends eclipse.FluxEditor.prototype */
 	{
 		_createSocket: function (user) {
@@ -78,6 +81,7 @@ var FluxEditor = (function() {
 			this._resourceUrl = null;
 
 			var self = this;
+			self.username = user;
 
 			this.socket.on('connect', function() {
 				self.socket.emit('connectToChannel', {
@@ -183,6 +187,21 @@ var FluxEditor = (function() {
 				}
 			});
 
+			this.socket.on('serviceRequiredRequest', function(data) {
+				self._getResourceData().then(function(resourceMetadata) {
+					if (data.username === resourceMetadata.username
+							&& SERVICE_TO_REGEXP[data.service] 
+							&& SERVICE_TO_REGEXP[data.service].test(resourceMetadata.resource)) {
+
+						self.sendMessage('serviceRequiredResponse', {
+							'requestSenderID'    : data.requestSenderID,
+							'username'           : resourceMetadata.username,
+							'service'			 : data.service
+						});
+					}
+				});
+			});
+			
 			this.socket.on('liveResourceChanged', function(data) {
 				self._getResourceData().then(function(resourceMetadata) {
 					if (data.username === resourceMetadata.username
@@ -447,15 +466,30 @@ var FluxEditor = (function() {
 		},
 
 		startEdit: authorize(function(editorContext, options) {
+			this.jdtInitializer = this._initializeJDT(editorContext);
 			var url = options ? options.title : null;
 			return this._setEditorInput(url, editorContext);
 		}),
 
 		endEdit: function(resourceUrl) {
+			if (this.jdtInitializer) {
+				this.jdtInitializer.dispose();
+				delete this.jdtInitializer;
+			}
 			this._setEditorInput(null, null);
+		},
+
+		/**
+		 * This function ensures the JDT service is started and shows a status message when
+		 * it is ready (or an error if it failed).
+		 */
+		_initializeJDT: function (editorContext) {
+			return require('jdt-initializer')(editorContext, this.socket, this.username);
 		}
 
 	};
+
+
 
 	return FluxEditor;
 }());
