@@ -64,23 +64,22 @@ public class CloudFoundryServiceLauncher implements IServiceLauncher {
 	@Override
 	public void init() {
 		cfClient.login();
-		/*
-		 * One instance will be running once the app starts, so set instances
-		 * number to 1
-		 */
-		numberOfInstances = 1;
 		cfClient.startApplication(serviceId);
+		numberOfInstances = 1;
+		
+		/*
+		 * HACK: wait until app instance is started. Not sure how to do that with CF client API
+		 */
 		boolean started = false;
 		while (!started) {
 			try {
 				cfClient.updateApplicationInstances(serviceId, numberOfInstances);
 				started = true;
-				System.out.println(serviceId + " app started on CF");
-			} catch (Exception e) {
+			} catch (Throwable t) {
 				try {
 					Thread.sleep(5000);
-				} catch (InterruptedException e1) {
-					e1.printStackTrace();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
 			}
 		}
@@ -98,7 +97,7 @@ public class CloudFoundryServiceLauncher implements IServiceLauncher {
 				updated = true;
 			} catch (Throwable t) {
 				try {
-					Thread.sleep(1000);
+					Thread.sleep(2000);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}

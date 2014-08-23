@@ -8,7 +8,7 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.eclipse.flux.jdt.servicemanager;
+package org.eclipse.flux.jdt.service.provider;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -32,7 +32,7 @@ import org.eclipse.flux.service.common.Utils;
  * @author aboyko
  *
  */
-public class JdtServiceManager {
+public class JdtServiceProvider {
 	
 	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
 	
