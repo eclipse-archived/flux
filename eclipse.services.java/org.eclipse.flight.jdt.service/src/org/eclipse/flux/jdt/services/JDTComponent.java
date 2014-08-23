@@ -52,11 +52,6 @@ public class JDTComponent {
 			host = "http://localhost:3000";
 		}
 		
-		String channel = System.getProperty("flux.channel.id") == null ? System.getenv("FLUX_CHANNEL_ID") : System.getProperty("lux.channel.id");
-		if (channel == null) {
-			channel = login;
-		}
-		
 		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, !lazyStart);
 		
 		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
@@ -64,15 +59,15 @@ public class JDTComponent {
 		
 		
 		
-		messagingConnector.connectChannel(channel);
+		messagingConnector.connectChannel(login);
 		
 		while (!messagingConnector.isChannelConnected()) {
 			Thread.sleep(500);
 		}
 		
-		discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, channel, JDT_SERVICE_ID, lazyStart);
+		discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, login, JDT_SERVICE_ID, lazyStart);
 		if (lazyStart) {
-			keepAliveConnector = new KeepAliveConnector(messagingConnector, channel, JDT_SERVICE_ID);
+			keepAliveConnector = new KeepAliveConnector(messagingConnector, login, JDT_SERVICE_ID);
 		}
 		
 	}
