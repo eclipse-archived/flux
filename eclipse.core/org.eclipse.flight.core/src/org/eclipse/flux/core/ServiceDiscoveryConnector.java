@@ -1,11 +1,8 @@
-package org.eclipse.flux.jdt.services;
+package org.eclipse.flux.core;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.flux.core.AbstractMessageHandler;
-import org.eclipse.flux.core.IMessageHandler;
-import org.eclipse.flux.core.IMessagingConnector;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -21,6 +18,8 @@ public class ServiceDiscoveryConnector {
 	private static final String DISCOVER_SERVICE_REQUEST = "discoverServiceRequest";
 	private static final String DISCOVER_SERVICE_RESPONSE = "discoverServiceResponse";
 	private static final String SERVICE_STATUS_CHANGE = "serviceStatusChange";
+	private static final String START_SERVICE_REQUEST = "startServiceRequest";
+	private static final String START_SERVICE_RESPONSE = "startServiceResponse";
 	
 	protected static final String[] COPY_PROPS = {
 		"service",
@@ -36,32 +35,56 @@ public class ServiceDiscoveryConnector {
 	
 	private boolean forMe(JSONObject message) {
 		try {
-			return message.getString("service").equals(serviceTypeId)
-					&& message.getString("username").equals(user);
+			return message.getString("service").equals(serviceTypeId);
 		} catch (JSONException e) {
 			e.printStackTrace();
 			return false;
 		}
 	}
 	
-	public ServiceDiscoveryConnector(IMessagingConnector messagingConnector, String user, String serviceTypeId) {
-		this.user = user;
+	public ServiceDiscoveryConnector(IMessagingConnector messagingConnector, String channel, String serviceTypeId, boolean keepAlive) {
+		this.user = channel;
 		this.mc = messagingConnector;
 		this.serviceTypeId = serviceTypeId;
+
 		sendStatus("ready");
+		
 		handler(new AbstractMessageHandler(DISCOVER_SERVICE_REQUEST) {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
 				try {
-					if (forMe(message)) {
+					if (forMe(message) && (message.get("username").equals(user) || Constants.SUPER_USER.equals(user))) {
 						JSONObject response = new JSONObject(message, COPY_PROPS);
-						response.put("status", "ready");
+						response.put("status", message.get("username").equals(user) ? "ready" : "available");
 						mc.send(DISCOVER_SERVICE_RESPONSE, response);
 					}
 				} catch (Exception e) {
 					throw new Error(e);
 				}
 			}
+		});
+		
+		this.mc.addMessageHandler(new AbstractMessageHandler(START_SERVICE_REQUEST) {
+
+			@Override
+			public void handleMessage(String messageType, JSONObject message) {
+				mc.removeMessageHandler(this);
+				try {
+					user = message.getString("username");
+					JSONObject serviceStartedMessage = new JSONObject(message, COPY_PROPS);
+					mc.send(START_SERVICE_RESPONSE, serviceStartedMessage);
+					sendStatus("starting");
+					mc.connectChannel(user);
+					sendStatus("ready");
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					user = null;
+				}
+				
+				
+			}
+			
 		});
 		
 	}

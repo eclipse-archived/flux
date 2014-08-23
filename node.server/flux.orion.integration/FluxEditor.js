@@ -22,6 +22,10 @@ var io = require('lib/socket.io');
 var Deferred = require('orion/Deferred');
 var authorize = require('authorize');
 
+var SERVICE_TO_REGEXP = {
+	"org.eclipse.flux.jdt": new RegExp(".*\\.java|.*\\.class")
+};
+
 var editSession; //Does this belong here? should be a propery of FluxEditor object.
 
 var callbacksCache = {};
@@ -183,6 +187,21 @@ var FluxEditor = (function() {
 				}
 			});
 
+			this.socket.on('serviceRequiredRequest', function(data) {
+				self._getResourceData().then(function(resourceMetadata) {
+					if (data.username === resourceMetadata.username
+							&& SERVICE_TO_REGEXP[data.service] 
+							&& SERVICE_TO_REGEXP[data.service].test(resourceMetadata.resource)) {
+
+						self.sendMessage('serviceRequiredResponse', {
+							'requestSenderID'    : data.requestSenderID,
+							'username'           : resourceMetadata.username,
+							'service'			 : data.service
+						});
+					}
+				});
+			});
+			
 			this.socket.on('liveResourceChanged', function(data) {
 				self._getResourceData().then(function(resourceMetadata) {
 					if (data.username === resourceMetadata.username

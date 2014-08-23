@@ -12,7 +12,8 @@
 package org.eclipse.flux.jdt.services;
 
 import org.eclipse.flux.core.IMessagingConnector;
-import org.eclipse.flux.core.ServiceConnector;
+import org.eclipse.flux.core.ServiceDiscoveryConnector;
+import org.eclipse.flux.core.KeepAliveConnector;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Deactivate;
@@ -24,9 +25,17 @@ public class JDTComponent {
 	
 	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
 	private ServiceDiscoveryConnector discoveryConnector;
+	private KeepAliveConnector keepAliveConnector;
+	
+	private static JDTComponent instance = null;
+	
+	static JDTComponent getInstance() {
+		return instance;
+	}
 	
 	@Activate
 	public void activate(final ComponentContext context) throws Exception {
+		instance = this;
 		
 		String lazyStartStr = System.getProperty("flux.jdt.lazyStart") == null ? System.getenv("FLUX_LAZY_START") : System.getProperty("flux.jdt.lazyStart");
 		boolean lazyStart = lazyStartStr != null && Boolean.valueOf(lazyStartStr);
@@ -43,32 +52,33 @@ public class JDTComponent {
 			host = "http://localhost:3000";
 		}
 		
+		String channel = System.getProperty("flux.channel.id") == null ? System.getenv("FLUX_CHANNEL_ID") : System.getProperty("lux.channel.id");
+		if (channel == null) {
+			channel = login;
+		}
+		
 		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, !lazyStart);
 		
 		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
 			.getDefault().getMessagingConnector();
-		if (lazyStart) {
-			new ServiceConnector(messagingConnector, JDT_SERVICE_ID) {
-
-				@Override
-				public void startService(String user) {
-					messagingConnector.connectChannel(user);
-				}
-
-				@Override
-				public void stopService() {
-					try {
-//						context.getBundleContext().getBundle(0L).stop();
-						System.exit(0);
-					} catch (Throwable e) {
-						e.printStackTrace();
-					}
-				}
-			};
-		} else {
-			discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, login, JDT_SERVICE_ID);
+		
+		
+		
+		messagingConnector.connectChannel(channel);
+		
+		while (!messagingConnector.isChannelConnected()) {
+			Thread.sleep(500);
 		}
 		
+		discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, channel, JDT_SERVICE_ID, lazyStart);
+		if (lazyStart) {
+			keepAliveConnector = new KeepAliveConnector(messagingConnector, channel, JDT_SERVICE_ID);
+		}
+		
+	}
+	
+	public KeepAliveConnector getKeepAliveConnector() {
+		return keepAliveConnector;
 	}
 	
 	@Deactivate
@@ -76,6 +86,10 @@ public class JDTComponent {
 		if (discoveryConnector!=null) {
 			discoveryConnector.dispose();
 		}
+		if (keepAliveConnector != null) {
+			keepAliveConnector.dispose();
+		}
+		instance = null;
 	}
 	
 }

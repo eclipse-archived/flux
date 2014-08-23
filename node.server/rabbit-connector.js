@@ -198,6 +198,34 @@ RabbitConnector.prototype.initialize = function () {
 			});
 		});
 	});
+	
+	socket.on('disconnectFromChannel', function (data, fn) {
+		//Note: a channel in 'flux | socket.io' is not the same thing as a channel in AMQP.
+		//  What is called a 'channel' in flux websockets is really more like a
+		//  'routing key'.
+		initialized.then(function () {
+			var sub = self.sub;
+			console.log('disconnectFromChannel', data);
+			
+			var topic = channelNameToTopicPattern(data.channel);
+			return self.channel.unbindQueue(self.inbox, self.outbox, topic)
+			.then(function() {
+				console.log('Disconnected '+self.inbox+' from topic ' + topic);
+				//send test message
+				// self.channel.publish(self.outbox, topic, self.encode({type: 'test', data: "Test message"}));
+				fn({
+					'disconnectedFromChannel' : true
+				});
+			}).otherwise(function (err) {
+				return fn({
+					error: err,
+					connectedToChannel: false
+				});
+			});
+			
+		});
+	});
+	
 	self.initialized = initialized;
 	return initialized;
 };
@@ -273,6 +301,9 @@ RabbitConnector.prototype.configure = function() {
 	    status: 'available' | 'starting' | 'ready' | 'unavailable',
 	    senderID: <id-of-flux-client-who-sent-the-response>
     } */
+    
+	this.configureRequest('serviceRequiredRequest');
+    this.configureResponse('serviceRequiredResponse');
 
 	this.configureServiceBroadcast('serviceReady');
 	this.configureDirectRequest('startServiceRequest');

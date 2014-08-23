@@ -12,6 +12,7 @@ package org.eclipse.flux.jdt.services;
 
 import org.eclipse.flux.core.IChannelListener;
 import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.core.KeepAliveConnector;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.Repository;
 
@@ -31,6 +32,12 @@ public class JdtChannelListener implements IChannelListener {
 
 	@Override
 	public void connected(String userChannel) {
+		if (JDTComponent.getInstance() != null) {
+			KeepAliveConnector keepAliveConnector = JDTComponent.getInstance().getKeepAliveConnector();
+			if (keepAliveConnector != null) {
+				keepAliveConnector.setUser(userChannel);
+			}
+		}
 		IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
 				.getDefault().getMessagingConnector();
 		Repository repository = org.eclipse.flux.core.Activator.getDefault()
@@ -51,6 +58,12 @@ public class JdtChannelListener implements IChannelListener {
 
 	@Override
 	public void disconnected(String userChannel) {
+		if (JDTComponent.getInstance() != null) {
+			KeepAliveConnector keepAliveConnector = JDTComponent.getInstance().getKeepAliveConnector();
+			if (keepAliveConnector != null) {
+				keepAliveConnector.setUser(null);
+			}
+		}
 		liveEditUnits.dispose();
 		contentAssistService.dispose();
 		navigationService.dispose();
