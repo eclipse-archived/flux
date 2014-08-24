@@ -520,13 +520,15 @@ public class LiveEditConnector {
 
 	public void reactToResourceChanged(IResourceChangeEvent event) {
 		try {
-			event.getDelta().accept(new IResourceDeltaVisitor() {
-				@Override
-				public boolean visit(IResourceDelta delta) throws CoreException {
-					reactToResourceChanged(delta);
-					return true;
-				}
-			});
+			if (event.getDelta() != null) {
+				event.getDelta().accept(new IResourceDeltaVisitor() {
+					@Override
+					public boolean visit(IResourceDelta delta) throws CoreException {
+						reactToResourceChanged(delta);
+						return true;
+					}
+				});
+			}
 		} catch (CoreException e) {
 			e.printStackTrace();
 		}
