@@ -13,7 +13,7 @@ package org.eclipse.flux.service.common;
 public interface IServiceLauncher {
 	
 	void init();
-	void startService(int n);
+	void startService(int n) throws Exception;
 	void dispose();
 
 }

@@ -232,7 +232,7 @@ public class JdtServiceProvider {
 			throws IOException {
 		return new CloudFoundryServiceLauncher(JDT_SERVICE_ID, cfControllerUrl,
 				orgName, spaceName, cfUsername, cfPassword, fluxUrl, username,
-				password, new File(serviceFolder));
+				password, new File(serviceFolder), 100);
 	}
 	
 	private static void validateArgument(String args[], int index) {

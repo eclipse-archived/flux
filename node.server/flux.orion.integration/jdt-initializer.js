@@ -14,11 +14,11 @@ define(function(require) {
 var SERVICE_TYPE_ID = 'org.eclipse.flux.jdt';
 var SERVICE_NAME = 'Flux JDT Service';
 
-var DISCOVERY_TIMEOUT = 1000; // Interval we wait for service discovery responses
+var DISCOVERY_TIMEOUT = 3000; // Interval we wait for service discovery responses
 	                          // The time should be relatively short. Services providers
 	                          // should respond quickly with info about their status.
 
-var SERVICE_RESTART_DELAY = 5000;
+var SERVICE_RESTART_DELAY = 10000;
 							  // After service becomes unavailable, we wait for a little
 							  // while and then we try to restart it.
 							  // This time should probably be larger than 'DISCOVERY_TIMEOUT'.
@@ -130,8 +130,12 @@ function intializeJDT(msgService, socket, username) {
 				var msg = SERVICE_NAME+' Unavailable';
 				if (fluxMsg.error) {
 					msg = msg+": "+fluxMsg.error;
+					msgService.showProgressError(msg);
+				} else if (fluxMsg.info) {
+					msg = msg+": "+fluxMsg.info;
+					msgService.showProgressMessage(msg);
 				}
-				msgService.showProgressError(msg);
+				setTimeout(startService, SERVICE_RESTART_DELAY)
 				break;
 			case 'available':
 				//Don't display. Confusing to users since it says 'available' but

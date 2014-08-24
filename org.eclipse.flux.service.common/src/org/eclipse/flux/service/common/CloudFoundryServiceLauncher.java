@@ -23,17 +23,23 @@ import org.cloudfoundry.client.lib.CloudFoundryException;
 import org.cloudfoundry.client.lib.UploadStatusCallback;
 import org.cloudfoundry.client.lib.domain.CloudApplication;
 import org.cloudfoundry.client.lib.domain.Staging;
+import org.springframework.http.HttpStatus;
 
 public class CloudFoundryServiceLauncher implements IServiceLauncher {
 
 	private CloudFoundryClient cfClient;
 	private String serviceId;
-	private int numberOfInstances;	
+	private int numberOfInstances;
+	final private int maxInstancesNumber;
 
 	public CloudFoundryServiceLauncher(String serviceId, URL cfControllerUrl, String orgName, String spaceName, String cfLogin, String cfPassword, String fluxUrl, String username, String password, 
-			File appLocation) throws IOException {
+			File appLocation, int maxInstancesNumber) throws IOException {
 		this.serviceId = serviceId;
 		this.numberOfInstances = 0;
+		if (maxInstancesNumber < 1) {
+			throw new IllegalArgumentException("Max number of instances cannot be less than 1.");
+		}
+		this.maxInstancesNumber = maxInstancesNumber;
 		cfClient = new CloudFoundryClient(new CloudCredentials(cfLogin, cfPassword), cfControllerUrl, orgName, spaceName);
 		cfClient.login();
 		try {
@@ -96,22 +102,35 @@ public class CloudFoundryServiceLauncher implements IServiceLauncher {
 	}
 
 	@Override
-	public void startService(int n) {
+	public void startService(int n) throws Exception {
 		cfClient.login();
 		boolean updated = false;
-		while (!updated) {
-			try {
-				cfClient.updateApplicationInstances(serviceId,
-						numberOfInstances + n);
-				numberOfInstances += n;
-				updated = true;
-			} catch (Throwable t) {
+		int difference = maxInstancesNumber - n - numberOfInstances;
+		if (difference < 0) {
+			n -= difference;
+		}
+		if (n > 0) {
+			while (!updated) {
 				try {
-					Thread.sleep(2000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+					cfClient.updateApplicationInstances(serviceId,
+							numberOfInstances + n);
+					numberOfInstances += n;
+					updated = true;
+				} catch (CloudFoundryException cfe) {
+					if (cfe.getStatusCode() == HttpStatus.NOT_FOUND) {
+						try {
+							Thread.sleep(2000);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					} else {
+						throw cfe;
+					}
 				}
 			}
+		}
+		if (difference <= 0) {
+			throw new Exception("Maximum number of service is running. Cannot start anymore services!");
 		}
 	}
 

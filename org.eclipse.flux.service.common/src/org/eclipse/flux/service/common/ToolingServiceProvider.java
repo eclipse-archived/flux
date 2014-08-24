@@ -10,12 +10,11 @@
 *******************************************************************************/
 package org.eclipse.flux.service.common;
 
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.json.JSONException;
@@ -23,7 +22,6 @@ import org.json.JSONObject;
 
 public class ToolingServiceProvider {
 
-	private static final long WAIT_TIME_BEFORE_SENDING_AVAILABLE = 500;
 	private static final long EXPECTED_RESPONSE_TIMEOUT = 500;
 	private static final long POOL_MAINTENANCE_PERIOD = 60 * 1000;
 	private static final long POOL_MAINTENANCE_NOW_DELAY = 50;
@@ -31,8 +29,6 @@ public class ToolingServiceProvider {
 	private static final String DISCOVER_SERVICE_REQUEST = "discoverServiceRequest";
 	private static final String DISCOVER_SERVICE_RESPONSE = "discoverServiceResponse";
 	private static final String SERVICE_STATUS_CHANGE = "serviceStatusChange";
-	private static final String START_SERVICE_REQUEST = "startServiceRequest";
-	private static final String START_SERVICE_RESPONSE = "startServiceResponse";
 	private static final String SERVICE_REQUIRED_REQUEST = "serviceRequiredRequest";
 	private static final String SERVICE_REQUIRED_RESPONSE = "serviceRequiredResponse";
 	
@@ -49,9 +45,9 @@ public class ToolingServiceProvider {
 	 */
 	private MessageConnector messageConnector;
 		
-	private ScheduledExecutorService scheduledExecutor;
-	
 	private ScheduledExecutorService poolMaintenanceExecutor;
+	
+	private ExecutorService serviceLauncherExecutor;
 	
 	private String serviceId;
 	
@@ -66,7 +62,7 @@ public class ToolingServiceProvider {
 	
 	private ScheduledFuture<?> poolMaintenanceFuture;
 	
-	private ConcurrentLinkedDeque<String> pendingStartServiceRequests;
+	private Exception launchException;
 	
 	private Runnable poolMaintenanceOperation = new Runnable() {
 		@Override
@@ -119,7 +115,7 @@ public class ToolingServiceProvider {
 			
 			int numberOfServicesToStart = poolSize - counter.get();
 			if (numberOfServicesToStart > 0) {
-				serviceLauncher.startService(numberOfServicesToStart);
+				startService(numberOfServicesToStart);
 			}
 			
 		}
@@ -189,41 +185,6 @@ public class ToolingServiceProvider {
 			},
 	
 			new IMessageHandler() {
-	
-				@Override
-				public void handle(String type, JSONObject message) {
-					try {
-						messageConnector.send(START_SERVICE_RESPONSE,
-								new JSONObject(message, JSON_PROPERTIES));
-						
-						JSONObject statusMessage = new JSONObject(message, JSON_PROPERTIES);
-						statusMessage.put("status", "starting");
-						messageConnector.send(SERVICE_STATUS_CHANGE, statusMessage);
-						
-						pendingStartServiceRequests.add(message.getString("username"));
-						serviceLauncher.startService(1);
-					} catch (JSONException e) {
-						e.printStackTrace();
-					}
-				}
-	
-				@Override
-				public String getMessageType() {
-					return START_SERVICE_REQUEST;
-				}
-	
-				@Override
-				public boolean canHandle(String type, JSONObject message) {
-					try {
-						return message.getString("service").equals(serviceId);
-					} catch (JSONException e) {
-						e.printStackTrace();
-						return false;
-					}
-				}
-			},
-			
-			new IMessageHandler() {
 
 				@Override
 				public boolean canHandle(String type, JSONObject message) {
@@ -237,23 +198,21 @@ public class ToolingServiceProvider {
 
 				@Override
 				public void handle(String type, final JSONObject message) {
-					scheduledExecutor.schedule(new Runnable() {
-						@Override
-						public void run() {
-							try {
-								JSONObject statusMessage = new JSONObject(message, JSON_PROPERTIES);
-							statusMessage.put(
-									"status",
-									pendingStartServiceRequests
-											.contains(message
-													.getString("username")) ? "starting"
-											: "available");
-								messageConnector.send(DISCOVER_SERVICE_RESPONSE, statusMessage);
-							} catch (JSONException e) {
-								e.printStackTrace();
-							}
+					try {
+						JSONObject statusMessage = new JSONObject(message,
+								JSON_PROPERTIES);
+						statusMessage.put("status", "unavailable");
+						String error = getError();
+						if (error == null) {
+							statusMessage.put("info", "Starting up services, please wait...");
+						} else {
+							statusMessage.put("error", getError());
 						}
-					}, WAIT_TIME_BEFORE_SENDING_AVAILABLE, TimeUnit.MILLISECONDS);
+						messageConnector.send(DISCOVER_SERVICE_RESPONSE,
+								statusMessage);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
 				}
 
 				@Override
@@ -268,7 +227,9 @@ public class ToolingServiceProvider {
 				@Override
 				public boolean canHandle(String type, JSONObject message) {
 					try {
-						return message.getString("service").equals(serviceId);
+						return message.getString("service").equals(serviceId)
+								&& "ready".equals(message.getString("status"))
+								&& !Utils.SUPER_USER.equals(message.get("username"));
 					} catch (JSONException e) {
 						e.printStackTrace();
 						return false;
@@ -277,24 +238,13 @@ public class ToolingServiceProvider {
 
 				@Override
 				public void handle(String type, JSONObject message) {
-					try {
-						if (Utils.SUPER_USER.equals(message.getString("username"))) {
-							if ("ready".equals(message.getString("status"))
-									&& pendingStartServiceRequests.peek() != null) {
-								startServiceForUser(pendingStartServiceRequests.poll(), message.getString("senderID"));
-							}
-						} else {
-							if ("starting".equals(message.getString("status"))) {
-								poolMaintenanceFuture.cancel(false);
-								poolMaintenanceFuture = poolMaintenanceExecutor
-										.scheduleWithFixedDelay(poolMaintenanceOperation,
-												POOL_MAINTENANCE_NOW_DELAY,
-												POOL_MAINTENANCE_PERIOD, TimeUnit.MILLISECONDS);
-							}
-						}
-					} catch (JSONException e) {
-						e.printStackTrace();
-					}
+					poolMaintenanceFuture.cancel(false);
+					poolMaintenanceFuture = poolMaintenanceExecutor
+							.scheduleWithFixedDelay(
+									poolMaintenanceOperation,
+									POOL_MAINTENANCE_NOW_DELAY,
+									POOL_MAINTENANCE_PERIOD,
+									TimeUnit.MILLISECONDS);
 				}
 
 				@Override
@@ -305,15 +255,20 @@ public class ToolingServiceProvider {
 			}
 		};
 	}
+	
+	private synchronized String getError() {
+		if (launchException != null) {
+			return launchException.getMessage();
+		}
+		return null;
+	}
 
 	private void init() {
 		if (serviceLauncher != null) {
 			serviceLauncher.init();
 		}
-
-		pendingStartServiceRequests = new ConcurrentLinkedDeque<String>();
-
-		scheduledExecutor = Executors.newScheduledThreadPool(5);
+		
+		serviceLauncherExecutor = Executors.newFixedThreadPool(5);
 
 		poolMaintenanceExecutor = Executors.newScheduledThreadPool(1);
 		poolMaintenanceFuture = poolMaintenanceExecutor.scheduleWithFixedDelay(
@@ -351,16 +306,14 @@ public class ToolingServiceProvider {
 			messageConnector.removeMessageHandler(messageHandler);
 		}
 		
-		scheduledExecutor.shutdown();
-		
 		poolMaintenanceFuture.cancel(false);
 		poolMaintenanceExecutor.shutdown();
+		
+		serviceLauncherExecutor.shutdown();
 		
 		if (serviceLauncher != null) {
 			serviceLauncher.dispose();
 		}
-		
-		pendingStartServiceRequests = null;
 		
 		active = false;		
 	}
@@ -378,50 +331,24 @@ public class ToolingServiceProvider {
 		}
 	}
 	
-	private void startServiceForUser(final String user, final String socketId) throws JSONException {
-		final AtomicBoolean started = new AtomicBoolean(false);
-		
-		final IMessageHandler serviceStartedResponseHandler = new IMessageHandler() {
-			
-			@Override
-			public void handle(String type, JSONObject message) {
-				started.set(true);
-			}
-			
-			@Override
-			public String getMessageType() {
-				return START_SERVICE_RESPONSE;
-			}
-			
-			@Override
-			public boolean canHandle(String type, JSONObject message) {
-				try {
-					return socketId.equals(message.getString("responseSenderID"));
-				} catch (JSONException e) {
-					e.printStackTrace();
-					return false;
-				}
-			}
-		};
-		messageConnector.addMessageHandler(serviceStartedResponseHandler);
-		
-		JSONObject startServiceMessage = new JSONObject();
-		startServiceMessage.put("username", user);
-		startServiceMessage.put("service", serviceId);
-		startServiceMessage.put("socketID", socketId);
-		messageConnector.send(START_SERVICE_REQUEST, startServiceMessage);
-		
-		scheduledExecutor.schedule(new Runnable() {
+	private void startService(final int n) {
+		serviceLauncherExecutor.submit(new Runnable() {
+
 			@Override
 			public void run() {
-				messageConnector.removeMessageHandler(serviceStartedResponseHandler);
-				if (!started.get()) {
-					pendingStartServiceRequests.addFirst(user);
-					serviceLauncher.startService(1);
+				try {
+					serviceLauncher.startService(n);
+					setLaunchException(null);
+				} catch (Exception e) {
+					setLaunchException(e);
 				}
 			}
-		}, EXPECTED_RESPONSE_TIMEOUT, TimeUnit.MILLISECONDS);
-		
+			
+		});
+	}
+	
+	private synchronized void setLaunchException(Exception e) {
+		launchException = e;
 	}
 	
 }
