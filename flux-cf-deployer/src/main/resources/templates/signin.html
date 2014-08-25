@@ -49,6 +49,12 @@
 				<p>Or you can <a th:href="@{/signup}">signup</a> with a new account.</p>
 			</form>
 
+			<!-- GITHUB SIGNIN -->
+			<form id="gh_signin" th:action="@{/signin/github}" method="POST">
+				<input type="hidden" name="_csrf" th:value="${_csrf.token}"></input>
+				<button type="submit">Sign In with GitHub</button>
+			</form>
+
 			<!-- TWITTER SIGNIN -->
 			<form id="tw_signin" th:action="@{/signin/twitter}" method="POST">
 				<input type="hidden" name="_csrf" th:value="${_csrf.token}"></input>
