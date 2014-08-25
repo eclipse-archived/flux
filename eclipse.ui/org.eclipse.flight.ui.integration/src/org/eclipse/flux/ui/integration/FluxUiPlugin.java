@@ -36,7 +36,7 @@ public class FluxUiPlugin extends AbstractUIPlugin implements IStartup {
 		String host = System.getProperty("flux-host", "http://localhost:3000");
 		// TODO: change this username and token to preference and create some UI to set it
 		
-		org.eclipse.flux.core.Activator.getDefault().startService(host, username, token, true);		
+		org.eclipse.flux.core.Activator.getDefault().startService(host, username, token, username);		
 		
 	}
 

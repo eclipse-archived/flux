@@ -218,6 +218,7 @@ public class JdtServiceProvider {
 		command.add("-Dflux.user.name=" + login);
 		command.add("-Dflux.user.token=" + password);
 		command.add("-Dflux.jdt.lazyStart=true");
+		command.add("-Dflux-initjdt=true");
 		command.add(Utils.getEquinoxLauncherJar(serviceFolder));
 		command.add("-data");
 		command.add(serviceFolder + File.separator + "workspace_" + System.currentTimeMillis());

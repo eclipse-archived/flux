@@ -92,25 +92,25 @@ public class Activator implements BundleActivator {
 		plugin = null;
 	}
 	
-	public void startService(String host, final String login, String token, boolean connectToChannel) throws CoreException {
+	public synchronized void startService(String host, final String login, String token, final String channel) throws CoreException {
 		if (this.messagingConnector == null) {
 			this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
 			this.messagingConnector.addChannelListener(SERVICE_STARTER);
-			if (connectToChannel) {
+			if (channel != null) {
 				messagingConnector.addConnectionListener(new IConnectionListener() {
-
+	
 					@Override
 					public void connected() {
 						messagingConnector.removeConnectionListener(this);
-						messagingConnector.connectChannel(login);
+						messagingConnector.connectChannel(channel);
 					}
-
+	
 					@Override
 					public void disconnected() {
 						// TODO Auto-generated method stub
-						
+	
 					}
-					
+	
 				});
 			}
 			this.messagingConnector.connect();

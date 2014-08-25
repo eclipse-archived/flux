@@ -146,6 +146,7 @@ public class CloudFoundryServiceLauncher implements IServiceLauncher {
 		env.add("FLUX_USER_ID=" + username.replace("$", "\\$"));
 		env.add("FLUX_USER_TOKEN=" + password);
 		env.add("FLUX_LAZY_START=true");
+		env.add("FLUX_INIT_JDT=true");
 		return env;
 	}
 	

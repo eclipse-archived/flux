@@ -11,6 +11,7 @@
  *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
+import org.eclipse.flux.core.Constants;
 import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.ServiceDiscoveryConnector;
 import org.eclipse.flux.core.KeepAliveConnector;
@@ -52,15 +53,11 @@ public class JDTComponent {
 			host = "http://localhost:3000";
 		}
 		
-		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, !lazyStart);
+		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, lazyStart ? Constants.SUPER_USER : login);
 		
 		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
 			.getDefault().getMessagingConnector();
-		
-		
-		
-		messagingConnector.connectChannel(login);
-		
+				
 		while (!messagingConnector.isChannelConnected()) {
 			Thread.sleep(500);
 		}

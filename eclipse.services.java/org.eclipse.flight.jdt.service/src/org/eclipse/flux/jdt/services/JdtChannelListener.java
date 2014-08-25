@@ -50,10 +50,13 @@ public class JdtChannelListener implements IChannelListener {
 		this.contentAssistService = new ContentAssistService(messagingConnector, liveEditUnits);
 		this.navigationService = new NavigationService(messagingConnector, liveEditUnits);
 		this.renameService = new RenameService(messagingConnector, liveEditUnits);
-
-		this.initializer = new InitializeServiceEnvironment(
-				messagingConnector, repository);
-		initializer.start();
+		
+		String initJdtStr = System.getProperty("flux-initjdt") == null ? System.getenv("FLUX_INIT_JDT") : System.getProperty("flux-initjdt");
+		if (initJdtStr != null && Boolean.valueOf(initJdtStr)) {
+			this.initializer = new InitializeServiceEnvironment(
+					messagingConnector, repository);
+			initializer.start();
+		}
 	}
 
 	@Override
@@ -68,7 +71,9 @@ public class JdtChannelListener implements IChannelListener {
 		contentAssistService.dispose();
 		navigationService.dispose();
 		renameService.dispose();
-		initializer.dispose();
+		if (initializer != null) {
+			initializer.dispose();
+		}
 	}
 
 }
