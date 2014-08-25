@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+	  xmlns:social="http://spring.io/springsocial"
+	  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	  layout:decorator="layout">
+	<head>
+		<title>Spring Social Showcase</title>
+		<link rel="stylesheet" th:href="@{/page.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/form.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/messages/messages.css}" type="text/css" media="screen"></link>
+	</head>
+	<body>
+		<div id="header">
+			<h1><a th:href="@{/}">Spring Social Showcase</a></h1>
+		</div>
+		
+		<div id="leftNav">
+			Left nav menu
+		</div>
+		
+		<div id="content" layout:fragment="content">
+			<h3>You are Singed in using your Github Profile</h3>
+			
+			<p>Token: <span th:text="${fluxToken}">name</span> </p>
+			
+			<p>Hello, <span th:text="${profile.name}">name</span>!</p>
+			<dl>
+				<dt>Github Login:</dt>
+				<dd th:text="${profile.login}">profile id</dd>
+				<dt>Company:</dt>
+				<dd th:text="${profile.company}">Acme Widgets Inc.</dd>
+				<dt>Location:</dt>
+				<dd th:text="${profile.location}">location</dd>
+			</dl>
+
+<!-- 			
+			<form id="disconnect" th:action="@{/connect/twitter}" method="post">
+				<input type="hidden" name="_csrf" th:value="${_csrf.token}" />
+				<button type="submit">Disconnect from Twitter</button>	
+				<input type="hidden" name="_method" value="delete" />
+			</form>
+ -->
+		</div>
+	</body>
+</html>
+

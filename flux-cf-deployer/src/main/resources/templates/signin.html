@@ -49,8 +49,8 @@
 				<p>Or you can <a th:href="@{/signup}">signup</a> with a new account.</p>
 			</form>
 
-			<!-- GITHUB SIGNIN -->
-			<form id="gh_signin" th:action="@{/signin/github}" method="POST">
+			<!-- GITHUB SIGNIN to flux APIs -->
+			<form id="gh_signin" th:action="@{/signin/flux}" method="POST">
 				<input type="hidden" name="_csrf" th:value="${_csrf.token}"></input>
 				<button type="submit">Sign In with GitHub</button>
 			</form>

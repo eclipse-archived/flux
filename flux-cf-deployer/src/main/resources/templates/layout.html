@@ -3,18 +3,28 @@
 	  xmlns:social="http://spring.io/springsocial"
 	  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
 	<head>
-		<title>Spring Social Showcase</title>
+		<title>Flux Deployer App</title>
 		<link rel="stylesheet" th:href="@{/page.css}" type="text/css" media="screen"></link>
 		<link rel="stylesheet" th:href="@{/form.css}" type="text/css" media="screen"></link>
 		<link rel="stylesheet" th:href="@{/messages/messages.css}" type="text/css" media="screen"></link>
 	</head>
 	<body>
 		<div id="header">
-			<h1><a th:href="@{/}">Spring Social Showcase</a></h1>
+			<h1><a th:href="@{/}">Flux Deployer</a></h1>
 		</div>
 		
 		<div id="leftNav">
 			<h4><a th:href="@{/connect}">Connections</a></h4>
+			
+			<h4><a th:href="@{/flux}">Flux</a></h4>
+			<div social:connected="flux">
+				<ul class="menu">
+					<li><a th:href="@{/flux}">User Profile</a></li>
+					<li><a th:href="@{/flux/projects}">Projects</a></li>
+				</ul>
+			</div>
+			
+			<!-- TODO: Get rid of the stuff below -->
 			
 			<h4><a th:href="@{/twitter}">Twitter</a></h4>
 			<div social:connected="twitter">

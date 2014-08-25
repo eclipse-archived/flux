@@ -20,7 +20,6 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.social.SocialWebAutoConfiguration;
@@ -40,6 +39,8 @@ import org.springframework.social.connect.ConnectionFactory;
 import org.springframework.social.connect.ConnectionRepository;
 import org.springframework.social.github.api.GitHub;
 import org.springframework.social.github.connect.GitHubConnectionFactory;
+import org.springframework.social.showcase.flux.Flux;
+import org.springframework.social.showcase.flux.FluxConnectionFactory;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Spring Social connectivity with
@@ -56,49 +57,91 @@ import org.springframework.social.github.connect.GitHubConnectionFactory;
 @AutoConfigureAfter(WebMvcAutoConfiguration.class)
 public class GitHubConfiguration {
 
+//	@Configuration
+//	@EnableSocial
+//	@ConditionalOnWebApplication
+//	protected static class GitAutoConfigurationAdapter extends SocialConfigurerAdapter implements
+//	EnvironmentAware {
+//
+//		private RelaxedPropertyResolver properties;
+//
+//		protected String getPropertyPrefix() {
+//			return "spring.social.github.";
+//		}
+//
+//		protected ConnectionFactory<?> createConnectionFactory(RelaxedPropertyResolver properties) {
+//			return new GitHubConnectionFactory(properties.getRequiredProperty("appId"),
+//					properties.getRequiredProperty("appSecret"));
+//		}
+//
+//		@Override
+//		public void addConnectionFactories(ConnectionFactoryConfigurer configurer,
+//				Environment environment) {
+//			//Copied from spring social code. Dont really understand why it can't just use 'environment'
+//			// parameter here instead of implementing 'EnvironmentAware'
+//			configurer.addConnectionFactory(createConnectionFactory(this.properties));
+//		}
+//		
+//		@Bean
+//		@Scope(value = "request", proxyMode = ScopedProxyMode.INTERFACES)
+//		public GitHub github(ConnectionRepository repository) {
+//			Connection<GitHub> connection = repository.findPrimaryConnection(GitHub.class);
+//			if (connection != null) {
+//				return connection.getApi();
+//			}
+//// The twitter one has something like this: do we need that for github? It seems to work fine without this
+////			String id = getProperties().getRequiredProperty("app-id");
+////			String secret = getProperties().getRequiredProperty("app-secret");
+////			return new GitHubTemplate(id, secret);
+//			throw new RuntimeException("No github connection.");
+//		}
+//
+//		@Override
+//		public void setEnvironment(Environment environment) {
+//			this.properties = new RelaxedPropertyResolver(environment, getPropertyPrefix());
+//		}
+//
+//// The example doesn't seem to need this so commented out. 		
+////		@Bean(name = { "connect/githubConnect", "connect/githubConnected" })
+////		@ConditionalOnProperty(prefix = "spring.social.", value = "auto-connection-views")
+////		public View githubConnectView() {
+////			return new GenericConnectionStatusView("github", "GitHub");
+////		}
+//
+//	}
+
 	@Configuration
 	@EnableSocial
 	@ConditionalOnWebApplication
-	protected static class GitAutoConfigurationAdapter extends SocialConfigurerAdapter implements
-	EnvironmentAware {
+	protected static class FluxConfigrationAdapter extends SocialConfigurerAdapter {
 
-		private RelaxedPropertyResolver properties;
-
-		protected String getPropertyPrefix() {
-			return "spring.social.github.";
-		}
-
-		protected ConnectionFactory<?> createConnectionFactory(RelaxedPropertyResolver properties) {
-			return new GitHubConnectionFactory(properties.getRequiredProperty("appId"),
-					properties.getRequiredProperty("appSecret"));
+		protected ConnectionFactory<?> createConnectionFactory(Environment environment) {
+			return new FluxConnectionFactory(
+					environment.getRequiredProperty("cfd.flux.github.client.id"),
+					environment.getRequiredProperty("cfd.flux.github.client.secret")
+			);
 		}
 
 		@Override
 		public void addConnectionFactories(ConnectionFactoryConfigurer configurer,
 				Environment environment) {
-			//Copied from spring social code. Dont really understand why it can't just use 'environment'
-			// parameter here instead of implementing 'EnvironmentAware'
-			configurer.addConnectionFactory(createConnectionFactory(this.properties));
+			configurer.addConnectionFactory(createConnectionFactory(environment));
 		}
 		
 		@Bean
 		@Scope(value = "request", proxyMode = ScopedProxyMode.INTERFACES)
-		public GitHub github(ConnectionRepository repository) {
-			Connection<GitHub> connection = repository.findPrimaryConnection(GitHub.class);
+		public Flux flux(ConnectionRepository repository) {
+			Connection<Flux> connection = repository.findPrimaryConnection(Flux.class);
 			if (connection != null) {
 				return connection.getApi();
 			}
-// The twitter one has something like this: do we need that for github? It seems to work fine without this
-//			String id = getProperties().getRequiredProperty("app-id");
-//			String secret = getProperties().getRequiredProperty("app-secret");
-//			return new GitHubTemplate(id, secret);
 			throw new RuntimeException("No github connection.");
 		}
 
-		@Override
-		public void setEnvironment(Environment environment) {
-			this.properties = new RelaxedPropertyResolver(environment, getPropertyPrefix());
-		}
+//		@Override
+//		public void setEnvironment(Environment environment) {
+//			this.properties = new RelaxedPropertyResolver(environment, getPropertyPrefix());
+//		}
 
 // The example doesn't seem to need this so commented out. 		
 //		@Bean(name = { "connect/githubConnect", "connect/githubConnected" })
@@ -108,5 +151,6 @@ public class GitHubConfiguration {
 //		}
 
 	}
-
+	
+	
 }
