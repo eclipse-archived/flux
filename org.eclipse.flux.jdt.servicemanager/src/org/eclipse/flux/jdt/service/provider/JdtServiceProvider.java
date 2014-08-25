@@ -37,6 +37,10 @@ public class JdtServiceProvider {
 	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
 	
 	private static final String DEFAULT_FLUX_URL = "http://localhost:3000";
+	
+	private static final int MAX_INSTANCE_NUMBER = 100;
+	
+	private static final int POOL_SIZE = 3;
 
 	/**
 	 * Launches the application. If command line arguments are present, the
@@ -55,6 +59,9 @@ public class JdtServiceProvider {
 		String password = "";
 		String cfUsername = null;
 		String cfPassword = "";
+		String appId = JDT_SERVICE_ID;
+		int maxInstanceNumber = MAX_INSTANCE_NUMBER;
+		int poolSize = POOL_SIZE;
 		IServiceLauncher serviceLauncher = null;
 		
 		for (int i = 0; i < args.length; i+=2) {
@@ -93,6 +100,25 @@ public class JdtServiceProvider {
 			} else if ("-cfpassword".equals(args[i])) {
 				validateArgument(args, i);
 				cfPassword = args[i+1];
+			} else if ("-appID".equals(args[i])) {
+				validateArgument(args, i);
+				appId = args[i+1];
+			} else if ("-maxInstances".equals(args[i])) {
+				validateArgument(args, i);
+				int n = Integer.valueOf(args[i+1]);
+				if (n > 0) {
+					maxInstanceNumber = n;
+				} else {
+					throw new IllegalArgumentException("Max number of instances must be greater than 0");
+				}
+			} else if ("-poolSize".equals(args[i])) {
+				validateArgument(args, i);
+				int n = Integer.valueOf(args[i+1]);
+				if (n > 0) {
+					poolSize = n;
+				} else {
+					throw new IllegalArgumentException("Service pool size must be greater than 0");
+				}
 			} else {
 				throw new IllegalArgumentException("Invalid argument '" + args[i] + "'");
 			}
@@ -151,16 +177,16 @@ public class JdtServiceProvider {
 				if (cfUsername == null) {
 					throw new IllegalStateException("Cloud Foundry login credentials are not provided!");
 				}
-				serviceLauncher = createCloudFoundryServiceLauncher(
-						cfUrl, orgName, spaceName,
-						cfUsername, cfPassword, host.toString(), username,
-						password, serviceFolderPath);
+				serviceLauncher = new CloudFoundryServiceLauncher(appId, cfUrl,
+						orgName, spaceName, cfUsername, cfPassword,
+						host.toString(), username, password, new File(
+								serviceFolderPath), maxInstanceNumber);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
 		}
 
-		final ToolingServiceProvider jdtServiceProvider = new ToolingServiceProvider(messageConnector, JDT_SERVICE_ID, serviceLauncher, 3);
+		final ToolingServiceProvider jdtServiceProvider = new ToolingServiceProvider(messageConnector, JDT_SERVICE_ID, serviceLauncher, poolSize);
 		
 		System.out.print("\nConnecting to Flux server: " + host.toString() + " ...");
 		while (!messageConnector.isConnected()) {
@@ -224,16 +250,6 @@ public class JdtServiceProvider {
 		command.add(serviceFolder + File.separator + "workspace_" + System.currentTimeMillis());
 		LocalProcessServiceLauncher launcher = new LocalProcessServiceLauncher(new File(serviceFolder), command);
 		return launcher;
-	}
-	
-	private static CloudFoundryServiceLauncher createCloudFoundryServiceLauncher(
-			URL cfControllerUrl, String orgName, String spaceName,
-			String cfUsername, String cfPassword, String fluxUrl,
-			String username, String password, String serviceFolder)
-			throws IOException {
-		return new CloudFoundryServiceLauncher(JDT_SERVICE_ID, cfControllerUrl,
-				orgName, spaceName, cfUsername, cfPassword, fluxUrl, username,
-				password, new File(serviceFolder), 100);
 	}
 	
 	private static void validateArgument(String args[], int index) {
