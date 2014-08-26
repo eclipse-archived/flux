@@ -169,7 +169,7 @@ public class Repository {
 	}
 
 	public boolean isConnected() {
-		return messagingConnector.isChannelConnected();
+		return messagingConnector.getChannel() != null;
 	}
 
 	public ConnectedProject getProject(IProject project) {

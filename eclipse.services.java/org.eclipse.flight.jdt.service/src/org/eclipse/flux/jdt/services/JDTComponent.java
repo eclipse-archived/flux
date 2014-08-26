@@ -12,9 +12,12 @@
 package org.eclipse.flux.jdt.services;
 
 import org.eclipse.flux.core.Constants;
+import org.eclipse.flux.core.IChannelListener;
 import org.eclipse.flux.core.IMessagingConnector;
-import org.eclipse.flux.core.ServiceDiscoveryConnector;
 import org.eclipse.flux.core.KeepAliveConnector;
+import org.eclipse.flux.core.LiveEditCoordinator;
+import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.ServiceDiscoveryConnector;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Deactivate;
@@ -25,63 +28,113 @@ import org.osgi.service.component.annotations.Deactivate;
 public class JDTComponent {
 	
 	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
+	private static long WAIT_TIME_PERIOD = 100;
+
 	private ServiceDiscoveryConnector discoveryConnector;
 	private KeepAliveConnector keepAliveConnector;
 	
-	private static JDTComponent instance = null;
-	
-	static JDTComponent getInstance() {
-		return instance;
-	}
-	
 	@Activate
-	public void activate(final ComponentContext context) throws Exception {
-		instance = this;
-		
-		String lazyStartStr = System.getProperty("flux.jdt.lazyStart") == null ? System.getenv("FLUX_LAZY_START") : System.getProperty("flux.jdt.lazyStart");
-		boolean lazyStart = lazyStartStr != null && Boolean.valueOf(lazyStartStr);
-		
-		String login = System.getProperty("flux.user.name") == null ? System.getenv("FLUX_USER_ID") : System.getProperty("flux.user.name");
-		if (login == null) {
-			login = "defaultuser";
-		}
-		
-		String token = System.getProperty("flux.user.token") == null ? System.getenv("FLUX_USER_TOKEN") : System.getProperty("flux.user.token");
-		
-		String host = System.getProperty("flux-host") == null ? System.getenv("FLUX_HOST") : System.getProperty("flux-host");
-		if (host == null) {
-			host = "http://localhost:3000";
-		}
-		
-		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, lazyStart ? Constants.SUPER_USER : login);
+	public void activate(final ComponentContext context) throws Exception {		
+		final boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
 		
 		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
-			.getDefault().getMessagingConnector();
+				.getDefault().getMessagingConnector();
+		
+		new Thread() {
+
+			@Override
+			public void run() {
 				
-		while (!messagingConnector.isChannelConnected()) {
-			Thread.sleep(500);
-		}
-		
-		discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, login, JDT_SERVICE_ID, lazyStart);
-		if (lazyStart) {
-			keepAliveConnector = new KeepAliveConnector(messagingConnector, login, JDT_SERVICE_ID);
-		}
-		
-	}
-	
-	public KeepAliveConnector getKeepAliveConnector() {
-		return keepAliveConnector;
+				String userChannel = messagingConnector.getChannel();
+				JdtChannelListener jdtChannelListener = new JdtChannelListener();
+				for (; userChannel == null; userChannel = messagingConnector
+						.getChannel()) {
+					try {
+						sleep(WAIT_TIME_PERIOD);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				
+				discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, JDT_SERVICE_ID, lazyStart);
+				if (lazyStart) {
+					keepAliveConnector = new KeepAliveConnector(messagingConnector, JDT_SERVICE_ID);
+				}
+				
+				jdtChannelListener.connected(userChannel);
+				messagingConnector.addChannelListener(jdtChannelListener);
+			}
+			
+		}.start();
+				
 	}
 	
 	@Deactivate
-	public void deactivate(final ComponentContext context) {
+	public synchronized void deactivate(final ComponentContext context) {
 		if (discoveryConnector!=null) {
 			discoveryConnector.dispose();
 		}
 		if (keepAliveConnector != null) {
 			keepAliveConnector.dispose();
 		}
-		instance = null;
+	}
+
+	/**
+	 * Flux Channel listener for JDT service (supports lazy start option)
+	 * 
+	 * @author aboyko
+	 *
+	 */
+	private class JdtChannelListener implements IChannelListener {
+		
+		private LiveEditUnits liveEditUnits;
+		private ContentAssistService contentAssistService;
+		private NavigationService navigationService;
+		private RenameService renameService;
+		private InitializeServiceEnvironment initializer;
+
+		@Override
+		public void connected(String userChannel) {
+			boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
+			if (lazyStart && Constants.SUPER_USER.equals(userChannel)) {
+				return;
+			}
+			IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
+					.getDefault().getMessagingConnector();
+			Repository repository = org.eclipse.flux.core.Activator.getDefault()
+					.getRepository();
+			LiveEditCoordinator liveEditCoordinator = org.eclipse.flux.core.Activator
+					.getDefault().getLiveEditCoordinator();
+
+			this.liveEditUnits = new LiveEditUnits(messagingConnector,
+					liveEditCoordinator, repository);
+			this.contentAssistService = new ContentAssistService(messagingConnector, liveEditUnits);
+			this.navigationService = new NavigationService(messagingConnector, liveEditUnits);
+			this.renameService = new RenameService(messagingConnector, liveEditUnits);
+			
+			String initJdtStr = System.getProperty("flux-initjdt") == null ? System.getenv("FLUX_INIT_JDT") : System.getProperty("flux-initjdt");
+			if (initJdtStr != null && Boolean.valueOf(initJdtStr)) {
+				this.initializer = new InitializeServiceEnvironment(
+						messagingConnector, repository);
+				initializer.start();
+			}
+		}
+
+		@Override
+		public void disconnected(String userChannel) {
+			boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
+			if (lazyStart && Constants.SUPER_USER.equals(userChannel)) {
+				return;
+			}
+			liveEditUnits.dispose();
+			contentAssistService.dispose();
+			navigationService.dispose();
+			renameService.dispose();
+			if (initializer != null) {
+				initializer.dispose();
+			}
+		}
+
 	}
 	
 }

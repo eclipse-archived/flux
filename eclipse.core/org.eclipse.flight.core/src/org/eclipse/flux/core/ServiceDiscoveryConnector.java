@@ -37,11 +37,26 @@ public class ServiceDiscoveryConnector {
 		"username",
 		"callback_id"
 	};
-	private String user;
 	private IMessagingConnector mc;
 	private String serviceTypeId;
 	
 	private List<Runnable> onDispose = new ArrayList<Runnable>();
+	
+	private IChannelListener channelListener = new IChannelListener() {
+
+		@Override
+		public void connected(String userChannel) {
+			sendStatus(userChannel, "ready");
+		}
+
+		@Override
+		public void disconnected(String userChannel) {
+			if (mc != null && mc.isConnected()) {
+				sendStatus(userChannel, "unavailable", "Disconnected");
+			}
+		}
+		
+	};
 	
 	private boolean forMe(JSONObject message) {
 		try {
@@ -52,16 +67,21 @@ public class ServiceDiscoveryConnector {
 		}
 	}
 	
-	public ServiceDiscoveryConnector(IMessagingConnector messagingConnector, String channel, String serviceTypeId, boolean keepAlive) {
-		this.user = channel;
+	public ServiceDiscoveryConnector(IMessagingConnector messagingConnector, String serviceTypeId, boolean keepAlive) {
 		this.mc = messagingConnector;
 		this.serviceTypeId = serviceTypeId;
+		
+		this.mc.addChannelListener(channelListener);
 
-		sendStatus("ready");
+		String userChannel = mc.getChannel();
+		if (userChannel != null) {
+			sendStatus(userChannel, "ready");
+		}
 		
 		handler(new AbstractMessageHandler(DISCOVER_SERVICE_REQUEST) {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
+				String user = mc.getChannel();
 				try {
 					if (forMe(message) && (message.get("username").equals(user) || Constants.SUPER_USER.equals(user))) {
 						JSONObject response = new JSONObject(message, COPY_PROPS);
@@ -78,18 +98,15 @@ public class ServiceDiscoveryConnector {
 
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
-				mc.removeMessageHandler(this);
+				mc.removeMessageHandler(this);				
 				try {
-					user = message.getString("username");
+					String user = message.getString("username");
 					JSONObject serviceStartedMessage = new JSONObject(message, COPY_PROPS);
 					mc.send(START_SERVICE_RESPONSE, serviceStartedMessage);
-					sendStatus("starting");
-					mc.connectChannel(user);
-					sendStatus("ready");
+					sendStatus(user, "starting");
+					mc.connectChannel(user);					
 				} catch (JSONException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
-					user = null;
 				}
 				
 				
@@ -112,7 +129,7 @@ public class ServiceDiscoveryConnector {
 	public synchronized void dispose() {
 		try {
 			if (mc!=null) {
-				sendStatus("unavailable", "Shutdown");
+				sendStatus(mc.getChannel(), "unavailable", "Shutdown");
 				for (Runnable r : onDispose) {
 					r.run();
 				}
@@ -123,11 +140,11 @@ public class ServiceDiscoveryConnector {
 		}
 	}
 
-	private void sendStatus(String status) {
-		sendStatus(status, null);
+	private void sendStatus(String user, String status) {
+		sendStatus(user, status, null);
 	}
 
-	private void sendStatus(String status, String error) {
+	private void sendStatus(String user, String status, String error) {
 		try {
 			JSONObject msg = new JSONObject();
 			msg.put("username", user);

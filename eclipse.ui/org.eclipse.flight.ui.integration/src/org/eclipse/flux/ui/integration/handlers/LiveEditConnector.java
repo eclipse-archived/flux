@@ -35,7 +35,10 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.flux.core.ConnectedProject;
 import org.eclipse.flux.core.ILiveEditConnector;
 import org.eclipse.flux.core.IRepositoryListener;
@@ -53,6 +56,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.progress.WorkbenchJob;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 /**
@@ -190,7 +194,6 @@ public class LiveEditConnector {
 			}
 			@Override
 			public void resourceChanged(IResource resource) {
-				// TODO Auto-generated method stub
 				IFileBuffer fileBuffer = FileBuffers.getTextFileBufferManager().getFileBuffer(resource.getLocation(), LocationKind.NORMALIZE);
 				if (fileBuffer != null) {
 					try {
@@ -278,12 +281,17 @@ public class LiveEditConnector {
 			}
 		};
 		
-		PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-			public void run() {
+		WorkbenchJob workbenchJob = new WorkbenchJob("add part listener") {			
+			@Override
+			public IStatus runInUIThread(IProgressMonitor monitor) {
 				IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 				window.getActivePage().addPartListener(partListener);
+				return Status.OK_STATUS;
 			}
-		});
+		};
+		workbenchJob.setSystem(true);
+		workbenchJob.schedule();
+		
 		/*
 		 * Connect open editors for all already connected projects. Flux Core
 		 * plug-in is activated earlier than the UI plug-in, consequently
@@ -471,23 +479,31 @@ public class LiveEditConnector {
 	}
 
 	protected void connectOpenEditors(IProject project) {
-		Display.getDefault().asyncExec(new Runnable() {
-			public void run() {
-				IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-				IEditorReference[] editorReferences = window.getActivePage().getEditorReferences();
+		new WorkbenchJob("Connecting opened editors to Flux...") {
+
+			@Override
+			public IStatus runInUIThread(IProgressMonitor monitor) {
+				IWorkbenchWindow window = PlatformUI.getWorkbench()
+						.getActiveWorkbenchWindow();
+				IEditorReference[] editorReferences = window.getActivePage()
+						.getEditorReferences();
 				for (IEditorReference editorReference : editorReferences) {
 					IEditorPart editorPart = editorReference.getEditor(false);
 					if (editorPart instanceof AbstractTextEditor) {
 						connectEditor((AbstractTextEditor) editorPart);
 					}
 				}
+				return Status.OK_STATUS;
 			}
-		});
+
+		}.schedule();
 	}
 	
 	protected void disconnectOpenEditors(IProject project) {
-		Display.getDefault().asyncExec(new Runnable() {
-			public void run() {
+		new WorkbenchJob("Disconnecting opened editors from Flux...") {
+
+			@Override
+			public IStatus runInUIThread(IProgressMonitor monitor) {
 				IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 				IEditorReference[] editorReferences = window.getActivePage().getEditorReferences();
 				for (IEditorReference editorReference : editorReferences) {
@@ -496,8 +512,10 @@ public class LiveEditConnector {
 						disconnectEditor((AbstractTextEditor) editorPart);
 					}
 				}
+				return Status.OK_STATUS;
 			}
-		});
+			
+		}.schedule();
 	}
 
 	public void reactToResourceChanged(IResourceChangeEvent event) {
@@ -563,14 +581,20 @@ public class LiveEditConnector {
 		this.repository.removeRepositoryListener(repositoryListener);
 		FileBuffers.getTextFileBufferManager().removeFileBufferListener(fileBufferListener);
 		ResourcesPlugin.getWorkspace().removeResourceChangeListener(workspaceListener);
-		if (!PlatformUI.getWorkbench().isClosing()) {
-			PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-				public void run() {
-					IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+		WorkbenchJob jw = new WorkbenchJob("Removing listener") {
+
+			@Override
+			public IStatus runInUIThread(IProgressMonitor monitor) {
+				IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+				if (window != null) {
 					window.getActivePage().removePartListener(partListener);
 				}
-			});
-		}
+				return Status.OK_STATUS;
+			}
+			
+		};
+		jw.setSystem(true);
+		jw.schedule();
 		for (IDocument document : documentMappings.values()) {
 			if (document != null) {
 				document.removeDocumentListener(documentListener);

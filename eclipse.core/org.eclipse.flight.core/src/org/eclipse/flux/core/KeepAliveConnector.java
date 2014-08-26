@@ -30,7 +30,6 @@ public final class KeepAliveConnector {
 	
 	private IMessagingConnector mc;
 	private String serviceTypeId;
-	private String user;
 	private ScheduledExecutorService executor;
 	private ScheduledFuture<?> scheduledKeepAliveMessage = null;
 	private ScheduledFuture<?> scheduledShutDown = null;
@@ -44,20 +43,37 @@ public final class KeepAliveConnector {
 			setKeepAliveDelayedMessage();
 		}
 	};
+	private IChannelListener channelListener = new IChannelListener() {
+		@Override
+		public void connected(String userChannel) {
+			setKeepAliveDelayedMessage();
+		}
+
+		@Override
+		public void disconnected(String userChannel) {
+			unsetScheduledShutdown();
+			unsetKeepAliveDelayedMessage();
+			/*
+			 * If no channel is connected than keep alive broadcast will
+			 * definitely not get any replies and shutdown would occur
+			 */
+			setKeepAliveDelayedMessage();
+		}
+	};
 	
-	public KeepAliveConnector(IMessagingConnector messaingConnector, String user, String serviceTypeId) {
-		this(messaingConnector, user, serviceTypeId, KEEP_ALIVE_DELAY, KEEP_ALIVE_RESPONSE_WAIT_TIME);
+	public KeepAliveConnector(IMessagingConnector messaingConnector, String serviceTypeId) {
+		this(messaingConnector, serviceTypeId, KEEP_ALIVE_DELAY, KEEP_ALIVE_RESPONSE_WAIT_TIME);
 	}
 	
-	public KeepAliveConnector(IMessagingConnector messaingConnector, String user, String serviceTypeId, long keepAliveDelay, long keepAliveResponseTimeout) {
+	public KeepAliveConnector(IMessagingConnector messaingConnector, String serviceTypeId, long keepAliveDelay, long keepAliveResponseTimeout) {
 		this.mc = messaingConnector;
 		this.serviceTypeId = serviceTypeId;
-		this.user = user;
 		this.executor = Executors.newScheduledThreadPool(2);
 		this.keepAliveDelay = keepAliveDelay;
 		this.keepAliveResponseTimeout = keepAliveResponseTimeout;
 		this.mc.addMessageHandler(keepAliveResponseHandler);
 		setKeepAliveDelayedMessage();
+		mc.addChannelListener(channelListener);
 	}
 	
 	private synchronized void unsetKeepAliveDelayedMessage() {
@@ -73,15 +89,12 @@ public final class KeepAliveConnector {
 	}
 	
 	private synchronized void setKeepAliveDelayedMessage() {
-		if (user != null) {
-			scheduledKeepAliveMessage = this.executor.schedule(new Runnable() {
-				@Override
-				public void run() {
-					setScheduledShutdown();
-				}
-			},
-			keepAliveDelay, TimeUnit.SECONDS);
-		}
+		scheduledKeepAliveMessage = this.executor.schedule(new Runnable() {
+			@Override
+			public void run() {
+				setScheduledShutdown();
+			}
+		}, keepAliveDelay, TimeUnit.SECONDS);
 	}
 	
 	private synchronized void setScheduledShutdown() {
@@ -98,55 +111,16 @@ public final class KeepAliveConnector {
 				}
 			}, keepAliveResponseTimeout, TimeUnit.SECONDS);
 			JSONObject message = new JSONObject();
-			message.put("username", user);
-			message.put("service", KeepAliveConnector.this.serviceTypeId);
+			message.put("username", mc.getChannel());
+			message.put("service", serviceTypeId);
 			mc.send(SERVICE_REQUIRED_REQUEST, message);
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
 	}
 	
-//	public void setKeepAliveMessageTypes(String[] messageTypes) {
-//		unsetScheduledShutdown();
-//		unsetKeepAliveDelayedMessage();
-//		for (IMessageHandler messageHandler : messageHandlers) {
-//			mc.removeMessageHandler(messageHandler);
-//		}
-//		messageHandlers = new ArrayList<IMessageHandler>(messageTypes.length);
-//		for (String messageType : messageTypes) {
-//			messageHandlers.add(new AbstractMessageHandler(messageType) {				
-//				@Override
-//				public void handleMessage(String messageType, JSONObject message) {
-//					try {
-//						if (message.has("username") && message.getString("username").equals(KeepAliveConnector.this.user)) {
-//							resetEverything();
-//						}
-//					} catch (JSONException e) {
-//						e.printStackTrace();
-//					}
-//				}
-//			});
-//		}
-//		for (IMessageHandler messageHandler : messageHandlers) {
-//			mc.addMessageHandler(messageHandler);
-//		}
-//		setKeepAliveDelayedMessage();
-//	}
-//	
-//	private synchronized void resetEverything() {
-//		unsetScheduledShutdown();
-//		unsetKeepAliveDelayedMessage();
-//		setKeepAliveDelayedMessage();
-//	}
-	
-	public synchronized void setUser(String user) {
-		unsetScheduledShutdown();
-		unsetKeepAliveDelayedMessage();
-		this.user = user;
-		setKeepAliveDelayedMessage();
-	}
-	
 	public void dispose() {
+		mc.removeChannelListener(channelListener);
 		unsetScheduledShutdown();
 		unsetKeepAliveDelayedMessage();
 		executor.shutdown();

@@ -99,11 +99,9 @@
       </startup>
    </extension>
    <extension
-         point="org.eclipse.flux.core.connectionInitialListeners">
-      <initialListener
-            class="org.eclipse.flux.ui.integration.UiChannelListener"
-            priority="MEDIUM">
-      </initialListener>
+         point="org.eclipse.ui.startup">
+      <startup
+            class="org.eclipse.flux.ui.integration.UiStartup"></startup>
    </extension>
 
 </plugin>

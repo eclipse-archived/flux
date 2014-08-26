@@ -27,7 +27,6 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.internal.CloudSyncResourceListener;
-import org.eclipse.flux.core.internal.messaging.ChannelInitializersRegistry;
 import org.eclipse.flux.core.internal.messaging.SocketIOMessagingConnector;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
@@ -50,6 +49,7 @@ public class Activator implements BundleActivator {
 	private SocketIOMessagingConnector messagingConnector;
 	private Repository repository;
 	private LiveEditCoordinator liveEditCoordinator;
+	private boolean lazyStart = false;
 	
 	private CloudSyncResourceListener resourceListener;
 	private CloudSyncMetadataListener metadataListener;
@@ -59,21 +59,18 @@ public class Activator implements BundleActivator {
 	private final IChannelListener SERVICE_STARTER = new IChannelListener() {
 		@Override
 		public void connected(String userChannel) {
-			if (!Constants.SUPER_USER.equals(userChannel)) {
+			if (!(lazyStart && Constants.SUPER_USER.equals(userChannel))) {
 				try {
 					plugin.initCoreService(userChannel);
 				} catch (CoreException e) {
 					e.printStackTrace();
 				}
-				ChannelInitializersRegistry.getInstance().connected(userChannel);
 			}
 		}
 
 		@Override
 		public void disconnected(String userChannel) {
-			if (!Constants.SUPER_USER.equals(userChannel)) {
-				ChannelInitializersRegistry.getInstance().disconnected(
-						userChannel);
+			if (!(lazyStart && Constants.SUPER_USER.equals(userChannel))) {
 				disposeCoreServices(userChannel);
 			}
 		}
@@ -82,6 +79,46 @@ public class Activator implements BundleActivator {
 	@Override
 	public void start(BundleContext context) throws Exception {
 		plugin = this;
+		
+		String login = System.getProperty("flux.user.name") == null ? System.getenv("FLUX_USER_ID") : System.getProperty("flux.user.name");
+		if (login == null) {
+			login = "defaultuser";
+		}
+		
+		String token = System.getProperty("flux.user.token") == null ? System.getenv("FLUX_USER_TOKEN") : System.getProperty("flux.user.token");
+		
+		String host = System.getProperty("flux-host") == null ? System.getenv("FLUX_HOST") : System.getProperty("flux-host");
+		if (host == null) {
+			host = "http://localhost:3000";
+		}
+		
+		String lazyStartStr = System.getProperty("flux.lazyStart") == null ? System.getenv("FLUX_LAZY_START") : System.getProperty("flux.lazyStart");
+		lazyStart = lazyStartStr != null && Boolean.valueOf(lazyStartStr);
+		
+		String channel = System.getProperty("flux.channel.id") == null ? System.getenv("FLUX_CHANNEL_ID") : System.getProperty("flux.channel.id");
+		if (channel == null) {
+			channel = login;
+		}
+		
+		this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
+		this.messagingConnector.addChannelListener(SERVICE_STARTER);
+		
+		final String userChannel = lazyStart ? Constants.SUPER_USER : channel;
+		messagingConnector.addConnectionListener(new IConnectionListener() {
+		
+			@Override
+			public void connected() {
+				messagingConnector.removeConnectionListener(this);
+				messagingConnector.connectChannel(userChannel);
+			}
+		
+			@Override
+			public void disconnected() {
+				// nothing
+			}
+			
+		});
+		messagingConnector.connect();
 	}
 
 	@Override
@@ -90,31 +127,6 @@ public class Activator implements BundleActivator {
 			messagingConnector.disconnect();
 		}
 		plugin = null;
-	}
-	
-	public synchronized void startService(String host, final String login, String token, final String channel) throws CoreException {
-		if (this.messagingConnector == null) {
-			this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
-			this.messagingConnector.addChannelListener(SERVICE_STARTER);
-			if (channel != null) {
-				messagingConnector.addConnectionListener(new IConnectionListener() {
-	
-					@Override
-					public void connected() {
-						messagingConnector.removeConnectionListener(this);
-						messagingConnector.connectChannel(channel);
-					}
-	
-					@Override
-					public void disconnected() {
-						// TODO Auto-generated method stub
-	
-					}
-	
-				});
-			}
-			this.messagingConnector.connect();
-		}
 	}
 	
 	private void initCoreService(String userChannel) throws CoreException {
@@ -269,6 +281,10 @@ public class Activator implements BundleActivator {
 
 	public static void log(Throwable ex) {
 		ex.printStackTrace();
+	}
+	
+	public boolean isLazyStart() {
+		return lazyStart;
 	}
 	
 }
