@@ -18,6 +18,7 @@ import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
@@ -54,9 +55,12 @@ public class Repository {
 	
 	private static int GET_PROJECT_CALLBACK = "Repository - getProjectCallback".hashCode();
 	private static int GET_RESOURCE_CALLBACK = "Repository - getResourceCallback".hashCode();
+	
+	private AtomicBoolean connected;
 
 	public Repository(IMessagingConnector messagingConnector, String user) {
 		this.username = user;
+		this.connected = new AtomicBoolean(true);
 		this.messagingConnector = messagingConnector;
 
 		this.syncedProjects = new ConcurrentHashMap<String, ConnectedProject>();
@@ -168,10 +172,6 @@ public class Repository {
 		}
 	}
 
-	public boolean isConnected() {
-		return messagingConnector.getChannel() != null;
-	}
-
 	public ConnectedProject getProject(IProject project) {
 		return getProject(project.getName());
 	}
@@ -193,11 +193,8 @@ public class Repository {
 		if (!this.syncedProjects.containsKey(projectName)) {
 			this.syncedProjects.put(projectName, new ConnectedProject(project));
 			notifyProjectConnected(project);
-
-			if (isConnected()) {
-				sendProjectConnectedMessage(projectName);
-				syncConnectedProject(projectName);
-			}
+			sendProjectConnectedMessage(projectName);
+			syncConnectedProject(projectName);
 		}
 	}
 
@@ -206,16 +203,13 @@ public class Repository {
 		if (this.syncedProjects.containsKey(projectName)) {
 			this.syncedProjects.remove(projectName);
 			notifyProjectDisonnected(project);
-
-			if (isConnected()) {
-				try {
-					JSONObject message = new JSONObject();
-					message.put("username", this.username);
-					message.put("project", projectName);
-					messagingConnector.send("projectDisconnected", message);
-				} catch (JSONException e) {
-					e.printStackTrace();
-				}
+			try {
+				JSONObject message = new JSONObject();
+				message.put("username", this.username);
+				message.put("project", projectName);
+				messagingConnector.send("projectDisconnected", message);
+			} catch (JSONException e) {
+				e.printStackTrace();
 			}
 		}
 	}
@@ -959,6 +953,7 @@ public class Repository {
 	}
 	
 	public void dispose() {
+		connected.set(false);
 		for (IMessageHandler messageHandler : messageHandlers) {
 			messagingConnector.removeMessageHandler(messageHandler);
 		}
