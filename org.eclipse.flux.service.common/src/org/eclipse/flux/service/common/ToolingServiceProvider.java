@@ -83,7 +83,7 @@ public class ToolingServiceProvider {
 		@Override
 		public void disconnected(String userChannel) {
 			if (Utils.SUPER_USER.equals(userChannel)) {
-				stop();
+				dispose();
 			}
 		}
 		
@@ -255,8 +255,13 @@ public class ToolingServiceProvider {
 			return;
 		}
 		
+		dispose();
 		messageConnector.removeChannelListener(CONNECTION_LISTENER);
 		
+		active.set(false);		
+	}
+	
+	private void dispose() {
 		for (IMessageHandler messageHandler : messageHandlers) {
 			messageConnector.removeMessageHandler(messageHandler);
 		}
@@ -272,8 +277,6 @@ public class ToolingServiceProvider {
 		if (serviceLauncher != null) {
 			serviceLauncher.dispose();
 		}
-		
-		active.set(false);		
 	}
 	
 	final public void start() {
