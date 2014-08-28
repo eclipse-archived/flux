@@ -16,7 +16,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.cloudfoundry.client.lib.CloudCredentials;
 import org.cloudfoundry.client.lib.CloudFoundryClient;
@@ -24,36 +23,33 @@ import org.cloudfoundry.client.lib.CloudFoundryException;
 import org.cloudfoundry.client.lib.UploadStatusCallback;
 import org.cloudfoundry.client.lib.domain.CloudApplication;
 import org.cloudfoundry.client.lib.domain.Staging;
-import org.eclipse.flux.client.MessageConnector;
+import org.springframework.http.HttpStatus;
 
-/**
- * Starts/Stops services on the Cloud Foundry
- * 
- * @author aboyko
- *
- */
-public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
-	
+public class CloudFoundryServiceLauncher implements IServiceLauncher {
+
 	private CloudFoundryClient cfClient;
-	
-	private AtomicInteger numberOfInstances;
-	
-	public MessageCloudFoundryServiceLauncher(MessageConnector messageConnector, URL cfControllerUrl, String orgName, String spaceName, String cfLogin, String cfPassword, String fluxUrl, String username, String password, String serviceID, int maxPoolSize, 
-			long timeout, File appLocation) throws IOException {
-		super(messageConnector, serviceID, maxPoolSize, timeout);
-		this.numberOfInstances = new AtomicInteger(maxPoolSize);
+	private String appId;
+	final private int maxInstancesNumber;
+
+	public CloudFoundryServiceLauncher(String appId, URL cfControllerUrl, String orgName, String spaceName, String cfLogin, String cfPassword, String fluxUrl, String username, String password, 
+			File appLocation, int maxInstancesNumber) throws IOException {
+		this.appId = appId;
+		if (maxInstancesNumber < 1) {
+			throw new IllegalArgumentException("Max number of instances cannot be less than 1.");
+		}
+		this.maxInstancesNumber = maxInstancesNumber;
 		cfClient = new CloudFoundryClient(new CloudCredentials(cfLogin, cfPassword), cfControllerUrl, orgName, spaceName);
 		cfClient.login();
 		try {
-			CloudApplication cfApp = cfClient.getApplication(serviceID);
+			CloudApplication cfApp = cfClient.getApplication(appId);
 			if (cfApp != null) {
-				cfClient.deleteApplication(serviceID);
+				cfClient.deleteApplication(appId);
 			}
 		} catch (CloudFoundryException e) {
-			e.printStackTrace();
+			System.out.println(e.getMessage());
 		}
-		cfClient.createApplication(serviceID, new Staging(), 1024, null, null);
-		cfClient.uploadApplication(serviceID , appLocation, new UploadStatusCallback() {
+		cfClient.createApplication(appId, new Staging(), 1024, null, null);
+		cfClient.uploadApplication(appId, appLocation, new UploadStatusCallback() {
 			
 			@Override
 			public boolean onProgress(String arg0) {
@@ -76,47 +72,64 @@ public class MessageCloudFoundryServiceLauncher extends MessageServiceLauncher {
 				System.out.println("Check resources!");
 			}
 		});		
-		cfClient.updateApplicationEnv(serviceID, createEnv(fluxUrl, username, password));
-		cfClient.updateApplicationInstances(serviceID, maxPoolSize);
+		cfClient.updateApplicationEnv(appId, createEnv(fluxUrl, username, password));
 	}
 
 	@Override
-	protected void addService() {
+	public synchronized void init() {
 		cfClient.login();
-		cfClient.updateApplicationInstances(serviceID, numberOfInstances.incrementAndGet());
+		cfClient.startApplication(appId);
 	}
 
 	@Override
-	protected void initServices() {
+	public synchronized void startService(int n) throws Exception {
 		cfClient.login();
-		cfClient.startApplication(serviceID);
-	}
-
-	@Override
-	protected boolean removeService(String socketId) {
-		boolean stopped = super.removeService(socketId);
-		if (stopped) {
-//			cfClient.login();
-//			cfClient.updateApplicationInstances(serviceID, numberOfInstances.decrementAndGet());
+		boolean updated = false;
+		while (!updated) {
+			try {
+				int numberOfInstances = cfClient.getApplication(appId)
+						.getInstances();
+				int difference = maxInstancesNumber - n - numberOfInstances;
+				if (difference < 0) {
+					n += difference;
+				}
+				if (n > 0) {
+					cfClient.updateApplicationInstances(appId,
+							numberOfInstances + n);
+				}
+				updated = true;
+				if (difference <= 0) {
+					throw new Exception(
+							"Maximum number of services is running. Cannot start anymore services!");
+				}
+			} catch (CloudFoundryException cfe) {
+				if (cfe.getStatusCode() == HttpStatus.NOT_FOUND) {
+					try {
+						Thread.sleep(2000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				} else {
+					throw cfe;
+				}
+			}
 		}
-		return stopped;
 	}
-	
+
+	@Override
+	public void dispose() {
+		cfClient.login();
+		cfClient.stopApplication(appId);
+	}
+
 	private List<String> createEnv(String fluxUrl, String username, String password) {
 		List<String> env = new ArrayList<String>(3);
 		env.add("FLUX_HOST=" + fluxUrl);
 		env.add("FLUX_USER_ID=" + username.replace("$", "\\$"));
 		env.add("FLUX_USER_TOKEN=" + password);
 		env.add("FLUX_LAZY_START=true");
-		env.add("PATH=/bin:/usr/bin:/home/vcap/app/.java-buildpack/open_jdk_jre/bin");
+		env.add("FLUX_INIT_JDT=true");
 		return env;
-	}
-
-	@Override
-	public void dispose() {
-		super.dispose();
-		cfClient.login();
-		cfClient.stopApplication(serviceID);
 	}
 	
 }

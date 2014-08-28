@@ -11,7 +11,13 @@
  *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
-import org.eclipse.flux.core.ServiceConnector;
+import org.eclipse.flux.core.Constants;
+import org.eclipse.flux.core.IChannelListener;
+import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.core.KeepAliveConnector;
+import org.eclipse.flux.core.LiveEditCoordinator;
+import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.ServiceDiscoveryConnector;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Deactivate;
@@ -22,54 +28,116 @@ import org.osgi.service.component.annotations.Deactivate;
 public class JDTComponent {
 	
 	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
+	private static long WAIT_TIME_PERIOD = 100;
+
+	private ServiceDiscoveryConnector discoveryConnector;
+	private KeepAliveConnector keepAliveConnector;
 	
 	@Activate
-	public void activate(final ComponentContext context) throws Exception {
+	public void activate(final ComponentContext context) throws Exception {		
+		final boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
 		
-		String lazyStartStr = System.getProperty("flux.jdt.lazyStart") == null ? System.getenv("FLUX_LAZY_START") : System.getProperty("flux.jdt.lazyStart");
-		boolean lazyStart = lazyStartStr != null && Boolean.valueOf(lazyStartStr);
+		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
+				.getDefault().getMessagingConnector();
 		
-		String login = System.getProperty("flux.user.name") == null ? System.getenv("FLUX_USER_ID") : System.getProperty("flux.user.name");
-		if (login == null) {
-			login = "defaultuser";
-		}
-		
-		String token = System.getProperty("flux.user.token") == null ? System.getenv("FLUX_USER_TOKEN") : System.getProperty("flux.user.token");
-		
-		String host = System.getProperty("flux-host") == null ? System.getenv("FLUX_HOST") : System.getProperty("flux-host");
-		if (host == null) {
-			host = "http://localhost:3000";
-		}
-		
-		org.eclipse.flux.core.Activator.getDefault().startService(host, login, token, !lazyStart);
-		
-		if (lazyStart) {
-			 new ServiceConnector(org.eclipse.flux.core.Activator
-				.getDefault().getMessagingConnector(), JDT_SERVICE_ID) {
+		new Thread() {
 
-				@Override
-				public void startService(String user) {
-					org.eclipse.flux.core.Activator.getDefault().getMessagingConnector().connectChannel(user);
-				}
-
-				@Override
-				public void stopService() {
+			@Override
+			public void run() {
+				
+				String userChannel = messagingConnector.getChannel();
+				JdtChannelListener jdtChannelListener = new JdtChannelListener();
+				for (; userChannel == null; userChannel = messagingConnector
+						.getChannel()) {
 					try {
-//						context.getBundleContext().getBundle(0L).stop();
-						System.exit(0);
-					} catch (Throwable e) {
+						sleep(WAIT_TIME_PERIOD);
+					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
 				}
 				
-			};			
-		}
-		
+				discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, JDT_SERVICE_ID, lazyStart);
+				if (lazyStart) {
+					keepAliveConnector = new KeepAliveConnector(messagingConnector, JDT_SERVICE_ID);
+				}
+				
+				jdtChannelListener.connected(userChannel);
+				messagingConnector.addChannelListener(jdtChannelListener);
+			}
+			
+		}.start();
+				
 	}
 	
 	@Deactivate
-	public void deactivate(final ComponentContext context) {
+	public synchronized void deactivate(final ComponentContext context) {
+		if (discoveryConnector!=null) {
+			discoveryConnector.dispose();
+		}
+		if (keepAliveConnector != null) {
+			keepAliveConnector.dispose();
+		}
+	}
+
+	/**
+	 * Flux Channel listener for JDT service (supports lazy start option)
+	 * 
+	 * @author aboyko
+	 *
+	 */
+	private class JdtChannelListener implements IChannelListener {
 		
+		private LiveEditUnits liveEditUnits;
+		private ContentAssistService contentAssistService;
+		private NavigationService navigationService;
+		private RenameService renameService;
+		private JavaDocService javadocService;
+		private InitializeServiceEnvironment initializer;
+
+		@Override
+		public void connected(String userChannel) {
+			boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
+			if (lazyStart && Constants.SUPER_USER.equals(userChannel)) {
+				return;
+			}
+			IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
+					.getDefault().getMessagingConnector();
+			Repository repository = org.eclipse.flux.core.Activator.getDefault()
+					.getRepository();
+			LiveEditCoordinator liveEditCoordinator = org.eclipse.flux.core.Activator
+					.getDefault().getLiveEditCoordinator();
+
+			this.liveEditUnits = new LiveEditUnits(messagingConnector,
+					liveEditCoordinator, repository);
+			this.contentAssistService = new ContentAssistService(messagingConnector, liveEditUnits);
+			this.navigationService = new NavigationService(messagingConnector, liveEditUnits);
+			this.renameService = new RenameService(messagingConnector, liveEditUnits);
+			this.javadocService = new JavaDocService(messagingConnector, liveEditUnits);
+			
+			String initJdtStr = System.getProperty("flux-initjdt") == null ? System.getenv("FLUX_INIT_JDT") : System.getProperty("flux-initjdt");
+			if (initJdtStr != null && Boolean.valueOf(initJdtStr)) {
+				this.initializer = new InitializeServiceEnvironment(
+						messagingConnector, repository);
+				initializer.start();
+			}
+		}
+
+		@Override
+		public void disconnected(String userChannel) {
+			boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
+			if (lazyStart && Constants.SUPER_USER.equals(userChannel)) {
+				return;
+			}
+			liveEditUnits.dispose();
+			contentAssistService.dispose();
+			navigationService.dispose();
+			renameService.dispose();
+			javadocService.dispose();
+			if (initializer != null) {
+				initializer.dispose();
+			}
+		}
+
 	}
 	
 }

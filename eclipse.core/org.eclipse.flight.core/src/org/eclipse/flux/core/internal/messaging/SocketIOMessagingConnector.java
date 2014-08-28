@@ -46,7 +46,6 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 
 	private SocketIO socket;
 	private String host;	
-	private AtomicBoolean connectedToUserspace = new AtomicBoolean(false);;
 	private AtomicBoolean connected = new AtomicBoolean(false);
 	private String userChannel;
 	private String login;
@@ -148,26 +147,22 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 			try {
 				connectToChannel(userChannel);
 			} catch (JSONException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 	}
 	
-	private void processConnectChannel(String userChannel) {
-		this.connectedToUserspace.compareAndSet(false, true);
+	private synchronized void processConnectChannel(String userChannel) {
 		if (userChannel != null) {
-			this.userChannel = userChannel;
 			notifyChannelConnected(userChannel);
+			this.userChannel = userChannel;
 		}
 	}
 	
-	private void processDisconnectChannel() {
-		this.connectedToUserspace.compareAndSet(true, false);
+	private synchronized void processDisconnectChannel() {
 		if (this.userChannel != null) {
-			String userChannel = this.userChannel;
+			notifyChannelDisconnected(this.userChannel);
 			this.userChannel = null;
-			notifyChannelDisconnected(userChannel);
 		}
 	}
 	
@@ -209,8 +204,8 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 		return connected.get();
 	}
 	
-	public boolean isChannelConnected() {
-		return connectedToUserspace.get();
+	public synchronized String getChannel() {
+		return userChannel;
 	}
 	
 	public String getLogin() {

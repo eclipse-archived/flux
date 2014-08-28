@@ -39,6 +39,7 @@ public class ConnectedProject {
 		this.resourceTimestamp = new ConcurrentHashMap<String, Long>();
 		
 		try {
+			project.refreshLocal(IResource.DEPTH_INFINITE, null);
 			project.accept(new IResourceVisitor() {
 				@Override
 				public boolean visit(IResource resource) throws CoreException {

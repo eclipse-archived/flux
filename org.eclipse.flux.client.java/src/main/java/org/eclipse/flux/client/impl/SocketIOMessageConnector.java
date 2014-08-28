@@ -207,7 +207,7 @@ public final class SocketIOMessageConnector implements MessageConnector {
 
 	public void removeMessageHandler(IMessageHandler messageHandler) {
 		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageHandler.getMessageType());
-		if (handlers!=null) {
+		if (handlers != null) {
 			handlers.remove(messageHandler);
 		}
 	}

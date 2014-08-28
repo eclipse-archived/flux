@@ -1,0 +1,19 @@
+---
+applications:
+- name: flux-JDT-service-provider
+  memory: 1024M
+  instances: 1
+  no-route: true
+  path: org.eclipse.flux.jdt.service.provider-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+  env:
+    FLUX_HOST: https://flux-test.cfapps.io:4443
+    FLUX_ADMIN_ID: \$super\$
+    FLUX_ADMIN_TOKEN: ca8caa3161e3aa4c711d49906604057621887771
+    FLUX_CF_CONTROLLER_URL: https://cf.controller.url
+    FLUX_CF_USER_ID: myID
+    FLUX_CF_PASSWORD: myPassword
+    FLUX_CF_SPACE: flux
+    FLUX_CF_ORG: FrameworksAndRuntimes
+    FLUX_SERVICE_APP_ID: flux-JDT
+    FLUX_SERVICE_POOL_SIZE: 3
+    FLUX_SERVICE_MAX_INSTANCES: 50

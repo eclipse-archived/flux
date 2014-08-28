@@ -50,6 +50,7 @@ public class InitializeServiceEnvironment {
 		getProjectsResponseHandler = new CallbackIDAwareMessageHandler("getProjectsResponse", GET_PROJECTS_CALLBACK) {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
+				messagingConnector.removeMessageHandler(this);
 				handleGetProjectsResponse(message);
 			}
 		};

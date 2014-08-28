@@ -35,6 +35,22 @@ function addLogging(prefix, eventSource) {
 	});
 }
 
+//For more focussed logging / debugging of flux messages
+var blacklisted = {
+	liveMetadataChanged: true,
+	liveResourceStarted: true,
+	getResourceResponse: true,
+	getResourceRequest: true,
+	getProjectRequest: true,
+	getProjectResponse: true,
+	getProjectsRequest: true,
+	getProjectsResponse: true
+};
+function logMsg(pre, type, data) {
+	if (blacklisted[type]) {return; }
+	console.log(pre, type, data);
+}
+
 /**
  * Get connection to AMQP message broker. This returns a promise.
  * The same connection is shared by everyone calling this function.
@@ -182,6 +198,34 @@ RabbitConnector.prototype.initialize = function () {
 			});
 		});
 	});
+	
+	socket.on('disconnectFromChannel', function (data, fn) {
+		//Note: a channel in 'flux | socket.io' is not the same thing as a channel in AMQP.
+		//  What is called a 'channel' in flux websockets is really more like a
+		//  'routing key'.
+		initialized.then(function () {
+			var sub = self.sub;
+			console.log('disconnectFromChannel', data);
+			
+			var topic = channelNameToTopicPattern(data.channel);
+			return self.channel.unbindQueue(self.inbox, self.outbox, topic)
+			.then(function() {
+				console.log('Disconnected '+self.inbox+' from topic ' + topic);
+				//send test message
+				// self.channel.publish(self.outbox, topic, self.encode({type: 'test', data: "Test message"}));
+				fn({
+					'disconnectedFromChannel' : true
+				});
+			}).otherwise(function (err) {
+				return fn({
+					error: err,
+					connectedToChannel: false
+				});
+			});
+			
+		});
+	});
+	
 	self.initialized = initialized;
 	return initialized;
 };
@@ -205,13 +249,61 @@ RabbitConnector.prototype.messageReceived = function (msg) {
 		//This mimicks how socketio works.
 		return;
 	}
-	console.log('rabbit ['+self.inbox+'] => ', msg);
+	//console.log('rabbit ['+self.inbox+'] => ', msg);
 
 	var socket = self.socket;
 	socket.emit(msg.type, msg.data);
 };
 
 RabbitConnector.prototype.configure = function() {
+
+	this.configureRequest('discoverServiceRequest');
+	/*
+	  'disoverServiceRequest' is sent when a process wants to discover
+	  providers that are available for a given service.
+	  info in this message: {
+	      username: 'kdvolder',
+          service: 'org.eclipse.flux.jdt'
+          ... calback id etc...
+	   }
+     */
+     this.configureResponse('discoverServiceResponse');
+	/* {
+	    username: 'kdvolder',
+	    service: 'org.eclipse.flux.jdt'
+	    status: 'available' | 'starting' | 'ready' | 'unavailable',
+	    responseSenderID: <id-of-flux-client-who-sent-the-response>
+	}
+
+	These status codes have the following meaning:
+	 - available: A reply sent by a service provider that has the capability
+	              to provide the requested service but is not yet ready
+	              to do so. It is the responsibility of the client
+	              to decide whether they want this particular provider
+	              start providing the service by sending a 'startService' request
+	              to them.
+	 - starting:  Sent by a service provider that has already begun the process
+	              of intializing itself to provide the requested service but
+	              is not yet ready to do so.
+	 - ready:     A reply sent by a service provider that is ready
+	              to respond to requests right away.
+	 - unavailable: Provider is not able to provide the requested service.
+	              The message may contain an additional 'error' field explaining
+	              why the service is not available.
+	              Service providers may elect not to respond at all rather than
+	              explicitly explain their unavailability.
+    */
+    
+    this.configureBroadcast('serviceStatusChange');
+    /* {
+	    username: 'kdvolder',
+	    service: 'org.eclipse.flux.jdt'
+	    status: 'available' | 'starting' | 'ready' | 'unavailable',
+	    senderID: <id-of-flux-client-who-sent-the-response>
+    } */
+    
+	this.configureRequest('serviceRequiredRequest');
+    this.configureResponse('serviceRequiredResponse');
 
 	this.configureServiceBroadcast('serviceReady');
 	this.configureDirectRequest('startServiceRequest');
@@ -255,6 +347,9 @@ RabbitConnector.prototype.configure = function() {
 
 	this.configureRequest('renameinfilerequest');
 	this.configureResponse('renameinfileresponse');
+	
+	this.configureRequest('javadocrequest');
+	this.configureResponse('javadocresponse');
 
 };
 
@@ -263,7 +358,7 @@ RabbitConnector.prototype.configureRequest = function(type) {
 	var outbox = self.outbox;
 	this.socket.on(type, function (data) {
 		data.requestSenderID = self.inbox;
-		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		return self.channel.publish(outbox, usernameToRoutingKey(data.username),
 			self.encode({type: type, origin: self.inbox, data: data})
 		);
@@ -276,9 +371,8 @@ RabbitConnector.prototype.configureBroadcast = function (type) {
 	this.socket.on(type, function (data) {
 		//'data' from websocket client.
 		//Must send it to rabbit mq.
-
-		// broadcast type messages don't expect a reply back. So need to set
-		// 'requestSenderID'
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
+		data.senderID = self.inbox;
 		return self.channel.publish(outbox, usernameToRoutingKey(data.username),
 			self.encode({type: type, origin: self.inbox, data: data})
 		);
@@ -288,7 +382,8 @@ RabbitConnector.prototype.configureBroadcast = function (type) {
 RabbitConnector.prototype.configureResponse = function(type) {
 	var self = this;
 	this.socket.on(type, function (data) {
-		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		data.responseSenderID = self.inbox;
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		//Deliver directly to inbox of the requester
 		self.channel.publish('', data.requestSenderID,
 			self.encode({type: type, origin: self.inbox, data: data})
@@ -301,7 +396,7 @@ RabbitConnector.prototype.configureDirectRequest = function(type) {
 	var outbox = self.outbox;
 	this.socket.on(type, function (data) {
 		data.requestSenderID = self.inbox;
-		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		return self.channel.publish('', data.socketID,
 			self.encode({type: type, origin: self.inbox, data: data})
 		);
@@ -311,8 +406,9 @@ RabbitConnector.prototype.configureDirectRequest = function(type) {
 RabbitConnector.prototype.configureDirectResponse = function(type) {
 	var self = this;
 	this.socket.on(type, function (data) {
-		data.socketID = self.inbox;
-		console.log("rabbit ["+ self.inbox +"] <= ", type, data);
+		data.responseSenderID = self.inbox;
+		data.socketID = self.inbox; //Deprecate: use 'responseSenderID instead.
+		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		//Deliver directly to inbox of the requester
 		self.channel.publish('', data.requestSenderID,
 			self.encode({type: type, origin: self.inbox, data: data})
@@ -320,6 +416,8 @@ RabbitConnector.prototype.configureDirectResponse = function(type) {
 	});
 };
 
+
+//TODO: Why do we need that?
 RabbitConnector.prototype.configureServiceBroadcast = function(type) {
 	var self = this;
 	var outbox = self.outbox;

@@ -10,16 +10,8 @@
 *******************************************************************************/
 package org.eclipse.flux.core;
 
-/**
- * Connector reacting to start/stop services messages
- * 
- * @author aboyko
- *
- */
-public interface IServiceConnector {
+public class Constants {
 	
-	void startService(String user);
-	
-	void stopService();
+	public static final String SUPER_USER = "$super$";
 
 }

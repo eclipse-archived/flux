@@ -159,7 +159,7 @@ public class LiveEditUnits {
 		try {
 			JSONObject message = new JSONObject();
 			message.put("username", repository.getUsername());
-			message.put("project", project.getName());
+			message.put("projectRegEx", project.getName());
 			message.put("callback_id", GET_LIVE_RESOURCES_CALLBACK);
 			messagingConnector.send("getLiveResourcesRequest", message);
 		} catch (JSONException e) {
@@ -210,11 +210,10 @@ public class LiveEditUnits {
 	}
 
 	protected void startLiveUnit(String requestSenderID, int callbackID, String username, String resourcePath, String hash, long timestamp) {
-		if (repository.getUsername().equals(username) && resourcePath.endsWith(".java")) {
-
-			String projectName = resourcePath.substring(0, resourcePath.indexOf('/'));
-			String relativeResourcePath = resourcePath.substring(projectName.length() + 1);
-
+		String projectName = resourcePath.substring(0, resourcePath.indexOf('/'));
+		String relativeResourcePath = resourcePath.substring(projectName.length() + 1);
+		
+		if (repository.getUsername().equals(username) && resourcePath.endsWith(".java") && repository.isConnected(projectName)) {
 			ICompilationUnit liveUnit = liveEditUnits.get(resourcePath);
 			if (liveUnit != null) {
 				try {

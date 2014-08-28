@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.eclipse.flux.jdt.servicemanager</groupId>
-  <artifactId>org.eclipse.flux.jdt.servicemanager</artifactId>
+  <groupId>org.eclipse.flux.jdt.service.provider</groupId>
+  <artifactId>org.eclipse.flux.jdt.service.provider</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>JDT Service Manager</name>
   <description>Starts/Stops JDT service per user on demand</description>
@@ -23,9 +23,9 @@
         <configuration>
           <archive>
             <manifest>
-<!--               <addClasspath>true</addClasspath>
+              <addClasspath>true</addClasspath>
               <classpathPrefix>lib/</classpathPrefix>
- -->              <mainClass>org.eclipse.flux.jdt.servicemanager.JdtServiceManager</mainClass>
+              <mainClass>org.eclipse.flux.jdt.service.provider.JdtServiceProvider</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -46,12 +46,39 @@
           </descriptorRefs>
           <archive>
             <manifest>
-              <mainClass>org.eclipse.flux.jdt.servicemanager.JdtServiceManager</mainClass>
+              <mainClass>org.eclipse.flux.jdt.service.provider.JdtServiceProvider</mainClass>
             </manifest>
           </archive>
         </configuration>
       </plugin>
+       <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.4</version>
+        <executions>
+          <execution>
+            <id>copy</id>
+            <phase>process-resources</phase>
+            <configuration>
+              <tasks>
+              	<copy file="${basedir}/../org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/linux/gtk/x86_64/flux-jdt.jar" tofile="${basedir}/cfapps/org.eclipse.flux.jdt.jar"/>
+              	<copy file="${basedir}/config/manifest.yml" tofile="${basedir}/target/manifest.yml"/>
+              </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution> 
+        </executions>
+      </plugin>
     </plugins>
+    <resources>
+      <resource>
+        <directory>${basedir}/cfapps</directory>
+        <includes>
+          <include>**/*.jar</include>
+        </includes>
+      </resource>
+    </resources>
   </build>
   <dependencies>
   	<dependency>
