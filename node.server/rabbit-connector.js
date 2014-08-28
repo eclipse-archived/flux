@@ -347,6 +347,9 @@ RabbitConnector.prototype.configure = function() {
 
 	this.configureRequest('renameinfilerequest');
 	this.configureResponse('renameinfileresponse');
+	
+	this.configureRequest('javadocrequest');
+	this.configureResponse('javadocresponse');
 
 };
 

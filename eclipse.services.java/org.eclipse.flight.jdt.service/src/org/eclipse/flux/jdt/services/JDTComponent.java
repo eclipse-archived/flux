@@ -91,6 +91,7 @@ public class JDTComponent {
 		private ContentAssistService contentAssistService;
 		private NavigationService navigationService;
 		private RenameService renameService;
+		private JavaDocService javadocService;
 		private InitializeServiceEnvironment initializer;
 
 		@Override
@@ -111,6 +112,7 @@ public class JDTComponent {
 			this.contentAssistService = new ContentAssistService(messagingConnector, liveEditUnits);
 			this.navigationService = new NavigationService(messagingConnector, liveEditUnits);
 			this.renameService = new RenameService(messagingConnector, liveEditUnits);
+			this.javadocService = new JavaDocService(messagingConnector, liveEditUnits);
 			
 			String initJdtStr = System.getProperty("flux-initjdt") == null ? System.getenv("FLUX_INIT_JDT") : System.getProperty("flux-initjdt");
 			if (initJdtStr != null && Boolean.valueOf(initJdtStr)) {
@@ -130,6 +132,7 @@ public class JDTComponent {
 			contentAssistService.dispose();
 			navigationService.dispose();
 			renameService.dispose();
+			javadocService.dispose();
 			if (initializer != null) {
 				initializer.dispose();
 			}

@@ -71,6 +71,9 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 	this.configureRequest(socket, 'renameinfilerequest');
 	this.configureResponse(socket, sockets, 'renameinfileresponse');
 
+	this.configureRequest(socket, 'javadocrequest');
+	this.configureResponse(socket, sockets, 'javadocresponse');
+
 	socket.on('disconnect', function () {
 		console.log('client disconnected from update notifications');
 	});
