@@ -212,13 +212,13 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
  The prototype uses RabbitMQ to relay messages between clients. So you must create
  and bind a RabbitMQ service instance to your cloudfoundry app for it to work.
  
-## Service Manager for IDE services
+## Service Provider for IDE services
 
-Service Managers are applications listening to messages form Flux and starting/stopping services for users depending on the need of a service. Service Managers are deployed, started and shut down by Flux "admin" users.
+Service Providers are applications listening to messages form Flux and maintaining a pool of IDE tooling services that are not assigned a user yet. Service Providers are deployed and started once one of the services in the pool is assigned a user.
  
-### JDT Service Manager
+### JDT Service Provider
 
- JDT Service Manager is meant to start JDT services for users requiring them and shut JDT services down for users that are not using them. The service manager lives in __org.eclipse.flux.jdt.servicemanager__ java project. It can be launched as Java application. The application accepts the following parameters:
+ JDT Service Provider is meant to maintain JDT services pool. The service provider lives in __org.eclipse.flux.jdt.service.provider__ java project. It can be launched as Java application. The application accepts the following parameters:
 
  * __-host__ Flux messaging server URL
  * __-user__ Flux "admin" user id
@@ -229,9 +229,17 @@ Service Managers are applications listening to messages form Flux and starting/s
  * __-org__ Cloud Foundry organization name
  * __-space__ Cloud Foundry space name
  * __-app__ Application location (either the .jar to be deployed on Cloud Foundry or the JDT service product folder)
+
+__Note:__ if __-cfUrl__ parameter is not entered then JDT services would be started as local processes.
  
-__Note:__ if __-cfUrl__ parameter is not entered then JDT services would started as local processes.
+ JDT service provider can be deployed on Cloud Foundry. In order to do so follow the instructions below:
  
+1. Build headless Flux JDT service and generate Flux JDT service jar that can be deployed on the Cloud Foundry as explained in the next list
+2. Locate __org.eclipse.flux.jdt.service.provider/config/manifest.yml__ file and provide necessary info in it (Env. variables are self-explanatory)
+3. Navigate to __org.eclipse.flux.service.common__ via console and execute _"mvn clean install"_
+4. Navigate to __org.eclipse.flux.jdt.service.provider__ via console and execute _"mvn clean package"_ twice (BUG: copying of flux-jdt.jar happens after the build)
+5. Navigate to __org.eclipse.flux.jdt.service.provider/target__ folder via console and execute _"cf p"_ 
+  
 Flux JDT service jar that can be deployed on the Cloud Foundry can be created with these steps:
  
 1. Navigate to _org.eclipse.flux.headless.releng_ folder
