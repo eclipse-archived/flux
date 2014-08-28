@@ -19,11 +19,8 @@
 		</div>
 		
 		<div id="content" layout:fragment="content">
-			<h3>You are Singed in using your Github Profile</h3>
+			<h3>Signed in to Flux using GitHub</h3>
 			
-			<p>Token: <span th:text="${fluxToken}">name</span> </p>
-			
-			<p>Hello, <span th:text="${profile.name}">name</span>!</p>
 			<dl>
 				<dt>Github Login:</dt>
 				<dd th:text="${profile.login}">profile id</dd>

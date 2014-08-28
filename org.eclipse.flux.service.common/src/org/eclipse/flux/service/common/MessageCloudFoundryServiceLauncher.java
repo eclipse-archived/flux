@@ -24,6 +24,7 @@ import org.cloudfoundry.client.lib.CloudFoundryException;
 import org.cloudfoundry.client.lib.UploadStatusCallback;
 import org.cloudfoundry.client.lib.domain.CloudApplication;
 import org.cloudfoundry.client.lib.domain.Staging;
+import org.eclipse.flux.client.MessageConnector;
 
 /**
  * Starts/Stops services on the Cloud Foundry

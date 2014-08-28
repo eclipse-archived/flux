@@ -19,10 +19,11 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.flux.client.FluxClient;
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.service.common.IServiceLauncher;
 import org.eclipse.flux.service.common.MessageCliServiceLauncher;
 import org.eclipse.flux.service.common.MessageCloudFoundryServiceLauncher;
-import org.eclipse.flux.service.common.MessageConnector;
 import org.eclipse.flux.service.common.ToolingServiceManager;
 import org.eclipse.flux.service.common.Utils;
 
@@ -43,6 +44,8 @@ public class JdtServiceManager {
 	private static final String JDT_RESOURCE_REGEX = ".*\\.java|.*\\.class";
 	
 	private static final String DEFAULT_FLUX_URL = "http://localhost:3000";
+
+	private static FluxClient fluxClient = FluxClient.DEFAULT_INSTANCE;
 
 	/**
 	 * Launches the application. If command line arguments are present, the
@@ -146,7 +149,7 @@ public class JdtServiceManager {
 			serviceFolderPath = sb.toString();
 		}
 		
-		final MessageConnector messageConnector = new MessageConnector(
+		final MessageConnector messageConnector = fluxClient.connect(
 				host.toString(), username, password);
 
 		if (cfUrl == null) {

@@ -1,4 +1,4 @@
-package org.springframework.social.showcase.flux;
+package org.springframework.social.showcase.flux.support;
 
 /*
  * Copyright 2013 the original author or authors.
@@ -30,8 +30,8 @@ public class FluxConnectionFactory extends OAuth2ConnectionFactory<Flux> {
 	 * @param clientId client ID
 	 * @param clientSecret client secret
 	 */
-	public FluxConnectionFactory(String clientId, String clientSecret) {
-		super("flux", new FluxServiceProvider(clientId, clientSecret), new FluxAdapter());
+	public FluxConnectionFactory(String fluxHost, String clientId, String clientSecret) {
+		super("flux", new FluxServiceProvider(fluxHost, clientId, clientSecret), new FluxAdapter());
 	}
 
 }

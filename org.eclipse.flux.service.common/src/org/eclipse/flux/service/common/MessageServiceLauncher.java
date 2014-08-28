@@ -14,6 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.IMessageHandler;
 import org.json.JSONException;
 import org.json.JSONObject;
 

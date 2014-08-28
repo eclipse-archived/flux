@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
+import org.eclipse.flux.client.MessageConnector;
+
 /**
  * Launches process for a JDT service. Emulates Cloud Foundry JDT services
  * 

@@ -8,7 +8,7 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.eclipse.flux.service.common;
+package org.eclipse.flux.client.impl;
 
 import io.socket.IOAcknowledge;
 import io.socket.IOCallback;
@@ -16,12 +16,9 @@ import io.socket.SocketIO;
 import io.socket.SocketIOException;
 
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -31,6 +28,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.IMessageHandler;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -38,11 +38,9 @@ import org.json.JSONObject;
  * Connector to Flux web socket
  * 
  * @author aboyko
- *
+ * @author kdvolder
  */
-public final class MessageConnector {
-	
-	static Map<URL, MessageConnector> pool = new HashMap<URL, MessageConnector>();
+public final class SocketIOMessageConnector implements MessageConnector {
 	
 	private SocketIO socket;
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
@@ -53,7 +51,7 @@ public final class MessageConnector {
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
 	private AtomicBoolean connected = new AtomicBoolean(false);
 	
-	public MessageConnector(final String host, final String login, String token) {
+	public SocketIOMessageConnector(final String host, final String login, String token) {
 		this.host = host;
 		this.login = login;
 		this.token = token;
@@ -208,7 +206,10 @@ public final class MessageConnector {
 	}
 
 	public void removeMessageHandler(IMessageHandler messageHandler) {
-		this.messageHandlers.get(messageHandler.getMessageType()).remove(messageHandler);
+		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageHandler.getMessageType());
+		if (handlers!=null) {
+			handlers.remove(messageHandler);
+		}
 	}
 	
 	public void addChannelListener(IChannelListener listener) {

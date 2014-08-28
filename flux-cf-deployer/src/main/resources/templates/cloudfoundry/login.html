@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+	  xmlns:social="http://spring.io/springsocial"
+	  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	  layout:decorator="layout">
+	<head>
+		<title>Spring Social Showcase</title>
+		<link rel="stylesheet" th:href="@{/page.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/form.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/messages/messages.css}" type="text/css" media="screen"></link>
+	</head>
+	<body>
+		<div id="header">
+			<h1><a th:href="@{/}">Flux Cloud Foundry Deployer</a></h1>
+		</div>
+		
+		<div id="leftNav">
+			Left nav menu
+		</div>
+		
+		<div id="content" layout:fragment="content">
+			<form id="signin" th:action="@{/cloudfoundry/processLogin}" method="post">
+				<input type="hidden" name="_csrf" th:value="${_csrf.token}"></input>
+				<p>To deploy an app you must be logged in to CloudFoundry. Use the form below
+				to log in. Then try again.</p>
+			
+				<div class="formInfo">
+					<div class="error" th:if="${param.error eq 'bad_credentials'}">
+						Your sign in information was incorrect.
+						Please try again or <a th:href="@{/signup}">sign up</a>.
+					</div>
+				</div>
+				<fieldset>
+					<label for="login">Username</label>
+					<input id="login" name="cf_login" type="text" size="25"></input>
+					<label for="password">Password</label>
+					<input id="password" name="cf_password" type="password" size="25"></input>
+				</fieldset>
+				<button type="submit">Sign In</button>
+			</form>
+		</div>		
+	</body>
+</html>

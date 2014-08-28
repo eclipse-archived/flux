@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.social.showcase.flux;
+package org.springframework.social.showcase.flux.support;
 
 import org.springframework.social.oauth2.AbstractOAuth2ServiceProvider;
 import org.springframework.social.oauth2.OAuth2Template;
@@ -25,8 +25,11 @@ import org.springframework.social.oauth2.OAuth2Template;
  */
 public class FluxServiceProvider extends AbstractOAuth2ServiceProvider<Flux> {
 
-	public FluxServiceProvider(String clientId, String clientSecret) {
+	private String fluxHost;
+
+	public FluxServiceProvider(String fluxHost, String clientId, String clientSecret) {
 		super(createOAuth2Template(clientId, clientSecret));
+		this.fluxHost = fluxHost;
 	}
 
 	private static OAuth2Template createOAuth2Template(String clientId, String clientSecret) {
@@ -36,7 +39,7 @@ public class FluxServiceProvider extends AbstractOAuth2ServiceProvider<Flux> {
 	}
 
 	public Flux getApi(String accessToken) {
-		return new FluxImpl(accessToken);
+		return new FluxImpl(accessToken, fluxHost);
 	} 
 
 }

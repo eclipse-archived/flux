@@ -69,6 +69,14 @@
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
 		</dependency>
+		
+		<!-- flux -->
+ 		<dependency>
+			<groupId>org.eclipse.flux.service.common</groupId>
+			<artifactId>org.eclipse.flux.service.common</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		
 	</dependencies>
 
 	<properties>

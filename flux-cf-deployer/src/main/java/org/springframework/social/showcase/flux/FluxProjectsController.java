@@ -28,17 +28,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 @Controller
-public class FluxProfileController {
+public class FluxProjectsController {
 
 	@Inject
 	private ConnectionRepository connectionRepository;
 	
-	@RequestMapping(value="/flux", method=RequestMethod.GET)
-	public String projects(Principal currentUser, Model model) {
+	@RequestMapping(value="/flux/projects", method=RequestMethod.GET)
+	public String projects(Principal currentUser, Model model) throws Exception {
 		Connection<Flux> connection = connectionRepository.findPrimaryConnection(Flux.class);
 		model.addAttribute("profile", connection.getApi().getUserProfile());
 		model.addAttribute("fluxToken", connection.getApi().getAccessToken());
-		return "flux/profile";
+		model.addAttribute("projects", connection.getApi().getProjects());
+		return "flux/projects";
 	}
 	
 }

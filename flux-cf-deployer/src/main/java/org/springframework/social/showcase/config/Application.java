@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.social.connect.web.SignInAdapter;
+import org.springframework.social.showcase.flux.CloudFoundryManager;
+import org.springframework.social.showcase.flux.CloudFoundryManagerImpl;
 import org.springframework.social.showcase.signin.SimpleSignInAdapter;
 
 @ComponentScan(basePackages="org.springframework.social.showcase")
@@ -22,4 +24,9 @@ public class Application {
 		return new SimpleSignInAdapter(new HttpSessionRequestCache());
 	}
 
+	@Bean
+	public CloudFoundryManager cfm() {
+		return new CloudFoundryManagerImpl();
+	}
+	
 }

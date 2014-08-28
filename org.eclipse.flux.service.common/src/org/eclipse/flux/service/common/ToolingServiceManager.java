@@ -17,6 +17,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -46,7 +49,7 @@ final public class ToolingServiceManager {
 	private boolean active = false;
 		
 	/**
-	 * Web socket connector
+	 * Flux message bus connector
 	 */
 	private MessageConnector messageConnector;
 	

@@ -8,7 +8,7 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.eclipse.flux.service.common;
+package org.eclipse.flux.client;
 
 /**
  * Listener for channel connected/disconnected events

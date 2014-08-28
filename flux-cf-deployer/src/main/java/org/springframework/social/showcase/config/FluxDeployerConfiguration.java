@@ -39,8 +39,10 @@ import org.springframework.social.connect.ConnectionFactory;
 import org.springframework.social.connect.ConnectionRepository;
 import org.springframework.social.github.api.GitHub;
 import org.springframework.social.github.connect.GitHubConnectionFactory;
-import org.springframework.social.showcase.flux.Flux;
-import org.springframework.social.showcase.flux.FluxConnectionFactory;
+import org.springframework.social.showcase.flux.CloudFoundryManager;
+import org.springframework.social.showcase.flux.CloudFoundryManagerImpl;
+import org.springframework.social.showcase.flux.support.Flux;
+import org.springframework.social.showcase.flux.support.FluxConnectionFactory;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Spring Social connectivity with
@@ -51,11 +53,9 @@ import org.springframework.social.showcase.flux.FluxConnectionFactory;
  * @since ???
  */
 @Configuration
-@ConditionalOnClass({ SocialConfigurerAdapter.class, GitHubConnectionFactory.class })
-@ConditionalOnProperty(prefix = "spring.social.github.", value = "appId")
 @AutoConfigureBefore(SocialWebAutoConfiguration.class)
 @AutoConfigureAfter(WebMvcAutoConfiguration.class)
-public class GitHubConfiguration {
+public class FluxDeployerConfiguration {
 
 //	@Configuration
 //	@EnableSocial
@@ -117,6 +117,7 @@ public class GitHubConfiguration {
 
 		protected ConnectionFactory<?> createConnectionFactory(Environment environment) {
 			return new FluxConnectionFactory(
+					environment.getRequiredProperty("cfd.flux.host"),
 					environment.getRequiredProperty("cfd.flux.github.client.id"),
 					environment.getRequiredProperty("cfd.flux.github.client.secret")
 			);
@@ -151,6 +152,5 @@ public class GitHubConfiguration {
 //		}
 
 	}
-	
 	
 }
