@@ -46,6 +46,8 @@ public final class KeepAliveConnector {
 	private IChannelListener channelListener = new IChannelListener() {
 		@Override
 		public void connected(String userChannel) {
+			unsetScheduledShutdown();
+			unsetKeepAliveDelayedMessage();
 			setKeepAliveDelayedMessage();
 		}
 

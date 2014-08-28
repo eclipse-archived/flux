@@ -51,17 +51,57 @@ public class JdtServiceProvider {
 	public static void main(String[] args) {
 		
 		URL host = null;
+		if (System.getenv("FLUX_HOST") != null) {
+			try {
+				host = new URL(System.getenv("FLUX_HOST"));
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+		}
+		
 		String serviceFolderPath = null;
+		
 		URL cfUrl = null;
-		String orgName = null;
-		String spaceName = null;
-		String username = null;
-		String password = "";
-		String cfUsername = null;
-		String cfPassword = "";
-		String appId = JDT_SERVICE_ID;
+		if (System.getenv("FLUX_CF_CONTROLLER_URL") != null) {
+			try {
+				cfUrl = new URL(System.getenv("FLUX_CF_CONTROLLER_URL"));
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		String orgName = System.getenv("FLUX_CF_ORG");
+		String spaceName = System.getenv("FLUX_CF_SPACE");
+		String username = System.getenv("FLUX_ADMIN_ID");
+		String password = System.getenv("FLUX_ADMIN_TOKEN") == null ? "" : System.getenv("FLUX_ADMIN_TOKEN");
+		String cfUsername = System.getenv("FLUX_CF_USER_ID");
+		String cfPassword = System.getenv("FLUX_CF_PASSWORD") == null ? "" : System.getenv("FLUX_CF_PASSWORD");
+		String appId = System.getenv("FLUX_SERVICE_APP_ID") == null ? JDT_SERVICE_ID : System.getenv("FLUX_SERVICE_APP_ID");
+		
 		int maxInstanceNumber = MAX_INSTANCE_NUMBER;
+		if (System.getenv("FLUX_SERVICE_MAX_INSTANCES") != null) {
+			try {
+				int n = Integer.valueOf(System.getenv("FLUX_SERVICE_MAX_INSTANCES"));
+				if (n > 0) {
+					maxInstanceNumber = n;
+				}
+			} catch (NumberFormatException e) {
+				e.printStackTrace();
+			}
+		}
+		
 		int poolSize = POOL_SIZE;
+		if (System.getenv("FLUX_SERVICE_POOL_SIZE") != null) {
+			try {
+				int n = Integer.valueOf(System.getenv("FLUX_SERVICE_POOL_SIZE"));
+				if (n > 0) {
+					poolSize = n;
+				}
+			} catch (NumberFormatException e) {
+				e.printStackTrace();
+			}
+		}
+
 		IServiceLauncher serviceLauncher = null;
 		
 		for (int i = 0; i < args.length; i+=2) {
@@ -137,39 +177,40 @@ public class JdtServiceProvider {
 		}
 		
 		if (serviceFolderPath == null) {
-			File serviceFolder = new File(System.getProperty("user.dir"));
-			StringBuilder sb = new StringBuilder(serviceFolder.getParent());
-			sb.append(File.separator);
-			sb.append("org.eclipse.flux.headless.product");
-			sb.append(File.separator);
-			sb.append("target");
-			sb.append(File.separator);
-			sb.append("products");
-			sb.append(File.separator);
-			sb.append("org.eclipse.flux.headless");
-			sb.append(File.separator);
 			if (cfUrl == null) {
+				File serviceFolder = new File(System.getProperty("user.dir"));
+				StringBuilder sb = new StringBuilder(serviceFolder.getParent());
+				sb.append(File.separator);
+				sb.append("org.eclipse.flux.headless.product");
+				sb.append(File.separator);
+				sb.append("target");
+				sb.append(File.separator);
+				sb.append("products");
+				sb.append(File.separator);
+				sb.append("org.eclipse.flux.headless");
+				sb.append(File.separator);
 				sb.append("macosx");
 				sb.append(File.separator);
 				sb.append("cocoa");
+				sb.append(File.separator);
+				sb.append("x86_64");
+				serviceFolderPath = sb.toString();
 			} else {
-				sb.append("linux");
-				sb.append(File.separator);
-				sb.append("gtk");
+				File appFile = new File(System.getProperty("user.dir"), JDT_SERVICE_ID + ".jar");
+				if (appFile.exists()) {
+					serviceFolderPath = appFile.getPath();
+				} else {
+					throw new IllegalArgumentException("Cloud Foundry deployable service does not exist at location: " + appFile.getPath());
+				} 
 			}
-			sb.append(File.separator);
-			sb.append("x86_64");
-			if (cfUrl != null) {
-				sb.append(File.separator);
-				sb.append("flux-jdt.jar");
-			}
-			serviceFolderPath = sb.toString();
 		}
+		
+		boolean localDeployment = cfUrl == null;
 		
 		final MessageConnector messageConnector = new MessageConnector(
 				host.toString(), username, password);
 
-		if (cfUrl == null) {
+		if (localDeployment) {
 			serviceLauncher = createCFImmitationServiceLauncher(
 					host.toString(), serviceFolderPath, username, password);
 		} else {
@@ -186,7 +227,9 @@ public class JdtServiceProvider {
 			}
 		}
 
-		final ToolingServiceProvider jdtServiceProvider = new ToolingServiceProvider(messageConnector, JDT_SERVICE_ID, serviceLauncher, poolSize);
+		final ToolingServiceProvider jdtServiceProvider = new ToolingServiceProvider(
+				messageConnector, JDT_SERVICE_ID, serviceLauncher, poolSize,
+				localDeployment);
 		
 		System.out.print("\nConnecting to Flux server: " + host.toString() + " ...");
 		while (!messageConnector.isConnected()) {
@@ -243,7 +286,7 @@ public class JdtServiceProvider {
 		command.add("-Dflux-host=" + host);
 		command.add("-Dflux.user.name=" + login);
 		command.add("-Dflux.user.token=" + password);
-		command.add("-Dflux.jdt.lazyStart=true");
+		command.add("-Dflux.lazyStart=true");
 		command.add("-Dflux-initjdt=true");
 		command.add(Utils.getEquinoxLauncherJar(serviceFolder));
 		command.add("-data");

@@ -208,7 +208,10 @@ public final class MessageConnector {
 	}
 
 	public void removeMessageHandler(IMessageHandler messageHandler) {
-		this.messageHandlers.get(messageHandler.getMessageType()).remove(messageHandler);
+		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageHandler.getMessageType());
+		if (handlers != null) {
+			handlers.remove(messageHandler);
+		}
 	}
 	
 	public void addChannelListener(IChannelListener listener) {

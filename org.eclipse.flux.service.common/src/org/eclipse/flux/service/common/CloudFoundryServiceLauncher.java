@@ -29,13 +29,11 @@ public class CloudFoundryServiceLauncher implements IServiceLauncher {
 
 	private CloudFoundryClient cfClient;
 	private String appId;
-	private int numberOfInstances;
 	final private int maxInstancesNumber;
 
 	public CloudFoundryServiceLauncher(String appId, URL cfControllerUrl, String orgName, String spaceName, String cfLogin, String cfPassword, String fluxUrl, String username, String password, 
 			File appLocation, int maxInstancesNumber) throws IOException {
 		this.appId = appId;
-		this.numberOfInstances = 0;
 		if (maxInstancesNumber < 1) {
 			throw new IllegalArgumentException("Max number of instances cannot be less than 1.");
 		}
@@ -78,59 +76,43 @@ public class CloudFoundryServiceLauncher implements IServiceLauncher {
 	}
 
 	@Override
-	public void init() {
+	public synchronized void init() {
 		cfClient.login();
 		cfClient.startApplication(appId);
-		numberOfInstances = 1;
-		
-		/*
-		 * HACK: wait until app instance is started. Not sure how to do that with CF client API
-		 */
-		boolean started = false;
-		while (!started) {
-			try {
-				cfClient.updateApplicationInstances(appId, numberOfInstances);
-				started = true;
-			} catch (Throwable t) {
-				try {
-					Thread.sleep(5000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
 	}
 
 	@Override
 	public synchronized void startService(int n) throws Exception {
 		cfClient.login();
 		boolean updated = false;
-		int difference = maxInstancesNumber - n - numberOfInstances;
-		if (difference < 0) {
-			n += difference;
-		}
-		if (n > 0) {
-			while (!updated) {
-				try {
+		while (!updated) {
+			try {
+				int numberOfInstances = cfClient.getApplication(appId)
+						.getInstances();
+				int difference = maxInstancesNumber - n - numberOfInstances;
+				if (difference < 0) {
+					n += difference;
+				}
+				if (n > 0) {
 					cfClient.updateApplicationInstances(appId,
 							numberOfInstances + n);
-					numberOfInstances += n;
-					updated = true;
-				} catch (CloudFoundryException cfe) {
-					if (cfe.getStatusCode() == HttpStatus.NOT_FOUND) {
-						try {
-							Thread.sleep(2000);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					} else {
-						throw cfe;
+				}
+				updated = true;
+				if (difference <= 0) {
+					throw new Exception(
+							"Maximum number of services is running. Cannot start anymore services!");
+				}
+			} catch (CloudFoundryException cfe) {
+				if (cfe.getStatusCode() == HttpStatus.NOT_FOUND) {
+					try {
+						Thread.sleep(2000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
 					}
+				} else {
+					throw cfe;
 				}
 			}
-		}
-		if (difference <= 0) {
-			throw new Exception("Maximum number of service is running. Cannot start anymore services!");
 		}
 	}
 
