@@ -80,8 +80,12 @@ public class DownloadProject {
 		project = root.getProject(projectName);
 
 		try {
-			project.create(null);
-			project.open(null);
+			if (!project.exists()) {
+				project.create(null);
+			}
+			if (!project.isOpen()) {
+				project.open(null);
+			}
 
 			JSONObject message = new JSONObject();
 			message.put("callback_id", this.callbackID);

@@ -11,9 +11,7 @@
 package org.eclipse.flux.jdt.services;
 
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.IncrementalProjectBuilder;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.flux.core.AbstractMessageHandler;
 import org.eclipse.flux.core.CallbackIDAwareMessageHandler;
@@ -50,7 +48,6 @@ public class InitializeServiceEnvironment {
 		getProjectsResponseHandler = new CallbackIDAwareMessageHandler("getProjectsResponse", GET_PROJECTS_CALLBACK) {
 			@Override
 			public void handleMessage(String messageType, JSONObject message) {
-				messagingConnector.removeMessageHandler(this);
 				handleGetProjectsResponse(message);
 			}
 		};
@@ -108,17 +105,6 @@ public class InitializeServiceEnvironment {
 			// already connected project
 			if (repository.isConnected(projectName))
 				return;
-
-			// project exists in workspace, but is not yet connected
-			IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-			IProject project = root.getProject(projectName);
-			if (project.exists()) {
-				if (!project.isOpen()) {
-					project.open(null);
-				}
-				repository.addProject(project);
-				return;
-			}
 
 			// project doesn't exist in workspace
 			DownloadProject downloadProject = new DownloadProject(messagingConnector, projectName, repository.getUsername());
