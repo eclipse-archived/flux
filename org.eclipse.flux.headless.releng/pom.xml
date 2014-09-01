@@ -23,8 +23,8 @@
 	<modules>
 		<module>../org.eclipse.flux.headless.product</module>
 		<module>../org.eclipse.flux.headless.feature</module>
-		<module>../eclipse.core/org.eclipse.flight.core</module>
-		<module>../eclipse.services.java/org.eclipse.flight.jdt.service</module>
+		<module>../org.eclipse.flux.core</module>
+		<module>../org.eclipse.flux.jdt.service</module>
 	</modules>
 
 
