@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site pack200="true">
+  <description url="http://www.springsource.com/products/sts">
+    Eclipse Flux IDE Integration Repository
+  </description>
+
+  <category-def name="Eclipse Flux / Eclipse IDE Integration" label="Eclipse Flux / Eclipse IDE Integration"/>
+
+  <feature
+	id="org.eclipse.flux.ide.integration.feature"
+	version="0.0.0">
+	<category name="Eclipse Flux / Eclipse IDE Integration" />
+  </feature>
+
+  <feature
+	id="org.eclipse.flux.ide.integration.jdtservice.feature"
+	version="0.0.0">
+	<category name="Eclipse Flux / Eclipse IDE Integration" />
+  </feature>
+
+</site>
