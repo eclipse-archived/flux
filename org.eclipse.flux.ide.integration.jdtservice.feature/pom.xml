@@ -6,7 +6,7 @@
 
 	<artifactId>org.eclipse.flux.ide.integration.jdtservice.feature</artifactId>
 	<packaging>eclipse-feature</packaging>
-	<name>Flux Eclipse IDE Integration Feature</name>
+	<name>Flux Eclipse IDE Integration - JDT Service Addon Feature</name>
 
 	<parent>
 		<version>0.1.0-SNAPSHOT</version>
