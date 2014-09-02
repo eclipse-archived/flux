@@ -11,14 +11,20 @@
 package org.eclipse.flux.core;
 
 import java.io.ByteArrayInputStream;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.m2e.core.MavenPlugin;
+import org.eclipse.m2e.core.project.ResolverConfiguration;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,7 +36,6 @@ public class DownloadProject {
 
 	public interface CompletionCallback {
 		public void downloadComplete(IProject project);
-
 		public void downloadFailed();
 	}
 
@@ -48,6 +53,8 @@ public class DownloadProject {
 
 	private CallbackIDAwareMessageHandler projectResponseHandler;
 	private CallbackIDAwareMessageHandler resourceResponseHandler;
+	
+	private Set<String> projectFiles = new HashSet<String>();
 
 	public DownloadProject(IMessagingConnector messagingConnector, String projectName, String username) {
 		this.messagingConnector = messagingConnector;
@@ -143,6 +150,8 @@ public class DownloadProject {
 					String type = resource.optString("type");
 
 					if (type.equals("file")) {
+						this.projectFiles.add(resourcePath);
+						
 						JSONObject message = new JSONObject();
 						message.put("callback_id", callbackID);
 						message.put("username", this.username);
@@ -181,7 +190,7 @@ public class DownloadProject {
 				if (downloaded == this.requestedFileCount.get()) {
 					this.messagingConnector.removeMessageHandler(projectResponseHandler);
 					this.messagingConnector.removeMessageHandler(resourceResponseHandler);
-					this.completionCallback.downloadComplete(project);
+					finish();
 				}
 			}
 		} catch (Exception e) {
@@ -189,6 +198,32 @@ public class DownloadProject {
 			this.messagingConnector.removeMessageHandler(projectResponseHandler);
 			this.messagingConnector.removeMessageHandler(resourceResponseHandler);
 			this.completionCallback.downloadFailed();
+		}
+	}
+	
+	public void finish() {
+		if (projectFiles.contains("pom.xml") && !projectFiles.contains(".project")) {
+			IFile pomFile = project.getFile("pom.xml");
+			if (pomFile != null && pomFile.exists()) {
+				importAsPureMavenProject(pomFile);
+			}
+		}
+		// we need to do the same for Gradle projects
+		
+		this.completionCallback.downloadComplete(project);
+	}
+
+	private void importAsPureMavenProject(IFile pomFile) {
+		try {
+			NullProgressMonitor pm = new NullProgressMonitor();
+			
+			ResolverConfiguration resolverConfiguration = new ResolverConfiguration();
+			String activeProfiles = "pom.xml";
+			resolverConfiguration.setActiveProfiles(activeProfiles);
+			
+			MavenPlugin.getProjectConfigurationManager().enableMavenNature(project, resolverConfiguration, pm);
+		}
+		catch (CoreException e) {
 		}
 	}
 
