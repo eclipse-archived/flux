@@ -27,11 +27,13 @@ import org.json.JSONObject;
  */
 public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 
-	private IMessagingConnector messagingConnector;
+	private final IMessagingConnector messagingConnector;
+	private final String username;
 
-	public SyncDownloadSelectionDialog(final Shell parent, final ILabelProvider renderer, final IMessagingConnector messagingConnector) {
+	public SyncDownloadSelectionDialog(final Shell parent, final ILabelProvider renderer, final IMessagingConnector messagingConnector, final String username) {
 		super(parent, renderer);
 		this.messagingConnector = messagingConnector;
+		this.username = username;
 
 		this.setMultipleSelection(true);
 		this.setAllowDuplicates(false);
@@ -69,6 +71,7 @@ public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 			
 			JSONObject message = new JSONObject();
 			message.put("callback_id", callbackID);
+			message.put("username", username);
 			this.messagingConnector.send("getProjectsRequest", message);
 		} catch (JSONException e1) {
 			e1.printStackTrace();

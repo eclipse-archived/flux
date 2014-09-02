@@ -37,7 +37,7 @@ public class SyncDownloadHandler extends AbstractHandler {
 		
 		final Shell shell = FluxUiPlugin.getDefault().getWorkbench().getActiveWorkbenchWindow().getShell();
 
-		SyncDownloadSelectionDialog selectionDialog = new SyncDownloadSelectionDialog(shell, new LabelProvider(), messagingConnector);
+		SyncDownloadSelectionDialog selectionDialog = new SyncDownloadSelectionDialog(shell, new LabelProvider(), messagingConnector, repository.getUsername());
 		int result = selectionDialog.open();
 		
 		if (result == Dialog.OK) {
