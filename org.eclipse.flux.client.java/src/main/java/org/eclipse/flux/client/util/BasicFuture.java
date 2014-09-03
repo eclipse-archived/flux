@@ -1,29 +1,13 @@
-/*
- * ====================================================================
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+/*******************************************************************************
+ * Copyright (c) 2014 Pivotal Software, Inc. and others.
+ * All rights reserved. This program and the accompanying materials are made 
+ * available under the terms of the Eclipse Public License v1.0 
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- * ====================================================================
- *
- * This software consists of voluntary contributions made by many
- * individuals on behalf of the Apache Software Foundation.  For more
- * information on the Apache Software Foundation, please see
- * <http://www.apache.org/>.
- *
- */
+ * Contributors:
+ *     Pivotal Software, Inc. - initial API and implementation
+*******************************************************************************/
 package org.eclipse.flux.client.util;
 
 import java.util.concurrent.ExecutionException;
@@ -32,120 +16,108 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Basic implementation of the {@link Future} interface. <tt>BasicFuture<tt>
- * can be put into a completed state by invoking any of the following methods:
- * {@link #cancel()}, {@link #failed(Exception)}, or {@link #completed(Object)}.
- *
- * @param <T> the future result type of an asynchronous operation.
- * @since 4.2
+ * Basic implementation of Future interface. Note: Apache http libs have something similar to
+ * this, but we don't want a dependency on that lib.
+ * 
+ * @author Kris De Volder
  */
-public class BasicFuture<T> implements Future<T>, Cancellable {
+public class BasicFuture<T> implements Future<T> {
 
-    private final FutureCallback<T> callback;
+	private boolean isDone = false;
+	
+	private Throwable exception; //set when 'rejected'
+	private T value; //set when 'resolved'
 
-    private volatile boolean completed;
-    private volatile boolean cancelled;
-    private volatile T result;
-    private volatile Exception ex;
+	private Runnable onDone;
+	
+	@Override
+	public boolean cancel(boolean mayInterruptIfRunning) {
+		throw new UnsupportedOperationException("Not implemented");
+	}
 
-    public BasicFuture(final FutureCallback<T> callback) {
-        super();
-        this.callback = callback;
-    }
+	@Override
+	public boolean isCancelled() {
+		return false;
+	}
 
-    public boolean isCancelled() {
-        return this.cancelled;
-    }
+	@Override
+	public boolean isDone() {
+		return isDone;
+	}
+	
+	public synchronized void resolve(T value) {
+		if (isDone) {
+			return;
+		}
+		this.value = value;
+		done();
+	}
+	
+	public synchronized void reject(Throwable e) {
+		if (isDone) {
+			return;
+		}
+		this.exception = e;
+		if (this.exception==null) {
+			this.exception = new RuntimeException();
+		}
+	}
 
-    public boolean isDone() {
-        return this.completed;
-    }
+	/**
+	 * Transition to 'done' state. If already in the 'done' state this does nothing.
+	 */
+	private void done() {
+		Runnable runOnDone = null;
+		synchronized (this) {
+			if (isDone) {
+				return;
+			}
+			isDone = true;
+			notifyAll();
+			runOnDone = onDone;
+			onDone = null;
+		}
+		//Careful to call runnable outside synch block. We don't know what it does and
+		// it should be responsible for its own thread synch/locks. This is still
+		//thread safe because using a local variable
+		if (runOnDone!=null) {
+			runOnDone.run();
+		}
+	}
+	
+	@Override
+	public synchronized T get() throws InterruptedException, ExecutionException {
+		waitUntilDone();
+		if (this.exception!=null) {
+			throw new ExecutionException(exception);
+		}
+		return value;
+	}
 
-    private T getResult() throws ExecutionException {
-        if (this.ex != null) {
-            throw new ExecutionException(this.ex);
-        }
-        return this.result;
-    }
+	private synchronized void waitUntilDone() throws ExecutionException {
+		while (!isDone()) {
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				//ignore
+			}
+		}
+	}
 
-    public synchronized T get() throws InterruptedException, ExecutionException {
-        while (!this.completed) {
-            wait();
-        }
-        return getResult();
-    }
+	@Override
+	public synchronized T get(long timeout, TimeUnit unit) throws InterruptedException,
+			ExecutionException, TimeoutException {
+		throw new UnsupportedOperationException("Not implemented");
+	}
 
-    public synchronized T get(long timeout, final TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        long msecs = unit.toMillis(timeout);
-        long startTime = (msecs <= 0) ? 0 : System.currentTimeMillis();
-        long waitTime = msecs;
-        if (this.completed) {
-            return getResult();
-        } else if (waitTime <= 0) {
-            throw new TimeoutException();
-        } else {
-            for (;;) {
-                wait(waitTime);
-                if (this.completed) {
-                    return getResult();
-                } else {
-                    waitTime = msecs - (System.currentTimeMillis() - startTime);
-                    if (waitTime <= 0) {
-                        throw new TimeoutException();
-                    }
-                }
-            }
-        }
-    }
-
-    public boolean completed(final T result) {
-        synchronized(this) {
-            if (this.completed) {
-                return false;
-            }
-            this.completed = true;
-            this.result = result;
-            notifyAll();
-        }
-        if (this.callback != null) {
-            this.callback.completed(result);
-        }
-        return true;
-    }
-
-    public boolean failed(final Exception exception) {
-        synchronized(this) {
-            if (this.completed) {
-                return false;
-            }
-            this.completed = true;
-            this.ex = exception;
-            notifyAll();
-        }
-        if (this.callback != null) {
-            this.callback.failed(exception);
-        }
-        return true;
-    }
-
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        synchronized(this) {
-            if (this.completed) {
-                return false;
-            }
-            this.completed = true;
-            this.cancelled = true;
-            notifyAll();
-        }
-        if (this.callback != null) {
-            this.callback.cancelled();
-        }
-        return true;
-    }
-
-    public boolean cancel() {
-        return cancel(true);
-    }
+	/**
+	 * Schedule a runnable to be executed when this future transitions to 'done' state
+	 */
+	public synchronized void whenDone(Runnable runnable) {
+		if (onDone!=null) {
+			throw new IllegalStateException("whenDone callback already registered");
+		}
+		onDone = runnable;
+	}
 
 }

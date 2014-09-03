@@ -10,11 +10,12 @@
 *******************************************************************************/
 package org.springframework.social.showcase.cloudfoundry;
 
-
 /**
  * An instance of this class represents a deployed flux application. When the deployment is activated, the 
  * flux project in question is deployed once and then monitored for changes and redeployed automatically 
  * each time it changes.
+ * 
+ * TODO: get rid of this class. We really only need {@link DeploymentConfig}
  */
 public class CfFluxDeployment {
 
@@ -23,6 +24,7 @@ public class CfFluxDeployment {
 	private String fluxProjectName;
 	private String cfSpace = null;
 	private boolean activated = false;
+	private boolean dirty = false;
 	
 	public CfFluxDeployment(CloudFoundry cf, String projectName) {
 		this.cf = cf;
@@ -55,8 +57,45 @@ public class CfFluxDeployment {
 		if (!config.getFluxProjectName().equals(fluxProjectName)) {
 			throw new IllegalArgumentException("Can not apply DeploymentConfig. Project names don't match");
 		}
-		this.cfSpace = config.getCfSpace();
-		this.activated = config.getActivated();
+		setCfSpace(config.getCfSpace());
+		setActivated(config.getActivated());
+		broadcastChanges(config);
+	}
+
+	private synchronized void broadcastChanges(DeploymentConfig config) {
+		if (dirty) {
+			cf.deploymentChanged(config);
+			dirty = false;
+		}
+	}
+
+	private synchronized void setActivated(boolean activated) {
+		if (this.activated==activated) {
+			return;
+		}
+		this.dirty = true;
+		this.activated = activated;
+	}
+
+	private synchronized void setCfSpace(String cfSpace) {
+		if (equal(this.cfSpace, cfSpace)) {
+			return;
+		}
+		dirty = true;
+		this.cfSpace = cfSpace;
+	}
+
+	/**
+	 * Null-safe version of String.equals
+	 */
+	private boolean equal(String s1, String s2) {
+		if (s1==null) {
+			return s1==s2;
+		}
+		if (s2==null) {
+			return false;
+		}
+		return s1.equals(s2);
 	}
 
 }

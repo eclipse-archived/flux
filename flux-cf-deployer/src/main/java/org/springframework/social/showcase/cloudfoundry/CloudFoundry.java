@@ -10,22 +10,16 @@
 *******************************************************************************/
 package org.springframework.social.showcase.cloudfoundry;
 
-import static org.eclipse.flux.client.MessageConstants.CF_CONTROLLER_URL;
-import static org.eclipse.flux.client.MessageConstants.CF_LOGIN_REQUEST;
-import static org.eclipse.flux.client.MessageConstants.CF_LOGIN_RESPONSE;
-import static org.eclipse.flux.client.MessageConstants.CF_PASSWORD;
-import static org.eclipse.flux.client.MessageConstants.CF_SPACES;
-import static org.eclipse.flux.client.MessageConstants.CF_SPACES_REQUEST;
-import static org.eclipse.flux.client.MessageConstants.CF_SPACES_RESPONSE;
-import static org.eclipse.flux.client.MessageConstants.CF_TOKEN;
-import static org.eclipse.flux.client.MessageConstants.CF_USERNAME;
-import static org.eclipse.flux.client.MessageConstants.USERNAME;
+import static org.eclipse.flux.client.MessageConstants.*;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.social.showcase.flux.support.SingleResponseHandler;
 
@@ -33,8 +27,8 @@ public class CloudFoundry {
 
 	private URL cloudControllerUrl;
 	private MessageConnector flux;
-	private String cfToken;
 	private String user;
+	private boolean loggedIn = false;
 	
 	private DeploymentManager deployments = DeploymentManager.INSTANCE;
 	private String[] spaces;
@@ -51,17 +45,22 @@ public class CloudFoundry {
 				.put(CF_CONTROLLER_URL, cloudControllerUrl.toString())
 				.put(CF_USERNAME, login)
 				.put(CF_PASSWORD, password);
-			SingleResponseHandler<String> response = new SingleResponseHandler<String>(flux, CF_LOGIN_RESPONSE, flux.getUser()) {
+			SingleResponseHandler<Void> response = new SingleResponseHandler<Void>(flux, CF_LOGIN_RESPONSE, flux.getUser()) {
 				@Override
-				protected String parse(JSONObject message) throws Exception {
-					return message.getString(CF_TOKEN);
+				protected Void parse(JSONObject message) throws Exception {
+					boolean ok = message.getBoolean(OK);
+					if (!ok) {
+						throw new IOException("Login failed for unkownn reason");
+					}
+					return null;
 				}
 			};
 			flux.send(CF_LOGIN_REQUEST, msg);
 			
-			this.cfToken = response.awaitResult();
+			response.awaitResult();
+			loggedIn = true;
 			this.user = login;
-			return cfToken!=null;
+			return loggedIn;
 		} catch (Throwable e) {
 			e.printStackTrace();
 			logout();
@@ -70,7 +69,7 @@ public class CloudFoundry {
 	}
 
 	private void logout() {
-		this.cfToken = null;
+		this.loggedIn = false;
 		this.user = null;
 	}
 
@@ -83,13 +82,11 @@ public class CloudFoundry {
 			return spaces;
 		}
 		try {
-			String token = this.cfToken;
-			if (token==null) {
+			if (!loggedIn) {
 				throw new IllegalStateException("Not logged in to CF");
 			}
 			JSONObject msg = new JSONObject()
-				.put(USERNAME, flux.getUser())
-				.put(CF_TOKEN, token);
+				.put(USERNAME, flux.getUser());
 			SingleResponseHandler<String[]> response = new SingleResponseHandler<String[]>(flux, CF_SPACES_RESPONSE, flux.getUser()) {
 				@Override
 				protected String[] parse(JSONObject message) throws Exception {
@@ -134,6 +131,22 @@ public class CloudFoundry {
 			deployments.put(fluxUser, deployment);
 		}
 		deployment.configure(config);
+	}
+
+	/**
+	 * Send out a message on flux bus alerting interested parties that a project deployment config has changed.
+	 */
+	public void deploymentChanged(DeploymentConfig config) {
+		try {
+			flux.send(MessageConstants.CF_DEPLOYMENT_CHANGED,  new JSONObject()
+				.put(USERNAME, flux.getUser())
+				.put(CF_SPACE, config.getCfSpace())
+				.put(PROJECT_NAME, config.getFluxProjectName())
+				.put(ACTIVATED, config.getActivated())
+			);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

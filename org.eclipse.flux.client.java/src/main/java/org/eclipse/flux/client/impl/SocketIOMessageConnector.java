@@ -59,7 +59,7 @@ public final class SocketIOMessageConnector implements MessageConnector {
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
 			this.socket = createSocket(host);
-			final BasicFuture<Void> connectedFuture = new BasicFuture<Void>(null);
+			final BasicFuture<Void> connectedFuture = new BasicFuture<Void>();
 			this.socket.connect(new IOCallback() {
 				
 				@Override
@@ -76,7 +76,7 @@ public final class SocketIOMessageConnector implements MessageConnector {
 					for (String channel : channelsArray) {
 						connectToChannel(channel);
 					}
-					connectedFuture.completed(null);
+					connectedFuture.resolve(null);
 				}
 	
 				@Override
@@ -89,7 +89,7 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	
 				@Override
 				public void onError(SocketIOException ex) {
-					connectedFuture.failed(ex);
+					connectedFuture.reject(ex);
 					ex.printStackTrace();
 					try {
 						onDisconnect();						

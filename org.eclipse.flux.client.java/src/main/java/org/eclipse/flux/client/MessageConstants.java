@@ -19,11 +19,17 @@ public abstract class MessageConstants {
 	public static final String CF_PASSWORD = "cf_password"; //property
 	
 	public static final String CF_LOGIN_RESPONSE ="cfLoginResponse"; //message type
-	public static final String CF_TOKEN = "cf_token"; //property
+	public static final String OK = "ok";
 	
 	public static final String CF_SPACES_REQUEST = "cfSpacesRequest"; //message type
 	public static final String CF_SPACES_RESPONSE = "cfSpacesResponse"; //message type
 	public static final String CF_SPACES = "cfSpaces"; //property type
+	
+	public static final String CF_DEPLOYMENT_CHANGED = "cfDeploymentChanged";
+	public static final String PROJECT_NAME = "project";
+	public static final String CF_SPACE = "cfSpace"; //property
+	public static final String ACTIVATED = "active";
+	
 
 	public static final String USERNAME = "username";  //property
 	public static final String ERROR = "error"; //property

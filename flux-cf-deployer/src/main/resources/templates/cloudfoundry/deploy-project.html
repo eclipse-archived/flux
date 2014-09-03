@@ -22,6 +22,7 @@
 			<h1>CF Flux Project Synch</h1> 
 			
 			<div class="error" th:if="${error_message}" th:text="${error_message}"></div>
+			<div class="info" th:if="${info_message}" th:text="${info_message}"></div>
 			
  			<form class="cfDeploy" th:action="@{${project}}">
 				<div class="project">

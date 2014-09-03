@@ -19,7 +19,6 @@ import java.util.concurrent.TimeoutException;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.util.BasicFuture;
-import org.eclipse.flux.client.util.FutureCallback;
 import org.json.JSONObject;
 
 /**
@@ -67,23 +66,6 @@ public abstract class SingleResponseHandler<T> implements IMessageHandler {
 	private String username;
 	private BasicFuture<T> future; // the result goes in here once we got it.
 
-	private final FutureCallback<T> done = new FutureCallback<T>() {
-		@Override
-		public void completed(T result) {
-			cleanup();
-		}
-
-		@Override
-		public void failed(Exception ex) {
-			cleanup();
-		}
-
-		@Override
-		public void cancelled() {
-			cleanup();
-		}
-	};
-	
 	private void cleanup() {
 		MessageConnector c = this.conn; // local var: thread safe
 		if (c!=null) {
@@ -96,7 +78,13 @@ public abstract class SingleResponseHandler<T> implements IMessageHandler {
 		this.conn = conn;
 		this.messageType = messageType;
 		this.username = username;
-		this.future = new BasicFuture<T>(done);
+		this.future = new BasicFuture<T>();
+		this.future.whenDone(new Runnable() {
+			@Override
+			public void run() {
+				cleanup();
+			}
+		});
 		conn.addMessageHandler(this);
 	}
 
@@ -115,21 +103,21 @@ public abstract class SingleResponseHandler<T> implements IMessageHandler {
 	public void handle(String type, JSONObject message) {
 		try {
 			errorParse(message);
-			future.completed(parse(message));
-		} catch (Exception e) {
-			future.failed(e);
+			future.resolve(parse(message));
 		} catch (Throwable e) {
-			//future doesn't like 'Throwable's' so wrap em.
-			future.failed(new RuntimeException(e));
+			future.reject(e);
 		}
 	}
 
 	/**
-	 * Should inspect the message to deterime if it is an 'error'
+	 * Should inspect the message to determine if it is an 'error'
 	 * response and throw an exception in that case. Do nothing otherwise.
 	 */
 	protected void errorParse(JSONObject message) throws Exception {
 		if (message.has(ERROR)) {
+			if (message.has("errorDetails")) {
+				System.err.println(message.get("errorDetails"));
+			}
 			throw new Exception(message.getString(ERROR));
 		}
 	}
@@ -150,9 +138,9 @@ public abstract class SingleResponseHandler<T> implements IMessageHandler {
 				@Override
 				public void run() {
 					try {
-						future.failed(new TimeoutException());
+						future.reject(new TimeoutException());
 					} catch (Throwable e) {
-						//don't let Exception fly.. the timer thread will die!
+						//don't let Exception fly.. or the timer thread will die!
 						e.printStackTrace();
 					}
 				}
