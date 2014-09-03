@@ -12,6 +12,7 @@ package org.eclipse.flux.cloudfoundry.deployment.service;
 
 import static org.eclipse.flux.client.MessageConstants.*;
 
+import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -93,9 +94,22 @@ public class CfDeploymentService {
 				try {
 					boolean activated = message.getBoolean(ACTIVATED);
 					if (activated) {
-						System.out.println("Should deploy now but don't know yet how");
-						String user = message.getString(USERNAME);
-						CloudFoundryClient cfClient = cfClients.get(user);
+						final String username = message.getString(USERNAME);
+						String projectName = message.getString(PROJECT_NAME);
+						DownloadProject downloader = new DownloadProject(flux, projectName, username);
+						downloader.run(new DownloadProject.CompletionCallback() {
+							@Override
+							public void downloadFailed() {
+								System.err.println("download project failed");
+							}
+							@Override
+							public void downloadComplete(File project) {
+								System.out.println("Downloade project: "+project);
+								
+								System.out.println("Should deploy now but don't know yet how");
+								CloudFoundryClient cfClient = cfClients.get(username);
+							}
+						});
 					}
 				} catch (Throwable e) {
 					e.printStackTrace();
