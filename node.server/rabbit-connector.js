@@ -249,7 +249,7 @@ RabbitConnector.prototype.messageReceived = function (msg) {
 		//This mimicks how socketio works.
 		return;
 	}
-	//console.log('rabbit ['+self.inbox+'] => ', msg);
+	console.log('rabbit ['+self.inbox+'] => ', msg);
 
 	var socket = self.socket;
 	socket.emit(msg.type, msg.data);
@@ -350,6 +350,12 @@ RabbitConnector.prototype.configure = function() {
 	
 	this.configureRequest('javadocrequest');
 	this.configureResponse('javadocresponse');
+	
+	this.configureRequest('cfLoginRequest');
+	this.configureResponse('cfLoginResponse');
+
+	this.configureRequest('cfSpacesRequest');
+	this.configureResponse('cfSpacesResponse');
 
 };
 
@@ -382,6 +388,11 @@ RabbitConnector.prototype.configureBroadcast = function (type) {
 RabbitConnector.prototype.configureResponse = function(type) {
 	var self = this;
 	this.socket.on(type, function (data) {
+		if (!data) {
+			//Don't crash server with NPE
+			console.error("message with no data from ["+self.inbox+"] type = " +type);
+			return;
+		}
 		data.responseSenderID = self.inbox;
 		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		//Deliver directly to inbox of the requester

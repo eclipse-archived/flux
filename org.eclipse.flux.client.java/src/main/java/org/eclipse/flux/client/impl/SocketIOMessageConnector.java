@@ -31,6 +31,7 @@ import javax.net.ssl.SSLContext;
 import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.util.BasicFuture;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -46,18 +47,19 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
 	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();
 	final private String host;
-	private String login;
+	private String user;
 	private String token;
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
-	private AtomicBoolean connected = new AtomicBoolean(false);
+	private AtomicBoolean isConnected = new AtomicBoolean(false);
 	
-	public SocketIOMessageConnector(final String host, final String login, String token) {
+	public SocketIOMessageConnector(final String host, final String user, String token) {
 		this.host = host;
-		this.login = login;
+		this.user = user;
 		this.token = token;
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
 			this.socket = createSocket(host);
+			final BasicFuture<Void> connectedFuture = new BasicFuture<Void>(null);
 			this.socket.connect(new IOCallback() {
 				
 				@Override
@@ -69,12 +71,12 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	
 				@Override
 				public void onConnect() {
-					connected.compareAndSet(false, true);
+					isConnected.compareAndSet(false, true);
 					String[] channelsArray = channels.toArray(new String[channels.size()]);
-					channels.clear();
 					for (String channel : channelsArray) {
 						connectToChannel(channel);
 					}
+					connectedFuture.completed(null);
 				}
 	
 				@Override
@@ -82,15 +84,16 @@ public final class SocketIOMessageConnector implements MessageConnector {
 					for (String channel : channels) {
 						notifyChannelDisconnected(channel);
 					}
-					connected.compareAndSet(true, false);
+					isConnected.compareAndSet(true, false);
 				}
 	
 				@Override
 				public void onError(SocketIOException ex) {
-					ex.printStackTrace();					
+					connectedFuture.failed(ex);
+					ex.printStackTrace();
 					try {
 						onDisconnect();						
-						connected.compareAndSet(true, false);
+						isConnected.compareAndSet(true, false);
 						socket = createSocket(host);
 						socket.connect(this);
 					} catch (MalformedURLException e) {
@@ -109,13 +112,21 @@ public final class SocketIOMessageConnector implements MessageConnector {
 				}
 				
 			});
+			connectedFuture.get();
+			return;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
 	public void connectToChannel(final String channel) {
-		if (isConnected() && channel != null && !channels.contains(channel)) {
+		if (!isConnected()) {
+			throw new IllegalStateException("Cannot connect to channel. Not connected to socket.io");
+		}
+		if (channel==null) {
+			throw new IllegalArgumentException("Channel name should not be null");
+		}
+		if (!channels.contains(channel)) {
 			try {
 				JSONObject message = new JSONObject();
 				message.put("channel", channel);
@@ -171,7 +182,7 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	private SocketIO createSocket(String host) throws MalformedURLException {
 		SocketIO socket = new SocketIO(host);
 		if (token != null) {
-			socket.addHeader("X-flux-user-name", login);
+			socket.addHeader("X-flux-user-name", user);
 			socket.addHeader("X-flux-user-token", token);
 		}
 		return socket;
@@ -249,7 +260,12 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	}
 	
 	public boolean isConnected() {
-		return connected.get();
+		return isConnected.get();
+	}
+
+	@Override
+	public String getUser() {
+		return user;
 	}
 	
 }

@@ -27,6 +27,10 @@ body {
 	margin-left: 170px;
 }
 
+dd {
+	font-weight: bold;
+}
+
 a {
 	color: #006600;
 }
@@ -54,6 +58,8 @@ ul.imagedlist li:first-child {
 li.imagedItem div.image {
 	float: left;
 }
+
+
 
 li.imagedItem div.content {
 	font-size: 11pt;
@@ -116,4 +122,18 @@ div.accountConnection h4 {
 
 div.accountConnection h4 img {
 	vertical-align: middle;
+}
+
+th {
+	text-align: left;
+	color: white;
+	background-color: black;
+}
+
+td {
+	padding: 3px;
+}
+
+select {
+	display: inline;
 }

@@ -21,13 +21,14 @@
 		<div id="content" layout:fragment="content">
 			<form id="signin" th:action="@{/cloudfoundry/processLogin}" method="post">
 				<input type="hidden" name="_csrf" th:value="${_csrf.token}"></input>
-				<p>To deploy an app you must be logged in to CloudFoundry. Use the form below
-				to log in. Then try again.</p>
-			
+				<h1>You are not yet connected to CloudFoundry.</h1>
+				
+				<p>Sign in Using Your <b>CloudFoundry</b> Credentials below.</p>
+				
 				<div class="formInfo">
-					<div class="error" th:if="${param.error eq 'bad_credentials'}">
-						Your sign in information was incorrect.
-						Please try again or <a th:href="@{/signup}">sign up</a>.
+					<div class="error" th:if="${param.error !=null}">
+						Your cloudfoundry credentials where incorrect.
+						Please try again.
 					</div>
 				</div>
 				<fieldset>

@@ -8,21 +8,13 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.springframework.social.showcase.flux.support;
+package org.springframework.social.showcase.cloudfoundry;
 
-import java.util.List;
+import java.security.Principal;
 
-import org.eclipse.flux.client.MessageConnector;
-import org.springframework.social.github.api.GitHubUserProfile;
+public interface CloudFoundryManager {
 
-public interface Flux {
+	CloudFoundry getConnection(Principal currentUser);
+	void putConnection(Principal currentUser, CloudFoundry cloudFoundry);
 
-	GitHubUserProfile getUserProfile();
-
-	String getAccessToken();
-
-	List<String> getProjects() throws Exception;
-
-	MessageConnector getMessagingConnector();
-	
 }

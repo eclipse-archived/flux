@@ -1,13 +1,25 @@
+/*******************************************************************************
+ * Copyright (c) 2014 Pivotal Software, Inc. and others.
+ * All rights reserved. This program and the accompanying materials are made 
+ * available under the terms of the Eclipse Public License v1.0 
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
+ *
+ * Contributors:
+ *     Pivotal Software, Inc. - initial API and implementation
+*******************************************************************************/
 package org.springframework.social.showcase.flux.support;
+
+import static org.eclipse.flux.client.MessageConstants.ERROR;
 
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.http.concurrent.BasicFuture;
-import org.apache.http.concurrent.FutureCallback;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.util.BasicFuture;
+import org.eclipse.flux.client.util.FutureCallback;
 import org.json.JSONObject;
 
 /**
@@ -19,7 +31,7 @@ import org.json.JSONObject;
  * <p>
  * Typical use:
  * <p>
- * FluxResponseHandler<ProjectList> resp = new FluxResponseHandler(conn, "getProjectsResponse", "kdvolder") {
+ * SingleResponseHandler<ProjectList> resp = new FluxResponseHandler(conn, "getProjectsResponse", "kdvolder") {
  *      protected ProjectList parse(JSONObject message) throws Exception {
  *          ... extract ProjectList from message...
  *          ... throw some exception if message doesn't parse...
@@ -29,14 +41,14 @@ import org.json.JSONObject;
  * return resp.awaitResult();
  * 
  */
-public abstract class FluxResponseHandler<T> implements IMessageHandler {
+public abstract class SingleResponseHandler<T> implements IMessageHandler {
 	
 	public static final String USERNAME = "username";
 
 	/**
 	 * Positive timeout in milliseconds. Negative number or 0 means 'infinite'.
 	 */
-	private static final long TIME_OUT = 3000; 
+	private static final long TIME_OUT = 60 * 1000; //quite long for now, for debugging purposes 
 	
 	private static Timer timer;
 	
@@ -45,7 +57,7 @@ public abstract class FluxResponseHandler<T> implements IMessageHandler {
 	 */
 	private static synchronized Timer timer() {
 		if (timer==null) {
-			timer = new Timer(FluxResponseHandler.class.getName()+"_TIMER", true);
+			timer = new Timer(SingleResponseHandler.class.getName()+"_TIMER", true);
 		}
 		return timer;
 	}
@@ -80,7 +92,7 @@ public abstract class FluxResponseHandler<T> implements IMessageHandler {
 		}
 	}
 	
-	public FluxResponseHandler(MessageConnector conn, String messageType, String username) {
+	public SingleResponseHandler(MessageConnector conn, String messageType, String username) {
 		this.conn = conn;
 		this.messageType = messageType;
 		this.username = username;
@@ -102,12 +114,23 @@ public abstract class FluxResponseHandler<T> implements IMessageHandler {
 	@Override
 	public void handle(String type, JSONObject message) {
 		try {
+			errorParse(message);
 			future.completed(parse(message));
 		} catch (Exception e) {
 			future.failed(e);
 		} catch (Throwable e) {
 			//future doesn't like 'Throwable's' so wrap em.
 			future.failed(new RuntimeException(e));
+		}
+	}
+
+	/**
+	 * Should inspect the message to deterime if it is an 'error'
+	 * response and throw an exception in that case. Do nothing otherwise.
+	 */
+	protected void errorParse(JSONObject message) throws Exception {
+		if (message.has(ERROR)) {
+			throw new Exception(message.getString(ERROR));
 		}
 	}
 

@@ -11,7 +11,7 @@
 	</head>
 	<body>
 		<div id="header">
-			<h1><a th:href="@{/}">Spring Social Showcase</a></h1>
+			<h1><a th:href="@{/}">Flux Cloud Foundry Deployer</a></h1>
 		</div>
 		
 		<div id="leftNav">
@@ -19,22 +19,18 @@
 		</div>
 		
 		<div id="content" layout:fragment="content">
-			<h3>Your Facebook Profile</h3>
-			<p>Hello, <span th:text="${profile.firstName}">first name</span>!</p>
-			<dl>
-				<dt>Facebook ID:</dt>
-				<dd th:text="${profile.id}"></dd>
-				<dt>Name:</dt>
-				<dd th:text="${profile.name}"></dd>
-				<dt>Email:</dt>
-				<dd th:text="${email}"></dd>
-			</dl>
+			<h1>Connected to CloudFoundry</h1>
 			
-			<form id="disconnect" th:action="@{/connect/facebook}" method="post">
-				<input type="hidden" name="_csrf" th:value="${_csrf.token}" />
-				<button type="submit">Disconnect from Facebook</button>	
-				<input type="hidden" name="_method" value="delete" />
-			</form>
+			<dl>
+				<dt>Email</dt>
+					<dd th:text="${user}"></dd>
+			</dl>
+					
+			<p>Spaces:</p>
+			<ul>
+				<li th:each="sp : ${spaces}" th:text="${sp}">
+				</li>
+			</ul>
 		</div>
 	</body>
 </html>

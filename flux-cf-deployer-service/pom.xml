@@ -17,5 +17,10 @@
 			<artifactId>org.eclipse.flux.client.java</artifactId>
 			<version>${flux.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.cloudfoundry</groupId>
+			<artifactId>cloudfoundry-client-lib</artifactId>
+			<version>1.0.3</version>
+		</dependency>
 	</dependencies>
 </project>

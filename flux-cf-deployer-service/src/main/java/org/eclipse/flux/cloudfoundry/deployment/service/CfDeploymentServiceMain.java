@@ -8,21 +8,22 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.springframework.social.showcase.flux.support;
+package org.eclipse.flux.cloudfoundry.deployment.service;
 
-import java.util.List;
+import org.eclipse.flux.client.FluxClient;
+import org.eclipse.flux.client.config.FluxConfig;
 
-import org.eclipse.flux.client.MessageConnector;
-import org.springframework.social.github.api.GitHubUserProfile;
+public class CfDeploymentServiceMain {
 
-public interface Flux {
-
-	GitHubUserProfile getUserProfile();
-
-	String getAccessToken();
-
-	List<String> getProjects() throws Exception;
-
-	MessageConnector getMessagingConnector();
+	/**
+	 * Launches the application. If command line arguments are present, the
+	 * first one is considered to be the Flux server URL.
+	 * 
+	 * @param args command line arguments
+	 */
+	public static void main(String[] args) {
+		CfDeploymentService instance = new CfDeploymentService(FluxClient.DEFAULT_INSTANCE, FluxConfig.defaultConfig());
+		instance.start();
+	}
 	
 }

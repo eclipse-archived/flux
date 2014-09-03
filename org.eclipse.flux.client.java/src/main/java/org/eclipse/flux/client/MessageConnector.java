@@ -51,6 +51,8 @@ public interface MessageConnector {
 	public void disconnect();
 	
 	public boolean isConnected();
-	public String getHost();
 	
+	public String getHost();
+	public String getUser();
+
 }

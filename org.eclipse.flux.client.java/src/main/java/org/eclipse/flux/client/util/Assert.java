@@ -8,21 +8,14 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.springframework.social.showcase.flux.support;
+package org.eclipse.flux.client.util;
 
-import java.util.List;
+public class Assert {
 
-import org.eclipse.flux.client.MessageConnector;
-import org.springframework.social.github.api.GitHubUserProfile;
+	public static void assertTrue(boolean check) {
+		if (!check) {
+			throw new AssertionError();
+		}
+	}
 
-public interface Flux {
-
-	GitHubUserProfile getUserProfile();
-
-	String getAccessToken();
-
-	List<String> getProjects() throws Exception;
-
-	MessageConnector getMessagingConnector();
-	
 }

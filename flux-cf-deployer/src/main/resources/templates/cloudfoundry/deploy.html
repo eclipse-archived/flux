@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+	  xmlns:social="http://spring.io/springsocial"
+	  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	  layout:decorator="layout">
+	<head>
+		<title>Spring Social Showcase</title>
+		<link rel="stylesheet" th:href="@{/page.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/form.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/messages/messages.css}" type="text/css" media="screen"></link>
+	</head>
+	<body>
+		<div id="header">
+			<h1><a th:href="@{/}">Flux Cloud Foundry Deployer</a></h1>
+		</div>
+		
+		<div id="leftNav">
+			Left nav menu
+		</div>
+		
+		<div id="content" layout:fragment="content">
+			<h1>Connected to CloudFoundry</h1>
+			
+			<dl>
+				<dt>Email</dt>
+					<dd th:text="${user}"></dd>
+			</dl>
+			
+			<p>Project's for which Synch is enabled below will be continually re-deployed to CloudFoundry whenever
+			 a file in the project changes.</p>
+			
+			<table>
+				<tr>
+					<th>Flux Project</th>
+					<th>CF Space</th>
+					<th>Synch</th>
+				</tr>
+				<tr th:each="dep : ${deployments}">
+					<td><a href="edit" th:href="@{'deploy/' + ${dep.fluxProjectName}}" th:text="${dep.fluxProjectName}"></a></td>
+					<td th:if="${dep.cfSpace}" th:text="${dep.cfSpace}"></td>
+					<td th:unless="${dep.cfSpace}">Not set</td>
+					<td>
+						<input class="checkbox" type="checkbox" disabled="disabled" th:checked="${dep.activated}" />
+					</td>
+				</tr>
+			</table>
+		</div>
+	</body>
+</html>

@@ -8,21 +8,24 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.springframework.social.showcase.flux.support;
+package org.springframework.social.showcase.cloudfoundry;
 
-import java.util.List;
+import java.security.Principal;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.eclipse.flux.client.MessageConnector;
-import org.springframework.social.github.api.GitHubUserProfile;
+public class CloudFoundryManagerImpl implements CloudFoundryManager {
 
-public interface Flux {
+	private Map<String, CloudFoundry> map = new HashMap<>();
 
-	GitHubUserProfile getUserProfile();
+	@Override
+	public synchronized CloudFoundry getConnection(Principal currentUser) {
+		return map.get(currentUser.getName());
+	}
 
-	String getAccessToken();
+	@Override
+	public synchronized void putConnection(Principal currentUser, CloudFoundry cloudFoundry) {
+		map.put(currentUser.getName(), cloudFoundry);
+	}
 
-	List<String> getProjects() throws Exception;
-
-	MessageConnector getMessagingConnector();
-	
 }

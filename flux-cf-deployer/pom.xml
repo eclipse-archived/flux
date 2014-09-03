@@ -72,11 +72,10 @@
 		
 		<!-- flux -->
  		<dependency>
-			<groupId>org.eclipse.flux.service.common</groupId>
-			<artifactId>org.eclipse.flux.service.common</artifactId>
+			<groupId>org.eclipse.flux</groupId>
+			<artifactId>org.eclipse.flux.client.java</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
-		
 	</dependencies>
 
 	<properties>

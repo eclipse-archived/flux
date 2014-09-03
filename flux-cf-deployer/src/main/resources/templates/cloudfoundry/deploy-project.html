@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+	  xmlns:social="http://spring.io/springsocial"
+	  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	  layout:decorator="layout">
+	<head>
+		<title>Spring Social Showcase</title>
+		<link rel="stylesheet" th:href="@{/page.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/form.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/messages/messages.css}" type="text/css" media="screen"></link>
+	</head>
+	<body>
+		<div id="header">
+			<h1><a th:href="@{/}">Flux Cloud Foundry Deployer</a></h1>
+		</div>
+		
+		<div id="leftNav">
+			Left nav menu
+		</div>
+		
+		<div id="content" layout:fragment="content">
+			<h1>CF Flux Project Synch</h1> 
+			
+			<div class="error" th:if="${error_message}" th:text="${error_message}"></div>
+			
+ 			<form class="cfDeploy" th:action="@{${project}}">
+				<div class="project">
+					<span class="label">Project:</span>
+					<span class="value" th:text="${fluxProjectName}"></span>
+				</div>
+				<div class="space">
+					<span class="label">Space:</span>
+					<select name="space">
+						<option th:each="space : ${spaces}" th:value="${space}" th:text="${space}"
+							th:selected="${space == deployment.cfSpace}"
+						/>
+					</select>
+				</div>
+				<div class="cfSynch">
+					<input type="checkbox" name="synch" th:checked="${deployment.activated}">Enable Synching to CloudFoundry</input>
+				</div>
+				<input type="submit" value="Save"/>
+			</form>
+		</div>
+	</body>
+</html>

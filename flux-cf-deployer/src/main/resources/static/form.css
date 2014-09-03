@@ -1,4 +1,4 @@
-form input, form select {
+form input {
 	display: block;
 }
 
@@ -6,6 +6,17 @@ form input[type=checkbox] {
 	display: inline;
 }
 
+form input[type=radio] {
+	display: inline;
+}
+
 span.error {
 	color: #D8000C;
+}
+
+form > .project {
+	font-size: large;
+	color: white;
+	background: black;
+	padding: 5px;
 }

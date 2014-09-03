@@ -14,48 +14,15 @@
 		</div>
 		
 		<div id="leftNav">
-			<h4><a th:href="@{/connect}">Connections</a></h4>
-			
 			<h4><a th:href="@{/flux}">Flux</a></h4>
-			<div social:connected="flux">
+<!-- 			<div social:connected="flux">
 				<ul class="menu">
 					<li><a th:href="@{/flux}">User Profile</a></li>
 					<li><a th:href="@{/flux/projects}">Projects</a></li>
 				</ul>
-			</div>
-			
-			<!-- TODO: Get rid of the stuff below -->
-			
-			<h4><a th:href="@{/twitter}">Twitter</a></h4>
-			<div social:connected="twitter">
-			<ul class="menu">
-				<li><a th:href="@{/twitter}">User Profile</a></li>
-				<li><a th:href="@{/twitter/timeline}">Timeline</a></li>
-				<li><a th:href="@{/twitter/friends}">Friends</a></li>
-				<li><a th:href="@{/twitter/followers}">Followers</a></li>
-				<li><a th:href="@{/twitter/messages}">Messages</a></li>
-				<li><a th:href="@{/twitter/trends}">Trends</a></li>
-				<li><a th:href="@{/twitter/revoked}">Sim Revoked</a></li>
-			</ul>
-			</div>
-			<h4><a th:href="@{/facebook}">Facebook</a></h4>
-			<div social:connected="facebook">
-			<ul class="menu">
-				<li><a th:href="@{/facebook}">User Profile</a></li>
-				<li><a th:href="@{/facebook/feed}">Feed</a></li>
-				<li><a th:href="@{/facebook/friends}">Friends</a></li>
-				<li><a th:href="@{/facebook/albums}">Albums</a></li>
-				<li><a th:href="@{/facebook/expired}">Sim Expired</a></li>
-			</ul>
-			</div>
-			
-			<h4><a th:href="@{/linkedin}">LinkedIn</a></h4>
-			<div social:connected="linkedin">
-			<ul class="menu">
-				<li><a th:href="@{/linkedin}">User Profile</a></li>
-				<li><a th:href="@{/linkedin/connections}">Connections</a></li>
-			</ul>
-			</div>
+			</div> -->
+			<h4><a th:href="@{/cloudfoundry}">Cloud Foundry</a></h4>
+			<h4><a th:href="@{/cloudfoundry/deploy}">Deploy</a></h4>
 		</div>
 		
 		<div id="content" layout:fragment="content">
