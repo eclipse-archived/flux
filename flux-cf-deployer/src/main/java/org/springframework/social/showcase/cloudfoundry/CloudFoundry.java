@@ -32,19 +32,22 @@ public class CloudFoundry {
 	
 	private DeploymentManager deployments = DeploymentManager.INSTANCE;
 	private String[] spaces;
+	private String space = null;
+	private String password;
 
 	public CloudFoundry(MessageConnector flux, String cloudControllerUrl) throws Exception {
 		this.flux = flux;
 		this.cloudControllerUrl = new URI(cloudControllerUrl).toURL();
 	}
 
-	public boolean login(String login, String password) {
+	public boolean login(String login, String password, String space) {
 		try {
 			JSONObject msg = new JSONObject()
 				.put(USERNAME, flux.getUser())
 				.put(CF_CONTROLLER_URL, cloudControllerUrl.toString())
 				.put(CF_USERNAME, login)
-				.put(CF_PASSWORD, password);
+				.put(CF_PASSWORD, password)
+				.put(CF_SPACE, space);
 			SingleResponseHandler<Void> response = new SingleResponseHandler<Void>(flux, CF_LOGIN_RESPONSE, flux.getUser()) {
 				@Override
 				protected Void parse(JSONObject message) throws Exception {
@@ -60,6 +63,8 @@ public class CloudFoundry {
 			response.awaitResult();
 			loggedIn = true;
 			this.user = login;
+			this.password = password;
+			this.space = space;
 			return loggedIn;
 		} catch (Throwable e) {
 			e.printStackTrace();
@@ -71,6 +76,8 @@ public class CloudFoundry {
 	private void logout() {
 		this.loggedIn = false;
 		this.user = null;
+		this.password = null;
+		this.space = null;
 	}
 
 	public String getUser() {
@@ -78,9 +85,9 @@ public class CloudFoundry {
 	}
 
 	public String[] getSpaces() {
-		if (this.spaces!=null) {
-			return spaces;
-		}
+//		if (this.spaces!=null) {
+//			return spaces;
+//		}
 		try {
 			if (!loggedIn) {
 				throw new IllegalStateException("Not logged in to CF");
@@ -136,17 +143,33 @@ public class CloudFoundry {
 	/**
 	 * Send out a message on flux bus alerting interested parties that a project deployment config has changed.
 	 */
-	public void deploymentChanged(DeploymentConfig config) {
+	public void push(DeploymentConfig config) {
 		try {
-			flux.send(MessageConstants.CF_DEPLOYMENT_CHANGED,  new JSONObject()
+			flux.send(MessageConstants.CF_PUSH_REQUEST,  new JSONObject()
 				.put(USERNAME, flux.getUser())
 				.put(CF_SPACE, config.getCfSpace())
 				.put(PROJECT_NAME, config.getFluxProjectName())
-				.put(ACTIVATED, config.getActivated())
 			);
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
 	}
+
+	public String getSpace() {
+		return space;
+	}
+
+	public void setSpace(String space) {
+		this.space = space;
+		if (loggedIn) {
+			login(this.user, this.password, this.space);
+		}
+	}
+
+	public void deploymentChanged(DeploymentConfig config) {
+		// TODO Auto-generated method stub
+		
+	}
+
 
 }

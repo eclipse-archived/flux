@@ -26,15 +26,31 @@
 					<dd th:text="${user}"></dd>
 			</dl>
 			
-			<p>Project's for which Synch is enabled below will be continually re-deployed to CloudFoundry whenever
-			 a file in the project changes.</p>
-			
+			<div class="error" th:if="${error_message}" th:text="${error_message}"></div>
+			<div class="info" th:if="${info_message}" th:text="${info_message}"></div>
+
+ 			<form class="cfDeploy" action="deploy.do" method="post">
+				<input type="hidden" name="_csrf" th:value="${_csrf.token}" />
+				<div>
+					<span class="label">Project:</span>
+					<select name="project">
+						<option th:each="project : ${projects}" th:value="${project}" th:text="${project}"/>
+					</select>
+					<span class="label">Space:</span>
+					<select name="space">
+						<option th:each="sp : ${spaces}" th:value="${sp}" th:text="${sp}"/>
+					</select>
+				</div>
+				<input type="submit" value="Push to Cloud Foundry"/>
+			</form>
+<!-- 				
 			<table>
 				<tr>
 					<th>Flux Project</th>
 					<th>CF Space</th>
 					<th>Synch</th>
 				</tr>
+				
 				<tr th:each="dep : ${deployments}">
 					<td><a href="edit" th:href="@{'deploy/' + ${dep.fluxProjectName}}" th:text="${dep.fluxProjectName}"></a></td>
 					<td th:if="${dep.cfSpace}" th:text="${dep.cfSpace}"></td>
@@ -44,6 +60,7 @@
 					</td>
 				</tr>
 			</table>
+ -->
 		</div>
 	</body>
 </html>

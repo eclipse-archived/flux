@@ -14,20 +14,11 @@ public class DeploymentConfig {
 
 	private String fluxProjectName;
 	private String cfSpace = null;
-	private boolean activated = false;
 	
 	public DeploymentConfig(String fluxProjectName) {
 		this.fluxProjectName = fluxProjectName;
 	}
 		
-	public boolean getActivated() {
-		return activated;
-	}
-
-	public void setActivated(boolean activated) {
-		this.activated = activated;
-	}
-
 	public String getFluxProjectName() {
 		return fluxProjectName;
 	}

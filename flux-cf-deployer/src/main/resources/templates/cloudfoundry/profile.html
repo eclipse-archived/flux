@@ -20,6 +20,9 @@
 		
 		<div id="content" layout:fragment="content">
 			<h1>Connected to CloudFoundry</h1>
+
+			<div class="error" th:each="error_message : ${param.error_message}" th:text="${error_message}">
+			</div>
 			
 			<dl>
 				<dt>Email</dt>
@@ -28,8 +31,7 @@
 					
 			<p>Spaces:</p>
 			<ul>
-				<li th:each="sp : ${spaces}" th:text="${sp}">
-				</li>
+				<li th:each="sp : ${spaces}" th:text="${sp}"></li>
 			</ul>
 		</div>
 	</body>

@@ -45,8 +45,19 @@ public class CfDeploymentService {
 	/**
 	 * CF clients instances for flux users that are logged in to CF.
 	 */
-	private Map<String, CloudFoundryClient> cfClients = Collections.synchronizedMap(
-				new HashMap<String, CloudFoundryClient>());
+	private Map<String, CloudFoundryClientDelegate> cfClients = Collections.synchronizedMap(
+				new HashMap<String, CloudFoundryClientDelegate>());
+	
+	
+	private synchronized CloudFoundryClientDelegate getCfClient(String username,
+			String space) {
+		CloudFoundryClientDelegate client = cfClients.get(username);
+		if (client!=null) {
+			String currentSpace = client.getSpace();
+		}
+		return client;
+	}
+	
 	
 	public void start() {
 		this.flux = fluxClient.connect(fluxConf);
@@ -63,7 +74,7 @@ public class CfDeploymentService {
 				String password = req.getString(CF_PASSWORD);
 				System.out.println("user="+user);
 
-				CloudFoundryClient client = new CloudFoundryClient(new CloudCredentials(cfUser, password), cloudControllerUrl);
+				CloudFoundryClientDelegate client = new CloudFoundryClientDelegate(cfUser, password, cloudControllerUrl, null);
 				cfClients.put(user, client);
 				res.put(OK, true);
 				return res;
@@ -75,45 +86,41 @@ public class CfDeploymentService {
 			protected JSONObject fillResponse(String type, JSONObject req,
 					JSONObject res) throws Exception {
 				String user = req.getString(USERNAME);
-				CloudFoundryClient cf = cfClients.get(user);
+				CloudFoundryClientDelegate cf = cfClients.get(user);
 				if (cf==null) {
 					return errorResponse(req, new IllegalStateException("User '"+user+"' not logged into Cloud Foundry"));
 				}
-				List<String> spaces = new ArrayList<>();
-				for (CloudSpace space : cf.getSpaces()) {
-					spaces.add(space.getName());
-				}
-				res.put(CF_SPACES, spaces);
+				res.put(CF_SPACES, cf.getSpaces());
 				return res;
 			}
 		});
 		
-		flux.addMessageHandler(new MessageHandler(CF_DEPLOYMENT_CHANGED) {
-			@Override
-			public void handle(String type, JSONObject message) {
-				try {
-					boolean activated = message.getBoolean(ACTIVATED);
-					if (activated) {
-						final String username = message.getString(USERNAME);
-						String projectName = message.getString(PROJECT_NAME);
-						DownloadProject downloader = new DownloadProject(flux, projectName, username);
-						downloader.run(new DownloadProject.CompletionCallback() {
-							@Override
-							public void downloadFailed() {
-								System.err.println("download project failed");
-							}
-							@Override
-							public void downloadComplete(File project) {
-								System.out.println("Downloade project: "+project);
-								
-								System.out.println("Should deploy now but don't know yet how");
-								CloudFoundryClient cfClient = cfClients.get(username);
-							}
-						});
+		flux.addMessageHandler(new RequestResponseHandler(flux, CF_PUSH_REQUEST) {
+			protected JSONObject fillResponse(String type, JSONObject req,
+					JSONObject res) throws Exception {
+				final String username = req.getString(USERNAME);
+				final String projectName = req.getString(PROJECT_NAME);
+				final String space = req.getString(CF_SPACE);
+				DownloadProject downloader = new DownloadProject(flux, projectName, username);
+				downloader.run(new DownloadProject.CompletionCallback() {
+					@Override
+					public void downloadFailed() {
+						System.err.println("download project failed");
 					}
-				} catch (Throwable e) {
-					e.printStackTrace();
-				}
+					@Override
+					public void downloadComplete(File project) {
+						try {
+							System.out.println("Downloaded project: "+project);
+							
+							System.out.println("Should deploy now but don't know yet how");
+							CloudFoundryClientDelegate cfClient = getCfClient(username, space);
+							cfClient.push(projectName, project);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				});
+				return res;
 			}
 		});
 	}

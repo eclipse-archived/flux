@@ -10,6 +10,7 @@
 *******************************************************************************/
 package org.springframework.social.showcase.cloudfoundry;
 
+import java.net.URLEncoder;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
@@ -43,9 +45,6 @@ public class CloudfoundryController {
 	@Inject
 	private Environment env;
 
-	/**
-	 * Presents an overview of flux projects that can be synched to cloudfoundry.
-	 */
 	@RequestMapping("/cloudfoundry/deploy")
 	public String deploy(Principal currentUser, Model model) throws Exception {
 		CloudFoundry cf = cfm.getConnection(currentUser);
@@ -57,11 +56,19 @@ public class CloudfoundryController {
 			return "redirect:/singin/flux";
 		}
 		
+		String defaultSpace = cf.getSpace();
+		
 		//The page should show a list of flux project with their deployment status.
 		List<String> projects = flux.getProjects();
 		model.addAttribute("user", cf.getUser());
 		model.addAttribute("projects", flux.getProjects());
 		model.addAttribute("spaces", cf.getSpaces());
+		model.addAttribute("defaultSpace", defaultSpace);
+		
+		if (projects.isEmpty()) {
+			model.addAttribute("error_message", "Nothing to deploy: You don't have any Flux projects!");
+		}
+		
 		List<DeploymentConfig> deployments = new ArrayList<DeploymentConfig>();
 		for (String pname : projects) {
 			DeploymentConfig deployConf = cf.getDeploymentConfig(pname);
@@ -72,13 +79,11 @@ public class CloudfoundryController {
 		return "cloudfoundry/deploy";
 	}
 
-	@RequestMapping(value="/cloudfoundry/deploy/{project}")
-	public String deployProject(
-			Principal currentUser, 
-			@RequestParam Map<String,String> params,
-			@PathVariable("project")String fluxProjectName, 
-			Model model
-	) throws Exception {
+	@RequestMapping(value="/cloudfoundry/deploy.do", method=RequestMethod.POST)
+	public String deployDo(Principal currentUser, 
+			@RequestParam("project") String project,
+			@RequestParam("space") String space,
+			Model model) throws Exception {
 		CloudFoundry cf = cfm.getConnection(currentUser);
 		if (cf==null) {
 			return "redirect:/cloudfoundry/login";
@@ -87,26 +92,14 @@ public class CloudfoundryController {
 		if (flux==null) {
 			return "redirect:/singin/flux";
 		}
-		
-		String setSpace = params.get("space");
-		if (setSpace!=null) {
-			//Handle form submission...
-			boolean setSynch = "on".equals(params.get("synch"));
-			DeploymentConfig config = cf.getDeploymentConfig(fluxProjectName);
-			config.setCfSpace(setSpace);
-			config.setActivated(setSynch);
-			cf.apply(config);
-			model.addAttribute("info_message", "Deployment config for '"+fluxProjectName+"' saved");
-		} 
-		
-		model.addAttribute("fluxProjectName", fluxProjectName);
-		model.addAttribute("spaces", cf.getSpaces());
-		model.addAttribute("deployment", cf.getDeploymentConfig(fluxProjectName));
-				
-		return "cloudfoundry/deploy-project";
+		DeploymentConfig dep = new DeploymentConfig(project);
+		dep.setCfSpace(space);
+		cf.push(dep);
+		return "redirect:/cloudfoundry/app-logs/"
+			+URLEncoder.encode(space, "UTF-8")+"/"
+			+URLEncoder.encode(project, "UTF-8");
 	}
 	
-
 	private Flux flux() {
 		Connection<Flux> connection = connectionRepository.findPrimaryConnection(Flux.class);
 		if (connection!=null) {
@@ -121,10 +114,23 @@ public class CloudfoundryController {
 		if (cf==null) {
 			return "redirect:/cloudfoundry/login";
 		}
+		model.addAttribute("space", cf.getSpace());
 		model.addAttribute("user", cf.getUser());
 		model.addAttribute("spaces", cf.getSpaces());
 		return "cloudfoundry/profile";
 	}
+	
+	@RequestMapping(value="/cloudfoundry/save_profile")
+	public String saveprofile(Principal currentUser, Model model, @RequestParam("space") String setSpace) {
+		CloudFoundry cf = cfm.getConnection(currentUser);
+		if (cf==null) {
+			return "redirect:/cloudfoundry/login";
+		}
+		cf.setSpace(setSpace);
+		
+		return "redirect:/cloudfoundry";
+	}
+	
 	
 	@RequestMapping(value="/cloudfoundry/processLogin")
 	public String doLogin(Principal currentUser, Model model,
@@ -136,7 +142,7 @@ public class CloudfoundryController {
 		CloudFoundry cf = new CloudFoundry(
 				flux.getApi().getMessagingConnector(),
 				env.getProperty("cloudfoundry.url", "https://api.run.pivotal.io/"));
-		if (cf.login(login, password)) {
+		if (cf.login(login, password, null)) {
 			cfm.putConnection(currentUser, cf);
 			return "redirect:/cloudfoundry";
 		} else {

@@ -25,11 +25,11 @@ public abstract class MessageConstants {
 	public static final String CF_SPACES_RESPONSE = "cfSpacesResponse"; //message type
 	public static final String CF_SPACES = "cfSpaces"; //property type
 	
-	public static final String CF_DEPLOYMENT_CHANGED = "cfDeploymentChanged";
+	public static final String CF_PUSH_REQUEST = "cfPushRequest"; //message type
+	public static final String CF_PUSH_RESPONSE = "cfPushResponse"; //message type
+	
 	public static final String PROJECT_NAME = "project";
 	public static final String CF_SPACE = "cfSpace"; //property
-	public static final String ACTIVATED = "active";
-	
 
 	public static final String USERNAME = "username";  //property
 	public static final String ERROR = "error"; //property

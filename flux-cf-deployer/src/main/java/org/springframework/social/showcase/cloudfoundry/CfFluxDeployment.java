@@ -49,7 +49,7 @@ public class CfFluxDeployment {
 	public synchronized DeploymentConfig getConfig() {
 		DeploymentConfig conf = new DeploymentConfig(fluxProjectName);
 		conf.setCfSpace(cfSpace);
-		conf.setActivated(activated);
+		//conf.setActivated(activated);
 		return conf;
 	}
 
@@ -58,7 +58,7 @@ public class CfFluxDeployment {
 			throw new IllegalArgumentException("Can not apply DeploymentConfig. Project names don't match");
 		}
 		setCfSpace(config.getCfSpace());
-		setActivated(config.getActivated());
+		//setActivated(config.getActivated());
 		broadcastChanges(config);
 	}
 

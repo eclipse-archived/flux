@@ -357,7 +357,8 @@ RabbitConnector.prototype.configure = function() {
 	this.configureRequest('cfSpacesRequest');
 	this.configureResponse('cfSpacesResponse');
 	
-	this.configureBroadcast('cfDeploymentChanged');
+	this.configureBroadcast('cfPushRequest');
+	this.configureBroadcast('cfPushResponse');
 
 };
 
