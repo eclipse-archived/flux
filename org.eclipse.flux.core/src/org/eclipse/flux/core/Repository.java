@@ -31,9 +31,7 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.core.resources.IResourceVisitor;
-import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.flux.core.DownloadProject.CompletionCallback;
 import org.eclipse.jdt.core.IClassFile;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
@@ -123,38 +121,6 @@ public class Repository {
 		};
 		this.messagingConnector.addMessageHandler(getProjectResponseHandler);
 		this.messageHandlers.add(getProjectResponseHandler);
-		
-		IMessageHandler projectConnectedHandler = new AbstractMessageHandler("projectConnected") {
-			@Override
-			public void handleMessage(String messageType, JSONObject message) {
-				try {
-					String projectName = message.getString("project");
-					if (!isConnected(projectName)) {
-						new DownloadProject(Repository.this.messagingConnector, projectName, username).run(new CompletionCallback() {
-							
-							@Override
-							public void downloadFailed() {
-								// nothing
-							}
-							
-							@Override
-							public void downloadComplete(IProject project) {
-								try {
-									project.build(IncrementalProjectBuilder.FULL_BUILD, null);
-								} catch (CoreException e) {
-									e.printStackTrace();
-								}
-								addProject(project);
-							}
-						});
-					}
-				} catch (JSONException e) {
-					e.printStackTrace();
-				}
-			}
-		};
-		this.messagingConnector.addMessageHandler(projectConnectedHandler);
-		this.messageHandlers.add(projectConnectedHandler);
 		
 		IMessageHandler getResourceRequestHandler = new AbstractMessageHandler("getResourceRequest") {
 			@Override
