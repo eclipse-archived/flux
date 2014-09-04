@@ -24,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
@@ -51,6 +53,8 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	private String token;
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
 	private AtomicBoolean isConnected = new AtomicBoolean(false);
+	
+	private ExecutorService executor = Executors.newFixedThreadPool(4); //TODO: inject?
 	
 	public SocketIOMessageConnector(final String host, final String user, String token) {
 		this.host = host;
@@ -188,13 +192,17 @@ public final class SocketIOMessageConnector implements MessageConnector {
 		return socket;
 	}
 	
-	private void handleIncomingMessage(String messageType, JSONObject message) {
+	private void handleIncomingMessage(final String messageType, final JSONObject message) {
 		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageType);
 		if (handlers != null) {
-			for (IMessageHandler handler : handlers) {
+			for (final IMessageHandler handler : handlers) {
 				try {
 					if (handler.canHandle(messageType, message)) {
-						handler.handle(messageType, message);
+						executor.execute(new Runnable() {
+							public void run() {
+								handler.handle(messageType, message);
+							}
+						});
 					}
 				} catch (Throwable t) {
 					t.printStackTrace();

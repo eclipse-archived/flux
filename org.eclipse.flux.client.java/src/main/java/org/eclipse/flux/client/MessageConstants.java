@@ -29,7 +29,7 @@ public abstract class MessageConstants {
 	public static final String CF_PUSH_RESPONSE = "cfPushResponse"; //message type
 	
 	public static final String PROJECT_NAME = "project";
-	public static final String CF_SPACE = "cfSpace"; //property
+	public static final String CF_ORG_SPACE = "orgSpace"; //property org + "/" + space
 
 	public static final String USERNAME = "username";  //property
 	public static final String ERROR = "error"; //property
@@ -38,4 +38,11 @@ public abstract class MessageConstants {
 	public static final String RESPONSE_SENDER_ID = "responseSenderID";
 	public static final String CALLBACK_ID = "callback_id";
 		
+	public static final String CF_APP_LOG = "cfAppLog"; //message type
+	public static final String CF_APP = "app";
+	public static final String CF_ORG = "org";
+	public static final String CF_SPACE = "space";
+	public static final String CF_STREAM = "stream";
+	public static final String CF_MESSAGE = "msg"; 
+	
 }

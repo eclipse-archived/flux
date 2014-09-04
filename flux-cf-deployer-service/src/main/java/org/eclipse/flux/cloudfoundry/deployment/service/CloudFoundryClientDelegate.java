@@ -109,6 +109,7 @@ public class CloudFoundryClientDelegate {
 			if (equal(this.orgSpace, space) && client != null) {
 				return;
 			}
+			this.orgSpace = space;
 			client = createClient(cfUser, password, cloudControllerUrl, space);
 		} catch (Throwable e) {
 			// something went wrong, if we still have a client, its pointing at the wrong space. So...

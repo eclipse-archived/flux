@@ -57,7 +57,7 @@ public class CfDeploymentService {
 			String space) {
 		CloudFoundryClientDelegate client = cfClients.get(username);
 		if (client!=null) {
-			String currentSpace = client.getSpace();
+			client.setSpace(space);
 		}
 		return client;
 	}
@@ -137,6 +137,14 @@ public class CfDeploymentService {
 		if (flux!=null) {
 			this.flux = null;
 			flux.disconnect();
+		}
+	}
+	
+	private boolean equal(String s1, String s2) {
+		if (s1 == null) {
+			return s1 == s2;
+		} else {
+			return s1.equals(s2);
 		}
 	}
 	
