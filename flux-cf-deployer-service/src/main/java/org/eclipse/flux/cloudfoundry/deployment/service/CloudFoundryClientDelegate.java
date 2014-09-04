@@ -24,7 +24,7 @@ public class CloudFoundryClientDelegate {
 
 	private CloudFoundryClient client;
 	private String[] spaces;
-	
+
 	public CloudFoundryClientDelegate(String cfUser, String password, URL cloudControllerUrl, String space) {
 		this.cfUser = cfUser;
 		this.password = password;
@@ -34,8 +34,8 @@ public class CloudFoundryClientDelegate {
 
 	private CloudFoundryClient createClient(String cfUser, String password,
 			URL cloudControllerUrl, String orgSpace) {
-		if (orgSpace!=null) {
-			String[] pieces = orgSpace.split("/"); 
+		if (orgSpace != null) {
+			String[] pieces = orgSpace.split("/");
 			String org = pieces[0];
 			String space = pieces[1];
 			return new CloudFoundryClient(
@@ -59,27 +59,44 @@ public class CloudFoundryClientDelegate {
 
 		String deploymentName = localApp.getName();
 		// Check whether it exists. if so, stop it first, otherwise create it
-		CloudApplication app = client.getApplication(deploymentName);
-		if (app == null) {
+		CloudApplication existingApp = null;
+
+		List<CloudApplication> applications = client.getApplications();
+
+		if (applications != null) {
+			for (CloudApplication deployedApp : applications) {
+				if (deployedApp.getName().equals(deploymentName)) {
+					existingApp = deployedApp;
+					break;
+				}
+			}
+		}
+		if (existingApp == null) {
 			client.createApplication(deploymentName,
 					new Staging(null, localApp.getBuildpack()),
 					localApp.getMemory(), localApp.getUrls(),
 					localApp.getServices());
-		} else if (app.getState() != AppState.STOPPED) {
-			client.stopApplication(deploymentName);
+		} else {
+			stopApplication(existingApp);
 		}
 
 		client.uploadApplication(deploymentName, localApp.getLocation());
 		client.startApplication(deploymentName);
 	}
-	
+
+	protected void stopApplication(CloudApplication app) {
+		if (app != null && app.getState() != AppState.STOPPED) {
+			client.stopApplication(app.getName());
+		}
+	}
+
 	public String getSpace() {
 		return orgSpace;
 	}
-	
+
 	public synchronized void setSpace(String space) {
 		try {
-			if (equal(this.orgSpace, space) && client!=null) {
+			if (equal(this.orgSpace, space) && client != null) {
 				return;
 			}
 			client = createClient(cfUser, password, cloudControllerUrl, space);
@@ -91,7 +108,7 @@ public class CloudFoundryClientDelegate {
 	}
 
 	private boolean equal(String s1, String s2) {
-		if (s1==null) {
+		if (s1 == null) {
 			return s1 == s2;
 		} else {
 			return s1.equals(s2);
@@ -100,15 +117,15 @@ public class CloudFoundryClientDelegate {
 
 	public synchronized String[] getSpaces() {
 		//We cache this. Assume it really never changes (or at least very rarely).
-		if (this.spaces==null) {
+		if (this.spaces == null) {
 			this.spaces = fetchSpaces();
 		}
 		return this.spaces;
 	}
-	
+
 	private String[] fetchSpaces() {
 		List<CloudSpace> spaces = client.getSpaces();
-		if (spaces!=null) {
+		if (spaces != null) {
 			String[] array = new String[spaces.size()];
 			for (int i = 0; i < array.length; i++) {
 				CloudSpace space = spaces.get(i);
