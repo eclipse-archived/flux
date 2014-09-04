@@ -10,23 +10,27 @@
 *******************************************************************************/
 package org.eclipse.flux.cloudfoundry.deployment.service;
 
-import static org.eclipse.flux.client.MessageConstants.*;
+import static org.eclipse.flux.client.MessageConstants.CF_CONTROLLER_URL;
+import static org.eclipse.flux.client.MessageConstants.CF_LOGIN_REQUEST;
+import static org.eclipse.flux.client.MessageConstants.CF_PASSWORD;
+import static org.eclipse.flux.client.MessageConstants.CF_PUSH_REQUEST;
+import static org.eclipse.flux.client.MessageConstants.CF_SPACE;
+import static org.eclipse.flux.client.MessageConstants.CF_SPACES;
+import static org.eclipse.flux.client.MessageConstants.CF_SPACES_REQUEST;
+import static org.eclipse.flux.client.MessageConstants.CF_USERNAME;
+import static org.eclipse.flux.client.MessageConstants.OK;
+import static org.eclipse.flux.client.MessageConstants.PROJECT_NAME;
+import static org.eclipse.flux.client.MessageConstants.USERNAME;
 
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import org.cloudfoundry.client.lib.CloudCredentials;
-import org.cloudfoundry.client.lib.CloudFoundryClient;
-import org.cloudfoundry.client.lib.domain.CloudSpace;
 import org.eclipse.flux.client.FluxClient;
 import org.eclipse.flux.client.MessageConnector;
-import org.eclipse.flux.client.MessageHandler;
 import org.eclipse.flux.client.RequestResponseHandler;
 import org.eclipse.flux.client.config.FluxConfig;
 import org.json.JSONObject;

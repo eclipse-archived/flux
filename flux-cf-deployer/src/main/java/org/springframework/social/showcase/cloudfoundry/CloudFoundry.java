@@ -85,9 +85,9 @@ public class CloudFoundry {
 	}
 
 	public String[] getSpaces() {
-//		if (this.spaces!=null) {
-//			return spaces;
-//		}
+		if (this.spaces!=null) {
+			return spaces;
+		}
 		try {
 			if (!loggedIn) {
 				throw new IllegalStateException("Not logged in to CF");

@@ -95,9 +95,9 @@ public class CloudfoundryController {
 		DeploymentConfig dep = new DeploymentConfig(project);
 		dep.setCfSpace(space);
 		cf.push(dep);
-		return "redirect:/cloudfoundry/app-logs/"
-			+URLEncoder.encode(space, "UTF-8")+"/"
-			+URLEncoder.encode(project, "UTF-8");
+		return "redirect:/cloudfoundry/app-logs"
+			+"?space="+URLEncoder.encode(space, "UTF-8")+"&"
+			+"?project="+URLEncoder.encode(project, "UTF-8");
 	}
 	
 	private Flux flux() {
