@@ -25,6 +25,7 @@ import org.json.JSONObject;
  */
 public class CloudFoundryClientDelegate {
 
+	private static final String DEPLOYMENT_SERVICE_LABEL = "[Deployment Service]";
 	private String fluxUser;
 	private String cfUser;
 	private URL cloudControllerUrl;
@@ -38,8 +39,9 @@ public class CloudFoundryClientDelegate {
 
 	private final Map<String, StreamingLogToken> activeApplicationLogs = new HashMap<String, StreamingLogToken>();
 
-	public CloudFoundryClientDelegate(String fluxUser, String cfUser, String password,
-			URL cloudControllerUrl, String space, MessageConnector connector) {
+	public CloudFoundryClientDelegate(String fluxUser, String cfUser,
+			String password, URL cloudControllerUrl, String space,
+			MessageConnector connector) {
 		this.fluxUser = fluxUser;
 		this.cfUser = cfUser;
 		this.password = password;
@@ -67,7 +69,7 @@ public class CloudFoundryClientDelegate {
 		return orgSpace.split("/");
 	}
 
-	public void push(String appName, File location) {
+	public synchronized void push(String appName, File location) {
 		CloudFoundryClient client = this.client;
 		final CloudFoundryApplication localApp = new CloudFoundryApplication(
 				appName, location, client);
@@ -170,6 +172,10 @@ public class CloudFoundryClientDelegate {
 
 	protected void addLogListener(String appName) {
 		if (appName != null && !activeApplicationLogs.containsKey(appName)) {
+
+			handleMessage(DEPLOYMENT_SERVICE_LABEL
+					+ " - Initialising Loggregator support for - " + appName
+					+ '\n', MessageConstants.CF_STREAM_STDOUT, appName);
 			StreamingLogToken logToken = this.client.streamLogs(appName,
 					new DeployedApplicationLogListener(appName));
 			if (logToken != null) {
@@ -181,6 +187,9 @@ public class CloudFoundryClientDelegate {
 	protected void removeLogListener(String appName) {
 		StreamingLogToken token = activeApplicationLogs.remove(appName);
 		if (token != null) {
+			handleMessage(DEPLOYMENT_SERVICE_LABEL
+					+ " - Removing Loggregator support for - " + appName
+					+ '\n', MessageConstants.CF_STREAM_STDOUT, appName);
 			token.cancel();
 		}
 	}
@@ -282,18 +291,18 @@ public class CloudFoundryClientDelegate {
 
 	protected void handleError(Throwable error, String message, String appName) {
 		StringWriter writer = new StringWriter();
-		writer.append("Application Deployment Service Error");
+		writer.append(DEPLOYMENT_SERVICE_LABEL + " - Error");
 
 		if (appName != null) {
 			writer.append(" - ");
 			writer.append(appName);
 		}
-	
+
 		if (message != null) {
 			writer.append(" - ");
 			writer.append(message);
 		}
-		
+
 		if (error != null) {
 			writer.append(" - ");
 			writer.append(error.getMessage());
@@ -374,9 +383,10 @@ public class CloudFoundryClientDelegate {
 		 */
 		public T run(CloudFoundryClient client) throws Exception {
 			try {
-				logMessage("Starting - " + operationName);
+				logMessage(DEPLOYMENT_SERVICE_LABEL + " - " + operationName);
 				T val = doRun(client);
-				logMessage("Completed - " + operationName);
+				logMessage(DEPLOYMENT_SERVICE_LABEL + " - Completed - "
+						+ operationName);
 				return val;
 			} catch (Throwable t) {
 				onError(t);
