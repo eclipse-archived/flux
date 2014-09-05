@@ -137,3 +137,13 @@ td {
 select {
 	display: inline;
 }
+
+.cfAppLog {
+	font-family: monospace;
+	white-space: pre;
+	background-color: black;
+	color: white;
+	min-height: 100px;
+	padding: 10px;
+	border-radius: 5px;
+}

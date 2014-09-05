@@ -114,9 +114,6 @@ public class CfDeploymentService {
 					@Override
 					public void downloadComplete(File project) {
 						try {
-							System.out.println("Downloaded project: "+project);
-							
-							System.out.println("Should deploy now but don't know yet how");
 							CloudFoundryClientDelegate cfClient = getCfClient(username, space);
 							cfClient.push(projectName, project);
 						} catch (Exception e) {

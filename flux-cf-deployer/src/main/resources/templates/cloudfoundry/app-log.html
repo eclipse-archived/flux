@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+	  xmlns:social="http://spring.io/springsocial"
+	  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+	  layout:decorator="layout">
+	<head>
+		<title>Spring Social Showcase</title>
+		<link rel="stylesheet" th:href="@{/page.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/form.css}" type="text/css" media="screen"></link>
+		<link rel="stylesheet" th:href="@{/messages/messages.css}" type="text/css" media="screen"></link>
+		<script th:inline="javascript">
+			var cfSpace = [[${space}]];
+			var cfOrg = [[${org}]];
+			var cfApp = [[${app}]];
+			var fluxUser = [[${fluxUser}]];
+			var fluxHost = [[${fluxHost}]];
+			console.log("space = "+cfSpace);
+			console.log("app   = "+cfApp);
+		</script>
+		<script data-main="/scripts/app-log" src="/scripts/requirejs/require.js"></script>
+	</head>
+	<body>
+		<div id="header">
+			<h1><a th:href="@{/}">Flux Cloud Foundry Deployer</a></h1>
+		</div>
+		
+		<div id="leftNav">
+			Left nav menu
+		</div>
+		
+		<div id="content" layout:fragment="content">
+			<h1>Cloud Foundry App Log</h1>
+			
+			<dl>
+				<dt>Org</dt>
+					<dd th:text="${org}">AcmeInc</dd>
+				<dt>Space</dt>
+					<dd th:text="${space}">dingbats</dd>
+				<dt>App</dt>
+					<dd th:text="${app}">hammer-scroll</dd>
+			</dl>
+			
+			<div class="cfAppLog">
+				The log text should...
+				go in here...
+			</div>
+		</div>
+	</body>
+</html>

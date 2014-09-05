@@ -14,7 +14,6 @@ import java.net.URLEncoder;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -24,7 +23,6 @@ import org.springframework.social.connect.ConnectionRepository;
 import org.springframework.social.showcase.flux.support.Flux;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -95,9 +93,9 @@ public class CloudfoundryController {
 		DeploymentConfig dep = new DeploymentConfig(project);
 		dep.setCfSpace(space);
 		cf.push(dep);
-		return "redirect:/cloudfoundry/app-logs"
-			+"?space="+URLEncoder.encode(space, "UTF-8")+"&"
-			+"?project="+URLEncoder.encode(project, "UTF-8");
+		return "redirect:/cloudfoundry/app-log"
+			+"?space="+URLEncoder.encode(space, "UTF-8")
+			+"&project="+URLEncoder.encode(project, "UTF-8");
 	}
 	
 	private Flux flux() {
@@ -153,6 +151,25 @@ public class CloudfoundryController {
 	@RequestMapping("/cloudfoundry/login")
 	public String login() {
 		return "cloudfoundry/login";
+	}
+	
+	@RequestMapping("/cloudfoundry/app-log")
+	public String appLogs(Principal currentUser, Model model,
+		@RequestParam("space") String orgSpace,
+		@RequestParam("project") String project
+	) {
+		Flux flux = flux();
+		if (flux==null) {
+			return "redirect:/singin/flux";
+		}
+		String [] pieces = orgSpace.split("/");
+		model.addAttribute("org",pieces[0]);
+		model.addAttribute("space", pieces[1]);
+		model.addAttribute("app", project);
+		
+		model.addAttribute("fluxUser", flux.getUserProfile().getLogin());
+		model.addAttribute("fluxHost", flux.getMessagingConnector().getHost());
+		return "cloudfoundry/app-log";
 	}
 
 }
