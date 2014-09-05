@@ -38,9 +38,10 @@ require(['socket', 'jquery'], function (socket) {
 		$(".cfAppLog").append(formatted);
 	}
 	
-	socket.on('resourceChanged', function (msg) {
-		console.log('resourceChanged', msg);
-		logAppend("STDOUT", "Changed ["+msg.timestamp+"] "+msg.project+"/"+msg.resource);
+	socket.on('cfAppLog', function (msg) {
+		console.log('cfAppLog', msg);
+		logAppend(msg.stream, msg.msg);
+//		logAppend("STDOUT", "Changed ["+msg.timestamp+"] "+msg.project+"/"+msg.resource);
 	});
 	
 });

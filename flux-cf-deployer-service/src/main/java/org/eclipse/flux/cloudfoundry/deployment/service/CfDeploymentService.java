@@ -78,7 +78,7 @@ public class CfDeploymentService {
 				String password = req.getString(CF_PASSWORD);
 				System.out.println("user="+user);
 
-				CloudFoundryClientDelegate client = new CloudFoundryClientDelegate(cfUser, password, cloudControllerUrl, null, flux);
+				CloudFoundryClientDelegate client = new CloudFoundryClientDelegate(user, cfUser, password, cloudControllerUrl, null, flux);
 				cfClients.put(user, client);
 				res.put(OK, true);
 				return res;

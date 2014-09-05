@@ -25,6 +25,7 @@ import org.json.JSONObject;
  */
 public class CloudFoundryClientDelegate {
 
+	private String fluxUser;
 	private String cfUser;
 	private URL cloudControllerUrl;
 	private String password;
@@ -37,8 +38,9 @@ public class CloudFoundryClientDelegate {
 
 	private final Map<String, StreamingLogToken> activeApplicationLogs = new HashMap<String, StreamingLogToken>();
 
-	public CloudFoundryClientDelegate(String cfUser, String password,
+	public CloudFoundryClientDelegate(String fluxUser, String cfUser, String password,
 			URL cloudControllerUrl, String space, MessageConnector connector) {
+		this.fluxUser = fluxUser;
 		this.cfUser = cfUser;
 		this.password = password;
 		this.cloudControllerUrl = cloudControllerUrl;
@@ -207,7 +209,7 @@ public class CloudFoundryClientDelegate {
 				throw new Error(message);
 			}
 			JSONObject json = new JSONObject();
-			json.put(MessageConstants.USERNAME, this.cfUser);
+			json.put(MessageConstants.USERNAME, this.fluxUser);
 			json.put(MessageConstants.CF_APP, appName);
 	
 			if (this.orgSpace != null) {
