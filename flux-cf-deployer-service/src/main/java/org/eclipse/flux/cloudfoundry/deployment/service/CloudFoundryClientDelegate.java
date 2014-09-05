@@ -1,7 +1,7 @@
 package org.eclipse.flux.cloudfoundry.deployment.service;
 
 import java.io.File;
-import java.io.IOException;
+import java.io.StringWriter;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -74,60 +74,100 @@ public class CloudFoundryClientDelegate {
 
 		String deploymentName = localApp.getName();
 
-		new ApplicationOperation<Void>(deploymentName) {
-			@Override
-			protected Void doRun(CloudFoundryClient client) {
-				// Check whether it exists. if so, stop it first, otherwise
-				// create it
-				CloudApplication existingApp = null;
+		try {
+			new ApplicationOperation<Void>(deploymentName,
+					"Pushing application") {
 
-				List<CloudApplication> applications = client.getApplications();
+				@Override
+				protected Void doRun(CloudFoundryClient client)
+						throws Exception {
 
-				if (applications != null) {
-					for (CloudApplication deployedApp : applications) {
-						if (deployedApp.getName().equals(appName)) {
-							existingApp = deployedApp;
-							break;
+					CloudApplication existingApp = getExistingApplication(getAppName());
+
+					if (existingApp == null) {
+						create(localApp);
+
+					} else {
+						stopApplication(existingApp);
+					}
+
+					upload(localApp);
+					start(localApp);
+
+					return null;
+				}
+			}.run(client);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	protected CloudApplication getExistingApplication(String appName)
+			throws Exception {
+
+		return new ApplicationOperation<CloudApplication>(appName,
+				"Checking if application exists") {
+
+			protected CloudApplication doRun(CloudFoundryClient client)
+					throws Exception {
+				List<CloudApplication> apps = client.getApplications();
+
+				if (apps != null) {
+					for (CloudApplication deployedApp : apps) {
+						if (deployedApp.getName().equals(getAppName())) {
+							return deployedApp;
 						}
 					}
 				}
-				if (existingApp == null) {
-					client.createApplication(appName, new Staging(null,
-							localApp.getBuildpack()), localApp.getMemory(),
-							localApp.getUrls(), localApp.getServices());
-				} else {
-					stopApplication(existingApp);
-				}
-
-				doUploadStart(localApp);
 				return null;
 			}
+		}.run(this.client);
 
-		}.run(client);
 	}
 
-	protected void doUploadStart(CloudFoundryApplication localApp) {
-		final File location = localApp.getLocation();
-		new ApplicationOperation<Void>(localApp.getName()) {
+	protected void create(final CloudFoundryApplication app) throws Exception {
+		new ApplicationOperation<Void>(app.getName(), "Creating application") {
 
-			protected Void doRun(CloudFoundryClient client) {
-				try {
-					addLogListener(appName);
-					client.uploadApplication(appName, location);
-					client.startApplication(appName);
-				} catch (IOException e) {
-					handleMessage(e, null, appName);
-				}
+			protected Void doRun(CloudFoundryClient client) throws Exception {
+				client.createApplication(getAppName(),
+						new Staging(null, app.getBuildpack()), app.getMemory(),
+						app.getUrls(), app.getServices());
 				return null;
-			}
-
-			protected void onError(Throwable t) {
-				removeLogListener(appName);
 			}
 
 		}.run(this.client);
 	}
-	
+
+	protected void upload(CloudFoundryApplication app) throws Exception {
+		final File location = app.getLocation();
+		new ApplicationOperation<Void>(app.getName(),
+				"Uploading application resources") {
+
+			protected Void doRun(CloudFoundryClient client) throws Exception {
+				addLogListener(getAppName());
+				client.uploadApplication(getAppName(), location);
+				return null;
+			}
+
+			protected void onError(Throwable t) {
+				removeLogListener(getAppName());
+			}
+
+		}.run(this.client);
+	}
+
+	protected void start(CloudFoundryApplication app) throws Exception {
+		new ApplicationOperation<Void>(app.getName(), "Starting Application") {
+
+			protected Void doRun(CloudFoundryClient client) {
+				client.startApplication(getAppName());
+				return null;
+			}
+
+		}.run(this.client);
+	}
+
 	protected void addLogListener(String appName) {
 		if (appName != null && !activeApplicationLogs.containsKey(appName)) {
 			StreamingLogToken logToken = this.client.streamLogs(appName,
@@ -145,9 +185,18 @@ public class CloudFoundryClientDelegate {
 		}
 	}
 
-	protected void stopApplication(CloudApplication app) {
+	protected void stopApplication(final CloudApplication app) throws Exception {
+
 		if (app != null && app.getState() != AppState.STOPPED) {
-			client.stopApplication(app.getName());
+			new ApplicationOperation<Void>(app.getName(),
+					"Stopping application") {
+
+				protected Void doRun(CloudFoundryClient client)
+						throws Exception {
+					client.stopApplication(app.getName());
+					return null;
+				}
+			}.run(this.client);
 		}
 	}
 
@@ -166,7 +215,7 @@ public class CloudFoundryClientDelegate {
 			// something went wrong, if we still have a client, its pointing at
 			// the wrong space. So...
 			// get rid of that client.
-			handleMessage(e, null, null);
+			handleError(e, null, null);
 			client = null;
 		}
 	}
@@ -205,37 +254,54 @@ public class CloudFoundryClientDelegate {
 	protected void handleMessage(String message, String streamType,
 			String appName) {
 		try {
-			if (connector == null) {
-				throw new Error(message);
+
+			System.out.println(message);
+
+			if (connector != null) {
+				JSONObject json = new JSONObject();
+				json.put(MessageConstants.USERNAME, this.fluxUser);
+				json.put(MessageConstants.CF_APP, appName);
+
+				if (this.orgSpace != null) {
+					String[] pieces = getOrgSpace(this.orgSpace);
+					String org = pieces[0];
+					String space = pieces[1];
+					json.put(MessageConstants.CF_ORG, org);
+					json.put(MessageConstants.CF_SPACE, space);
+				}
+				json.put(MessageConstants.CF_MESSAGE, message);
+				json.put(MessageConstants.CF_STREAM, streamType);
+
+				connector.send(MessageConstants.CF_APP_LOG, json);
 			}
-			JSONObject json = new JSONObject();
-			json.put(MessageConstants.USERNAME, this.fluxUser);
-			json.put(MessageConstants.CF_APP, appName);
-	
-			if (this.orgSpace != null) {
-				String[] pieces = getOrgSpace(this.orgSpace);
-				String org = pieces[0];
-				String space = pieces[1];
-				json.put(MessageConstants.CF_ORG, org);
-				json.put(MessageConstants.CF_SPACE, space);
-			}
-			json.put(MessageConstants.CF_MESSAGE, message);
-			json.put(MessageConstants.CF_STREAM, streamType);
-	
-			connector.send(MessageConstants.CF_APP_LOG, json);
+
 		} catch (Throwable e) {
 			e.printStackTrace();
 		}
 	}
 
-	protected void handleMessage(Throwable error, String message, String appName) {
-		if (message == null) {
-			message = "Cloud Foundry Deployment Service Error";
+	protected void handleError(Throwable error, String message, String appName) {
+		StringWriter writer = new StringWriter();
+		writer.append("Application Deployment Service Error");
+
+		if (appName != null) {
+			writer.append(" - ");
+			writer.append(appName);
 		}
+	
+		if (message != null) {
+			writer.append(" - ");
+			writer.append(message);
+		}
+		
 		if (error != null) {
-			message += " - " + error.getMessage() + '\n';
+			writer.append(" - ");
+			writer.append(error.getMessage());
 		}
-		handleMessage(message, MessageConstants.CF_STREAM_CLIENT_ERROR, appName);
+		writer.append('\n');
+
+		handleMessage(writer.toString(),
+				MessageConstants.CF_STREAM_CLIENT_ERROR, appName);
 	}
 
 	class DeployedApplicationLogListener implements ApplicationLogListener {
@@ -251,7 +317,7 @@ public class CloudFoundryClientDelegate {
 		}
 
 		public void onError(Throwable error) {
-			handleMessage(error, null, appName);
+			CloudFoundryClientDelegate.this.handleError(error, null, appName);
 		}
 
 		public void onMessage(ApplicationLog log) {
@@ -275,29 +341,66 @@ public class CloudFoundryClientDelegate {
 
 	}
 
+	/**
+	 * 
+	 * Performs a {@link CloudFoundryClient} operation. Handles error that may
+	 * occur when performing the client call
+	 *
+	 * @param <T>
+	 *            Operation value. java.lang.Void if not returning anything.
+	 */
 	abstract class ApplicationOperation<T> {
 
-		protected final String appName;
+		private final String appName;
 
-		public ApplicationOperation(String appName) {
+		private final String operationName;
+
+		public ApplicationOperation(String appName, String operationName) {
 			this.appName = appName;
+			this.operationName = operationName;
 		}
 
-		public T run(CloudFoundryClient client) {
+		public String getAppName() {
+			return this.appName;
+		}
+
+		/**
+		 * 
+		 * @param client
+		 * @return value of operation. May be null if a successful application
+		 *         operation does not need to return a value.
+		 * @throws Exception
+		 *             if error occurred while performing operation.
+		 */
+		public T run(CloudFoundryClient client) throws Exception {
 			try {
-				return doRun(client);
+				logMessage("Starting - " + operationName);
+				T val = doRun(client);
+				logMessage("Completed - " + operationName);
+				return val;
 			} catch (Throwable t) {
 				onError(t);
-				handleMessage(t, null, appName);
+				logError(t, "Unable to complete operation - " + operationName);
+				Exception e = t instanceof Exception ? (Exception) t
+						: new Exception(t);
+				throw e;
 			}
-			return null;
 		}
 
-		abstract protected T doRun(CloudFoundryClient client);
+		abstract protected T doRun(CloudFoundryClient client) throws Exception;
 
 		protected void onError(Throwable t) {
 
 		};
+
+		protected void logError(Throwable error, String message) {
+			handleError(error, message, getAppName());
+		}
+
+		protected void logMessage(String message) {
+			CloudFoundryClientDelegate.this.handleMessage(message + '\n',
+					MessageConstants.CF_STREAM_STDOUT, getAppName());
+		}
 	}
 
 }
