@@ -1,26 +1,24 @@
-/*******************************************************************************
- * Copyright (c) 2014 Pivotal Software, Inc. and others.
- * All rights reserved. This program and the accompanying materials are made 
- * available under the terms of the Eclipse Public License v1.0 
- * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
- * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
- *
- * Contributors:
- *     Pivotal Software, Inc. - initial API and implementation
-*******************************************************************************/
 package org.eclipse.flux.cloudfoundry.deployment.service;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.cloudfoundry.client.lib.ApplicationLogListener;
 import org.cloudfoundry.client.lib.CloudCredentials;
 import org.cloudfoundry.client.lib.CloudFoundryClient;
+import org.cloudfoundry.client.lib.StreamingLogToken;
+import org.cloudfoundry.client.lib.domain.ApplicationLog;
 import org.cloudfoundry.client.lib.domain.CloudApplication;
+import org.cloudfoundry.client.lib.domain.CloudApplication.AppState;
 import org.cloudfoundry.client.lib.domain.CloudSpace;
 import org.cloudfoundry.client.lib.domain.Staging;
-import org.cloudfoundry.client.lib.domain.CloudApplication.AppState;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
+import org.json.JSONObject;
 
 /**
  * Defines API for Cloud Foundry operations, like pushing an application.
@@ -35,63 +33,114 @@ public class CloudFoundryClientDelegate {
 	private CloudFoundryClient client;
 	private String[] spaces;
 
-	public CloudFoundryClientDelegate(String cfUser, String password, URL cloudControllerUrl, String space) {
+	private final MessageConnector connector;
+
+	private final Map<String, StreamingLogToken> activeApplicationLogs = new HashMap<String, StreamingLogToken>();
+
+	public CloudFoundryClientDelegate(String cfUser, String password,
+			URL cloudControllerUrl, String space, MessageConnector connector) {
 		this.cfUser = cfUser;
 		this.password = password;
 		this.cloudControllerUrl = cloudControllerUrl;
 		this.client = createClient(cfUser, password, cloudControllerUrl, space);
+		this.connector = connector;
 	}
 
 	private CloudFoundryClient createClient(String cfUser, String password,
 			URL cloudControllerUrl, String orgSpace) {
 		if (orgSpace != null) {
-			String[] pieces = orgSpace.split("/");
+			String[] pieces = getOrgSpace(orgSpace);
 			String org = pieces[0];
 			String space = pieces[1];
 			return new CloudFoundryClient(
-					new CloudCredentials(cfUser, password),
-					cloudControllerUrl,
-					org,
-					space
-			);
+					new CloudCredentials(cfUser, password), cloudControllerUrl,
+					org, space);
 		} else {
 			return new CloudFoundryClient(
-					new CloudCredentials(cfUser, password),
-					cloudControllerUrl
-			);
+					new CloudCredentials(cfUser, password), cloudControllerUrl);
 		}
 	}
 
-	public void push(String appName, File location) throws IOException {
+	private String[] getOrgSpace(String orgSpace) {
+		return orgSpace.split("/");
+	}
+
+	public void push(String appName, File location) {
 		CloudFoundryClient client = this.client;
-		CloudFoundryApplication localApp = new CloudFoundryApplication(appName,
-				location, client);
+		final CloudFoundryApplication localApp = new CloudFoundryApplication(
+				appName, location, client);
 
 		String deploymentName = localApp.getName();
-		// Check whether it exists. if so, stop it first, otherwise create it
-		CloudApplication existingApp = null;
 
-		List<CloudApplication> applications = client.getApplications();
+		new ApplicationOperation<Void>(deploymentName) {
+			@Override
+			protected Void doRun(CloudFoundryClient client) {
+				// Check whether it exists. if so, stop it first, otherwise
+				// create it
+				CloudApplication existingApp = null;
 
-		if (applications != null) {
-			for (CloudApplication deployedApp : applications) {
-				if (deployedApp.getName().equals(deploymentName)) {
-					existingApp = deployedApp;
-					break;
+				List<CloudApplication> applications = client.getApplications();
+
+				if (applications != null) {
+					for (CloudApplication deployedApp : applications) {
+						if (deployedApp.getName().equals(appName)) {
+							existingApp = deployedApp;
+							break;
+						}
+					}
 				}
+				if (existingApp == null) {
+					client.createApplication(appName, new Staging(null,
+							localApp.getBuildpack()), localApp.getMemory(),
+							localApp.getUrls(), localApp.getServices());
+				} else {
+					stopApplication(existingApp);
+				}
+
+				doUploadStart(localApp);
+				return null;
+			}
+
+		}.run(client);
+	}
+
+	protected void doUploadStart(CloudFoundryApplication localApp) {
+		final File location = localApp.getLocation();
+		new ApplicationOperation<Void>(localApp.getName()) {
+
+			protected Void doRun(CloudFoundryClient client) {
+				try {
+					addLogListener(appName);
+					client.uploadApplication(appName, location);
+					client.startApplication(appName);
+				} catch (IOException e) {
+					handleMessage(e, null, appName);
+				}
+				return null;
+			}
+
+			protected void onError(Throwable t) {
+				removeLogListener(appName);
+			}
+
+		}.run(this.client);
+	}
+	
+	protected void addLogListener(String appName) {
+		if (appName != null && !activeApplicationLogs.containsKey(appName)) {
+			StreamingLogToken logToken = this.client.streamLogs(appName,
+					new DeployedApplicationLogListener(appName));
+			if (logToken != null) {
+				activeApplicationLogs.put(appName, logToken);
 			}
 		}
-		if (existingApp == null) {
-			client.createApplication(deploymentName,
-					new Staging(null, localApp.getBuildpack()),
-					localApp.getMemory(), localApp.getUrls(),
-					localApp.getServices());
-		} else {
-			stopApplication(existingApp);
-		}
+	}
 
-		client.uploadApplication(deploymentName, localApp.getLocation());
-		client.startApplication(deploymentName);
+	protected void removeLogListener(String appName) {
+		StreamingLogToken token = activeApplicationLogs.remove(appName);
+		if (token != null) {
+			token.cancel();
+		}
 	}
 
 	protected void stopApplication(CloudApplication app) {
@@ -112,8 +161,10 @@ public class CloudFoundryClientDelegate {
 			this.orgSpace = space;
 			client = createClient(cfUser, password, cloudControllerUrl, space);
 		} catch (Throwable e) {
-			// something went wrong, if we still have a client, its pointing at the wrong space. So...
+			// something went wrong, if we still have a client, its pointing at
+			// the wrong space. So...
 			// get rid of that client.
+			handleMessage(e, null, null);
 			client = null;
 		}
 	}
@@ -127,7 +178,8 @@ public class CloudFoundryClientDelegate {
 	}
 
 	public synchronized String[] getSpaces() {
-		//We cache this. Assume it really never changes (or at least very rarely).
+		// We cache this. Assume it really never changes (or at least very
+		// rarely).
 		if (this.spaces == null) {
 			this.spaces = fetchSpaces();
 		}
@@ -140,11 +192,110 @@ public class CloudFoundryClientDelegate {
 			String[] array = new String[spaces.size()];
 			for (int i = 0; i < array.length; i++) {
 				CloudSpace space = spaces.get(i);
-				array[i] = space.getOrganization().getName()+"/"+space.getName();
+				array[i] = space.getOrganization().getName() + "/"
+						+ space.getName();
 			}
 			return array;
 		}
 		return new String[0];
+	}
+
+	protected void handleMessage(String message, String streamType,
+			String appName) {
+		try {
+			if (connector == null) {
+				throw new Error(message);
+			}
+			JSONObject json = new JSONObject();
+			json.put(MessageConstants.USERNAME, this.cfUser);
+			json.put(MessageConstants.CF_APP, appName);
+	
+			if (this.orgSpace != null) {
+				String[] pieces = getOrgSpace(this.orgSpace);
+				String org = pieces[0];
+				String space = pieces[1];
+				json.put(MessageConstants.CF_ORG, org);
+				json.put(MessageConstants.CF_ORG_SPACE, space);
+			}
+			json.put(MessageConstants.CF_MESSAGE, message);
+			json.put(MessageConstants.CF_STREAM, streamType);
+	
+			connector.send(MessageConstants.CF_APP_LOG, json);
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
+	}
+
+	protected void handleMessage(Throwable error, String message, String appName) {
+		if (message == null) {
+			message = "Cloud Foundry Deployment Service Error";
+		}
+		if (error != null) {
+			message += " - " + error.getMessage() + '\n';
+		}
+		handleMessage(message, MessageConstants.CF_STREAM_CLIENT_ERROR, appName);
+	}
+
+	class DeployedApplicationLogListener implements ApplicationLogListener {
+
+		private final String appName;
+
+		public DeployedApplicationLogListener(String appName) {
+			this.appName = appName;
+		}
+
+		public void onComplete() {
+			// Nothing for now
+		}
+
+		public void onError(Throwable error) {
+			handleMessage(error, null, appName);
+		}
+
+		public void onMessage(ApplicationLog log) {
+			if (log != null) {
+				org.cloudfoundry.client.lib.domain.ApplicationLog.MessageType type = log
+						.getMessageType();
+				String streamType = null;
+				if (type != null) {
+					switch (type) {
+					case STDERR:
+						streamType = MessageConstants.CF_STREAM_STDERROR;
+						break;
+					case STDOUT:
+						streamType = MessageConstants.CF_STREAM_STDOUT;
+						break;
+					}
+				}
+				handleMessage(log.getMessage(), streamType, appName);
+			}
+		}
+
+	}
+
+	abstract class ApplicationOperation<T> {
+
+		protected final String appName;
+
+		public ApplicationOperation(String appName) {
+			this.appName = appName;
+		}
+
+		public T run(CloudFoundryClient client) {
+			try {
+				return doRun(client);
+			} catch (Throwable t) {
+				onError(t);
+				handleMessage(t, null, appName);
+			}
+			return null;
+		}
+
+		abstract protected T doRun(CloudFoundryClient client);
+
+		protected void onError(Throwable t) {
+
+		};
 	}
 
 }
