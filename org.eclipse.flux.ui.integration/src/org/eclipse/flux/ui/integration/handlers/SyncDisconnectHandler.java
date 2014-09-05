@@ -35,6 +35,9 @@ public class SyncDisconnectHandler extends AbstractHandler {
 		ISelection selection = HandlerUtil.getCurrentSelection(event);
 		IProject[] selectedProjects = getSelectedProjects(selection);
 		
+//		selectedProjects[0].getLocalTimeStamp();
+//		selectedProjects[0].getFile(".project").getLocalTimeStamp();
+		
 		Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
 
 		for (IProject project : selectedProjects) {

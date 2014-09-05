@@ -20,9 +20,12 @@ import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.resources.WorkspaceJob;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.m2e.core.MavenPlugin;
 import org.eclipse.m2e.core.project.ResolverConfiguration;
 import org.json.JSONArray;
@@ -77,7 +80,7 @@ public class DownloadProject {
 		};
 	}
 
-	public void run(CompletionCallback completionCallback) {
+	public void run(final CompletionCallback completionCallback) {
 		this.messagingConnector.addMessageHandler(projectResponseHandler);
 		this.messagingConnector.addMessageHandler(resourceResponseHandler);
 
@@ -85,32 +88,42 @@ public class DownloadProject {
 
 		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 		project = root.getProject(projectName);
+		
+		WorkspaceJob job = new WorkspaceJob("createProject") {
+			@Override
+			public IStatus runInWorkspace(IProgressMonitor monitor) throws CoreException {
+				try {
+					if (!project.exists()) {
+						project.create(monitor);
+					}
+					if (!project.isOpen()) {
+						project.open(null);
+					}
 
-		try {
-			if (!project.exists()) {
-				project.create(null);
+					JSONObject message = new JSONObject();
+					message.put("callback_id", callbackID);
+					message.put("username", username);
+					message.put("project", projectName);
+
+					messagingConnector.send("getProjectRequest", message);
+				} catch (CoreException e1) {
+					e1.printStackTrace();
+					messagingConnector.removeMessageHandler(projectResponseHandler);
+					messagingConnector.removeMessageHandler(resourceResponseHandler);
+					completionCallback.downloadFailed();
+				} catch (JSONException e) {
+					e.printStackTrace();
+					messagingConnector.removeMessageHandler(projectResponseHandler);
+					messagingConnector.removeMessageHandler(resourceResponseHandler);
+					completionCallback.downloadFailed();
+				}
+
+				return Status.OK_STATUS;
 			}
-			if (!project.isOpen()) {
-				project.open(null);
-			}
-
-			JSONObject message = new JSONObject();
-			message.put("callback_id", this.callbackID);
-			message.put("username", this.username);
-			message.put("project", this.projectName);
-
-			messagingConnector.send("getProjectRequest", message);
-		} catch (CoreException e1) {
-			e1.printStackTrace();
-			this.messagingConnector.removeMessageHandler(projectResponseHandler);
-			this.messagingConnector.removeMessageHandler(resourceResponseHandler);
-			this.completionCallback.downloadFailed();
-		} catch (JSONException e) {
-			e.printStackTrace();
-			this.messagingConnector.removeMessageHandler(projectResponseHandler);
-			this.messagingConnector.removeMessageHandler(resourceResponseHandler);
-			this.completionCallback.downloadFailed();
-		}
+		};
+		
+		job.setRule(ResourcesPlugin.getWorkspace().getRuleFactory().createRule(project));
+		job.schedule();
 	}
 
 	public void getProjectResponse(JSONObject response) {
@@ -129,9 +142,7 @@ public class DownloadProject {
 					String type = resource.optString("type");
 
 					if (type.equals("folder")) {
-						if (resourcePath.isEmpty()) {
-							project.setLocalTimeStamp(timestamp);
-						} else {
+						if (!resourcePath.isEmpty()) {
 							IFolder folder = project.getFolder(new Path(resourcePath));
 							if (!folder.exists()) {
 								folder.create(true, true, null);
@@ -214,17 +225,27 @@ public class DownloadProject {
 	}
 
 	private void importAsPureMavenProject(IFile pomFile) {
-		try {
-			NullProgressMonitor pm = new NullProgressMonitor();
+		WorkspaceJob job = new WorkspaceJob("importAsMaven") {
 			
-			ResolverConfiguration resolverConfiguration = new ResolverConfiguration();
-			String activeProfiles = "pom.xml";
-			resolverConfiguration.setActiveProfiles(activeProfiles);
-			
-			MavenPlugin.getProjectConfigurationManager().enableMavenNature(project, resolverConfiguration, pm);
-		}
-		catch (CoreException e) {
-		}
+			@Override
+			public IStatus runInWorkspace(IProgressMonitor monitor) throws CoreException {
+				try {
+					ResolverConfiguration resolverConfiguration = new ResolverConfiguration();
+					String activeProfiles = "pom.xml";
+					resolverConfiguration.setActiveProfiles(activeProfiles);
+					
+					MavenPlugin.getProjectConfigurationManager().enableMavenNature(project, resolverConfiguration, monitor);
+					return Status.OK_STATUS;
+				}
+				catch (CoreException e) {
+					e.printStackTrace();
+					return Status.OK_STATUS; 
+				}
+			}
+		};
+		
+		job.setRule(ResourcesPlugin.getWorkspace().getRoot());
+		job.schedule();
 	}
 
 }

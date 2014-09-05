@@ -107,8 +107,8 @@ public abstract class AbstractMessagingConnector implements IMessagingConnector 
 		connectionListeners.remove(connectionListener);
 	}
 
-	protected void handleIncomingMessage(String messageType, JSONObject message) {
-		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageType);
+	protected void handleIncomingMessage(final String messageType, final JSONObject message) {
+		Collection<IMessageHandler> handlers = AbstractMessagingConnector.this.messageHandlers.get(messageType);
 		if (handlers != null) {
 			for (IMessageHandler handler : handlers) {
 				if (handler.canHandle(messageType, message)) {
