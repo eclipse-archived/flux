@@ -78,7 +78,7 @@ public class CfDeploymentService {
 				String password = req.getString(CF_PASSWORD);
 				System.out.println("user="+user);
 
-				CloudFoundryClientDelegate client = new CloudFoundryClientDelegate(cfUser, password, cloudControllerUrl, null);
+				CloudFoundryClientDelegate client = new CloudFoundryClientDelegate(cfUser, password, cloudControllerUrl, null, flux);
 				cfClients.put(user, client);
 				res.put(OK, true);
 				return res;
@@ -113,15 +113,11 @@ public class CfDeploymentService {
 					}
 					@Override
 					public void downloadComplete(File project) {
-						try {
-							System.out.println("Downloaded project: "+project);
-							
-							System.out.println("Should deploy now but don't know yet how");
-							CloudFoundryClientDelegate cfClient = getCfClient(username, space);
-							cfClient.push(projectName, project);
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
+						System.out.println("Downloaded project: "+project);
+						
+						System.out.println("Should deploy now but don't know yet how");
+						CloudFoundryClientDelegate cfClient = getCfClient(username, space);
+						cfClient.push(projectName, project);
 					}
 				});
 				return res;
