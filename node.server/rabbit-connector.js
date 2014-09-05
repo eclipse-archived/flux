@@ -447,7 +447,9 @@ RabbitConnector.prototype.configureServiceBroadcast = function(type) {
 
 
 RabbitConnector.prototype.dispose = function () {
-	if (this.channel) {
+	var self = this;
+	if (self.channel) {
+		console.log("disposing ["+self.inbox+"]");
 		this.channel.close(); //Not waiting for promise. This is deliberate.
 		delete this.channel;
 	}

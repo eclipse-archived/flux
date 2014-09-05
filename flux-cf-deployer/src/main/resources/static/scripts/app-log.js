@@ -35,7 +35,10 @@ require(['socket', 'jquery'], function (socket) {
 				.addClass(stream)
 				.text(msg);
 
-		$(".cfAppLog").append(formatted);
+		var appLog = $(".cfAppLog");
+		appLog.append(formatted);
+		var height = appLog[0].scrollHeight;
+		appLog.scrollTop(height);
 	}
 	
 	socket.on('cfAppLog', function (msg) {

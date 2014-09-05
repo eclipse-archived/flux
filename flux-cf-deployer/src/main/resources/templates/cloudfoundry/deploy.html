@@ -24,6 +24,8 @@
 			<dl>
 				<dt>Email</dt>
 					<dd th:text="${user}"></dd>
+				<dt>Default Space</dt>
+					<dd th:text="${defaultSpace}"></dd>
 			</dl>
 			
 			<div class="error" th:if="${error_message}" th:text="${error_message}"></div>
@@ -38,7 +40,7 @@
 					</select>
 					<span class="label">Space:</span>
 					<select name="space">
-						<option th:each="sp : ${spaces}" th:value="${sp}" th:text="${sp}"/>
+						<option th:each="sp : ${spaces}" th:value="${sp}" th:text="${sp}" th:selected="${defaultSpace == sp}"/>
 					</select>
 				</div>
 				<input type="submit" value="Push to Cloud Foundry"/>

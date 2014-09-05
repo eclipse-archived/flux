@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
@@ -54,7 +55,7 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
 	private AtomicBoolean isConnected = new AtomicBoolean(false);
 	
-	private ExecutorService executor = Executors.newFixedThreadPool(4); //TODO: inject?
+	private ExecutorService executor = Executors.newCachedThreadPool();
 	
 	public SocketIOMessageConnector(final String host, final String user, String token) {
 		this.host = host;
@@ -85,6 +86,7 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	
 				@Override
 				public void onDisconnect() {
+					System.out.println("Socket disconnected: "+socket);
 					for (String channel : channels) {
 						notifyChannelDisconnected(channel);
 					}
@@ -124,13 +126,17 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	}
 	
 	public void connectToChannel(final String channel) {
+		System.out.println("Connecting to Channel: "+channel);
 		if (!isConnected()) {
 			throw new IllegalStateException("Cannot connect to channel. Not connected to socket.io");
 		}
 		if (channel==null) {
 			throw new IllegalArgumentException("Channel name should not be null");
 		}
-		if (!channels.contains(channel)) {
+// Commented out because this gets called to 'reconnectr' to socketio after an error
+// and in that case it already has channel in the channels list, but not actually connected
+// yet.
+//		if (!channels.contains(channel)) {
 			try {
 				JSONObject message = new JSONObject();
 				message.put("channel", channel);
@@ -154,7 +160,9 @@ public final class SocketIOMessageConnector implements MessageConnector {
 			} catch (JSONException e) {
 				e.printStackTrace();
 			}
-		}
+//		} else {
+//			System.out.println("Skipping channel connect "+channel+" Already connected");
+//		}
 	}
 	
 	public void disconnectFromChannel(final String channel) {
@@ -184,11 +192,13 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	}
 	
 	private SocketIO createSocket(String host) throws MalformedURLException {
+		System.out.println("Creating websocket to: "+host);
 		SocketIO socket = new SocketIO(host);
 		if (token != null) {
 			socket.addHeader("X-flux-user-name", user);
 			socket.addHeader("X-flux-user-token", token);
 		}
+		System.out.println("Created websocket: "+socket);
 		return socket;
 	}
 	

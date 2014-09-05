@@ -92,6 +92,7 @@ public class CloudfoundryController {
 		}
 		DeploymentConfig dep = new DeploymentConfig(project);
 		dep.setCfSpace(space);
+		cf.setSpace(space); //use this as default space from now on
 		cf.push(dep);
 		return "redirect:/cloudfoundry/app-log"
 			+"?space="+URLEncoder.encode(space, "UTF-8")

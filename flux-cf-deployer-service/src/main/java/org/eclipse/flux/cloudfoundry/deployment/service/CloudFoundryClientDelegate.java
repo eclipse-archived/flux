@@ -217,7 +217,7 @@ public class CloudFoundryClientDelegate {
 				String org = pieces[0];
 				String space = pieces[1];
 				json.put(MessageConstants.CF_ORG, org);
-				json.put(MessageConstants.CF_ORG_SPACE, space);
+				json.put(MessageConstants.CF_SPACE, space);
 			}
 			json.put(MessageConstants.CF_MESSAGE, message);
 			json.put(MessageConstants.CF_STREAM, streamType);
