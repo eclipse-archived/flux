@@ -25,7 +25,7 @@ public final class KeepAliveConnector {
 	private static final String SERVICE_REQUIRED_REQUEST = "serviceRequiredRequest";
 	private static final String SERVICE_REQUIRED_RESPONSE = "serviceRequiredResponse";
 
-	private static final long KEEP_ALIVE_DELAY = 60; // 60 seconds
+	private static final long KEEP_ALIVE_DELAY = 3 * 60 * 60; // 3 hours
 	private static final long KEEP_ALIVE_RESPONSE_WAIT_TIME = 5; // 5 seconds
 	
 	private IMessagingConnector mc;
