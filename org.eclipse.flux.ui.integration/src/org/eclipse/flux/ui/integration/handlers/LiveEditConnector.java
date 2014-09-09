@@ -56,6 +56,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.progress.UIJob;
 import org.eclipse.ui.progress.WorkbenchJob;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 
@@ -193,15 +194,24 @@ public class LiveEditConnector {
 				disconnectOpenEditors(project);
 			}
 			@Override
-			public void resourceChanged(IResource resource) {
-				IFileBuffer fileBuffer = FileBuffers.getTextFileBufferManager().getFileBuffer(resource.getLocation(), LocationKind.NORMALIZE);
-				if (fileBuffer != null) {
-					try {
-						fileBuffer.revert(new NullProgressMonitor());
-					} catch (CoreException e) {
-						e.printStackTrace();
+			public void resourceChanged(final IResource resource) {
+				UIJob job = new UIJob("Sync Save") {
+
+					@Override
+					public IStatus runInUIThread(IProgressMonitor monitor) {
+						IFileBuffer fileBuffer = FileBuffers.getTextFileBufferManager().getFileBuffer(resource.getLocation(), LocationKind.NORMALIZE);
+						if (fileBuffer != null) {
+							try {
+								fileBuffer.revert(new NullProgressMonitor());
+							} catch (CoreException e) {
+								e.printStackTrace();
+							}
+						}
+						return Status.OK_STATUS;
 					}
-				}
+				};
+				job.setSystem(true);
+				job.schedule();
 			}
 		};
 		
