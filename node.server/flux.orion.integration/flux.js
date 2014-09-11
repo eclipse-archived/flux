@@ -29,10 +29,11 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 
 	var host = location.hostname;
 	var port = location.port || 80;
+	var wsport = port;
 	if (host.indexOf("cfapps.io")>0) {
-		port = 4443; // Cloudfoundry weirdness: all websocket traffic re-routed on this port.
+		wsport = 4443; // Cloudfoundry weirdness: all websocket traffic re-routed on this port.
 	}
-	var base = "flux://" + host + ":" + port + "/";
+	var base = "flux://" + host + ":" + wsport + "/";
 
 	var contentTypes = ["application/javascript", "text/plain" ];
 
@@ -42,15 +43,15 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 		'Description' : "Flux Integration",
 		'top' : base,
 		'pattern' : base,
-		'login' : 'http://'+host+':'+port+'/login.html'
+		'login' : 'http://'+host+':'+port+'/auth/github'
 	};
 
 	var provider = new PluginProvider(headers);
 
-	var fileService = new FluxFileSystem(host, port, base);
+	var fileService = new FluxFileSystem(host, wsport, base);
 	provider.registerService("orion.core.file", fileService, headers);
 
-	var editorService = new FluxEditor(host, port, base);
+	var editorService = new FluxEditor(host, wsport, base);
 
 	provider.registerService([
 			"orion.edit.validator",
@@ -70,7 +71,7 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 			'contentType' : contentTypes
 		}
 	);
-	var openDeclaration = new OpenDeclaration(host, port, base);
+	var openDeclaration = new OpenDeclaration(host, wsport, base);
 	provider.registerService("orion.edit.command",
 		openDeclaration,
 		{
