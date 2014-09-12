@@ -43,8 +43,10 @@ var blacklisted = {
 	getResourceRequest: true,
 	getProjectRequest: true,
 	getProjectResponse: true,
-	getProjectsRequest: true,
-	getProjectsResponse: true
+	getProjectsRequest: false,
+	getProjectsResponse: false,
+	serviceRequiredRequest: true,
+	serviceRequiredResponse: true
 };
 function logMsg(pre, type, data) {
 	if (blacklisted[type]) {return; }
@@ -350,6 +352,17 @@ RabbitConnector.prototype.configure = function() {
 	
 	this.configureRequest('javadocrequest');
 	this.configureResponse('javadocresponse');
+	
+	this.configureRequest('cfLoginRequest');
+	this.configureResponse('cfLoginResponse');
+
+	this.configureRequest('cfSpacesRequest');
+	this.configureResponse('cfSpacesResponse');
+	
+	this.configureRequest('cfPushRequest');
+	this.configureResponse('cfPushResponse');
+	
+	this.configureBroadcast('cfAppLog');
 
 };
 
@@ -382,6 +395,11 @@ RabbitConnector.prototype.configureBroadcast = function (type) {
 RabbitConnector.prototype.configureResponse = function(type) {
 	var self = this;
 	this.socket.on(type, function (data) {
+		if (!data) {
+			//Don't crash server with NPE
+			console.error("message with no data from ["+self.inbox+"] type = " +type);
+			return;
+		}
 		data.responseSenderID = self.inbox;
 		logMsg("rabbit ["+ self.inbox +"] <= ", type, data);
 		//Deliver directly to inbox of the requester
@@ -431,7 +449,9 @@ RabbitConnector.prototype.configureServiceBroadcast = function(type) {
 
 
 RabbitConnector.prototype.dispose = function () {
-	if (this.channel) {
+	var self = this;
+	if (self.channel) {
+		console.log("disposing ["+self.inbox+"]");
 		this.channel.close(); //Not waiting for promise. This is deliberate.
 		delete this.channel;
 	}
