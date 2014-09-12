@@ -63,18 +63,24 @@ if (ENABLE_AUTH) {
 	app.use('/edit', authentication.ensureAuthenticated);
 }
 
-function express_static(path) {
-	//Allow browser to cache static content for one whole day. Much improved speed for
-	// loading stuff!
-	var oneDay = 86400000;
-	return express['static'](path, {maxAge: oneDay});
+function express_static(path, noCache) {
+	if (noCache) {
+		console.log("no cache for "+path);
+		return express['static'](path);
+	} else {
+		//Allow browser to cache static content for one whole day. Much improved speed for
+		// loading stuff!
+		var oneDay = 86400000;
+		return express['static'](path, {maxAge: oneDay});
+	}
 }
 
 app.use(app.router);
-app.use("/client/js/URIjs", express_static(__dirname + '/node_modules/URIjs/src'));
+app.use("/", express_static(pathResolve(__dirname, 'flux-static'), "noCache"));
 app.use("/client", express_static(__dirname + '/web-editor'));
 app.use("/orion-plugin",  express_static(pathResolve(__dirname, 'flux.orion.integration')));
-app.use("/", express_static(pathResolve(__dirname, 'flux-static')));
+app.use("/client/js/URIjs", express_static(__dirname + '/node_modules/URIjs/src'));
+
 
 function redirectHome(req, res) {
 	var target = URI(homepage).query({user: userName(req)}).toString();
@@ -88,7 +94,7 @@ if (ENABLE_AUTH) {
 
 if (ENABLE_AUTH) {
 	app.get('/auth/github/callback',
-		passport.authenticate('github', { failureRedirect: '/login.html' }),
+		passport.authenticate('github', { failureRedirect: '/auth/github' }),
 		redirectHome
 	);
 }
