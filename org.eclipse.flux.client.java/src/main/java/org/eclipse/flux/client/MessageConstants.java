@@ -51,7 +51,7 @@ public abstract class MessageConstants {
 	public static final String CF_STREAM = "stream";
 	public static final String CF_MESSAGE = "msg";
 
-	public static final String CF_STREAM_CLIENT_ERROR = "CLIENTERROR";
+	public static final String CF_STREAM_CLIENT_ERROR = "STDERROR";
 	public static final String CF_STREAM_STDOUT = "STDOUT";
 	public static final String CF_STREAM_STDERROR = "STDERROR";
 	public static final String CF_STREAM_SERVICE_OUT = "SVCOUT";
