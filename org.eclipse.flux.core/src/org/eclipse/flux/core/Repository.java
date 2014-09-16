@@ -245,7 +245,7 @@ public class Repository {
 	
 	public void getProjects(JSONObject request) {
 		try {
-			int callbackID = request.getInt("callback_id");
+			int callbackID = getIntMaybe(request, "callback_id");
 			String sender = request.getString("requestSenderID");
 			String username = request.getString("username");
 
@@ -268,6 +268,13 @@ public class Repository {
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private int getIntMaybe(JSONObject request, String prop) throws JSONException {
+		if (request.has(prop)) {
+			return request.getInt(prop);
+		}
+		return 0;
 	}
 
 	public void getProject(JSONObject request) {
