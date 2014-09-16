@@ -13,9 +13,12 @@ package org.eclipse.flux.ui.integration.preferences;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.flux.core.Activator;
 import org.eclipse.flux.core.IPreferenceConstants;
+import org.eclipse.flux.ui.integration.FluxUiPlugin;
 import org.eclipse.jface.dialogs.IMessageProvider;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.preference.PreferencePage;
@@ -33,6 +36,7 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
+import org.osgi.service.prefs.BackingStoreException;
 
 /**
  * Flux connection preferences page
@@ -132,10 +136,16 @@ public class ConnectionPreferencePage extends PreferencePage implements IWorkben
 				|| !getPreferenceStore().getString(IPreferenceConstants.PREF_USER_ID).equals(user.getText())
 				|| !getPreferenceStore().getString(IPreferenceConstants.PREF_USER_TOKEN).equals(token.getText()))) {
 			if (MessageDialog.openQuestion(getShell(), "Change Flux Server Connection Settings", "Do you want to change Flux server connection settings?\n\nIf \"Yes\" is selected workbench will be restarted and new settings will take effect.\n\nEnsure all work is saved before clicking \"Yes\"")) {
-				getPreferenceStore().putValue(IPreferenceConstants.PREF_URL, url.getText());
-				getPreferenceStore().putValue(IPreferenceConstants.PREF_USER_ID, user.getText());
-				getPreferenceStore().putValue(IPreferenceConstants.PREF_USER_TOKEN, token.getText());
-				return PlatformUI.getWorkbench().restart();
+				getPreferenceStore().setValue(IPreferenceConstants.PREF_URL, url.getText());
+				getPreferenceStore().setValue(IPreferenceConstants.PREF_USER_ID, user.getText());
+				getPreferenceStore().setValue(IPreferenceConstants.PREF_USER_TOKEN, token.getText());
+				try {
+					InstanceScope.INSTANCE.getNode(Activator.PLUGIN_ID).flush();
+					return PlatformUI.getWorkbench().restart();
+				} catch (BackingStoreException e) {
+					FluxUiPlugin.getDefault().getLog().log(new Status(IStatus.ERROR, FluxUiPlugin.PLUGIN_ID, "Cannot save preferences changes!", e));
+					e.printStackTrace();
+				}
 			} else {
 				return false;
 			}
