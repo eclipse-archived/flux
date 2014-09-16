@@ -39,20 +39,22 @@ public class UiStartup implements IStartup {
 		IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
 				.getDefault().getMessagingConnector();
 
-		UiChannelListener uiChannelListener = new UiChannelListener();
-		
-		String userChannel = messagingConnector.getChannel();
-		for (; userChannel == null; userChannel = messagingConnector
-				.getChannel()) {
-			try {
-				Thread.sleep(WAIT_TIME_PERIOD);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+		if (messagingConnector != null) {
+			UiChannelListener uiChannelListener = new UiChannelListener();
+			
+			String userChannel = messagingConnector.getChannel();
+			for (; userChannel == null; userChannel = messagingConnector
+					.getChannel()) {
+				try {
+					Thread.sleep(WAIT_TIME_PERIOD);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
+			
+			uiChannelListener.connected(userChannel);
+			messagingConnector.addChannelListener(uiChannelListener);
 		}
-		
-		uiChannelListener.connected(userChannel);
-		messagingConnector.addChannelListener(uiChannelListener);
 	}
 	
 	private class UiChannelListener implements IChannelListener {

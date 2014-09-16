@@ -103,5 +103,13 @@
       <startup
             class="org.eclipse.flux.ui.integration.UiStartup"></startup>
    </extension>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="org.eclipse.flux.ui.integration.preferences.ConnectionPreferencePage"
+            id="org.eclipse.flux.ui.integration.page.connection"
+            name="Flux">
+      </page>
+   </extension>
 
 </plugin>

@@ -80,18 +80,9 @@ public class Activator implements BundleActivator {
 	public void start(BundleContext context) throws Exception {
 		plugin = this;
 		
-		String login = System.getProperty("flux.user.name") == null ? System.getenv("FLUX_USER_ID") : System.getProperty("flux.user.name");
-		if (login == null) {
-			login = "defaultuser";
-		}
-		
-		String token = System.getProperty("flux.user.token") == null ? System.getenv("FLUX_USER_TOKEN") : System.getProperty("flux.user.token");
-		
-		String host = System.getProperty("flux-host") == null ? System.getenv("FLUX_HOST") : System.getProperty("flux-host");
-		if (host == null) {
-			host = "http://localhost:3000";
-		}
-		
+		String host = getHostUrl();
+		String login = getUserId();
+		String token = getUserToken();
 		String lazyStartStr = System.getProperty("flux.lazyStart") == null ? System.getenv("FLUX_LAZY_START") : System.getProperty("flux.lazyStart");
 		lazyStart = lazyStartStr != null && Boolean.valueOf(lazyStartStr);
 		
@@ -100,25 +91,60 @@ public class Activator implements BundleActivator {
 			channel = login;
 		}
 		
-		this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
-		this.messagingConnector.addChannelListener(SERVICE_STARTER);
-		
-		final String userChannel = lazyStart ? Constants.SUPER_USER : channel;
-		messagingConnector.addConnectionListener(new IConnectionListener() {
-		
-			@Override
-			public void connected() {
-				messagingConnector.removeConnectionListener(this);
-				messagingConnector.connectChannel(userChannel);
-			}
-		
-			@Override
-			public void disconnected() {
-				// nothing
-			}
+		if (!host.isEmpty()) {
+			this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
+			this.messagingConnector.addChannelListener(SERVICE_STARTER);
 			
-		});
-		messagingConnector.connect();
+			final String userChannel = lazyStart ? Constants.SUPER_USER : channel;
+			messagingConnector.addConnectionListener(new IConnectionListener() {
+			
+				@Override
+				public void connected() {
+					messagingConnector.removeConnectionListener(this);
+					messagingConnector.connectChannel(userChannel);
+				}
+			
+				@Override
+				public void disconnected() {
+					// nothing
+				}
+				
+			});
+			messagingConnector.connect();
+		}
+	}
+	
+	public static String getHostUrl() {
+		String host = System.getProperty("flux-host") == null ? System.getenv("FLUX_HOST") : System.getProperty("flux-host");
+		if (host == null) {
+			host = InstanceScope.INSTANCE.getNode(PLUGIN_ID).get(IPreferenceConstants.PREF_URL, "");
+		}
+		return host;
+	}
+	
+	public static String getUserId() {
+		String login = System.getProperty("flux.user.name") == null ? System.getenv("FLUX_USER_ID") : System.getProperty("flux.user.name");
+		if (login == null) {
+			login = InstanceScope.INSTANCE.getNode(PLUGIN_ID).get(IPreferenceConstants.PREF_USER_ID, "");
+		}
+		return login;
+	}
+	
+	public static String getUserToken() {
+		String token = System.getProperty("flux.user.token") == null ? System.getenv("FLUX_USER_TOKEN") : System.getProperty("flux.user.token");
+		if (token == null) {
+			token = InstanceScope.INSTANCE.getNode(PLUGIN_ID).get(IPreferenceConstants.PREF_USER_TOKEN, "");
+		}
+		return token;
+	}
+	
+	public static boolean isConnectionSettingsViaPreferences() {
+		return System.getProperty("flux-host") == null
+				&& System.getenv("FLUX_HOST") == null
+				&& System.getProperty("flux.user.name") == null
+				&& System.getenv("FLUX_USER_ID") == null
+				&& System.getProperty("flux.user.token") == null
+				&& System.getenv("FLUX_USER_TOKEN") == null;
 	}
 
 	@Override
