@@ -63,7 +63,12 @@ function sessionCookieHandshake(handshakeData, accept) {
 		var cookie = cookieParse(handshakeData.headers.cookie);
 		//console.log('parsedCookie = ', cookie);
 
-		var sessionID = connect.utils.parseSignedCookie(cookie['connect.sid'], SESSION_SECRET);
+		var sessionID = cookie['connect.sid'];
+		if (!sessionID) {
+			return accept('No session id in Cooky', false);
+		}
+		
+		sessionID = connect.utils.parseSignedCookie(sessionID, SESSION_SECRET);
 		//console.log('sessionID = ', sessionID);
 		//Note: check below is different from the one in the sample code linked above
 		// Nevertheless this *is* the correct check. When cookie cannot be 'unsigned' with our secret

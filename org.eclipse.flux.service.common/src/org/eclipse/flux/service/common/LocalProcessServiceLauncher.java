@@ -14,6 +14,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Launches process for a JDT service. Emulates Cloud Foundry JDT services
+ * 
+ * @author aboyko
+ */
 public class LocalProcessServiceLauncher implements IServiceLauncher {
 	
 	private ProcessBuilder processBuilder;

@@ -19,10 +19,11 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.flux.client.FluxClient;
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.service.common.CloudFoundryServiceLauncher;
 import org.eclipse.flux.service.common.IServiceLauncher;
 import org.eclipse.flux.service.common.LocalProcessServiceLauncher;
-import org.eclipse.flux.service.common.MessageConnector;
 import org.eclipse.flux.service.common.ToolingServiceProvider;
 import org.eclipse.flux.service.common.Utils;
 
@@ -41,6 +42,8 @@ public class JdtServiceProvider {
 	private static final int MAX_INSTANCE_NUMBER = 100;
 	
 	private static final int POOL_SIZE = 3;
+
+	private static FluxClient fluxClient = FluxClient.DEFAULT_INSTANCE;
 
 	/**
 	 * Launches the application. If command line arguments are present, the
@@ -207,7 +210,7 @@ public class JdtServiceProvider {
 		
 		boolean localDeployment = cfUrl == null;
 		
-		final MessageConnector messageConnector = new MessageConnector(
+		final MessageConnector messageConnector = fluxClient.connect(
 				host.toString(), username, password);
 
 		if (localDeployment) {
