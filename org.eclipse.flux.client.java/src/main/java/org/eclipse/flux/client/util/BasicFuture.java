@@ -10,6 +10,8 @@
 *******************************************************************************/
 package org.eclipse.flux.client.util;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -27,8 +29,13 @@ public class BasicFuture<T> implements Future<T> {
 	
 	private Throwable exception; //set when 'rejected'
 	private T value; //set when 'resolved'
-
-	private Runnable onDone;
+	
+	private Collection<CompletionCallback<T>> onDone;
+	
+	public interface CompletionCallback<T> {
+		void resolved(T result);
+		void rejected(Throwable e);
+	}
 	
 	@Override
 	public boolean cancel(boolean mayInterruptIfRunning) {
@@ -75,11 +82,21 @@ public class BasicFuture<T> implements Future<T> {
 			}
 			isDone = true;
 			notifyAll();
-			runOnDone = onDone;
+			if (onDone!=null) {
+				final Object[] callbacks = onDone.toArray();
+				runOnDone = new Runnable() {
+					@SuppressWarnings("unchecked")
+					public void run() {
+						for (Object cb : callbacks) {
+							callback((CompletionCallback<T>) cb);
+						}
+					}
+				};
+			}
 			onDone = null;
 		}
-		//Careful to call runnable outside synch block. We don't know what it does and
-		// it should be responsible for its own thread synch/locks. This is still
+		//Careful to call callbacks outside synch block. We don't know what they do and
+		//they should be responsible for its own thread synch/locks. This is still
 		//thread safe because using a local variable
 		if (runOnDone!=null) {
 			runOnDone.run();
@@ -114,11 +131,40 @@ public class BasicFuture<T> implements Future<T> {
 	/**
 	 * Schedule a runnable to be executed when this future transitions to 'done' state
 	 */
-	public synchronized void whenDone(Runnable runnable) {
-		if (onDone!=null) {
-			throw new IllegalStateException("whenDone callback already registered");
+	public synchronized void whenDone(final Runnable runnable) {
+		whenDone(new CompletionCallback<T>() {
+			@Override
+			public void resolved(T result) {
+				runnable.run();
+			}
+			
+			@Override
+			public void rejected(Throwable e) {
+				runnable.run();
+			}
+		});
+	}
+	
+	/**
+	 * Add a callback to be called on completion (i.e. when the future resolves or rejects).
+	 */
+	public synchronized void whenDone(CompletionCallback<T> callback) {
+		if (isDone()) {
+			callback(callback);
+		} else {
+			if (onDone==null) {
+				onDone = new HashSet<>();
+			}
+			onDone.add(callback);
 		}
-		onDone = runnable;
+	}
+
+	private void callback(CompletionCallback<T> callback) {
+		if (exception!=null) {
+			callback.rejected(exception);
+		} else {
+			callback.resolved(value);
+		}
 	}
 
 }
