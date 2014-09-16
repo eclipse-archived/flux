@@ -55,9 +55,10 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
 	private AtomicBoolean isConnected = new AtomicBoolean(false);
 	
-	private ExecutorService executor = Executors.newCachedThreadPool();
+	private ExecutorService executor;
 	
-	public SocketIOMessageConnector(final String host, final String user, String token) {
+	public SocketIOMessageConnector(final String host, final String user, String token, ExecutorService executor) {
+		this.executor = executor;
 		this.host = host;
 		this.user = user;
 		this.token = token;

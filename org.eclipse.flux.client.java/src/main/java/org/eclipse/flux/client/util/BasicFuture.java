@@ -61,6 +61,7 @@ public class BasicFuture<T> implements Future<T> {
 		if (this.exception==null) {
 			this.exception = new RuntimeException();
 		}
+		done();
 	}
 
 	/**
