@@ -135,10 +135,11 @@ public class ConnectionPreferencePage extends PreferencePage implements IWorkben
 		if (editable && (!getPreferenceStore().getString(IPreferenceConstants.PREF_URL).equals(url.getText())
 				|| !getPreferenceStore().getString(IPreferenceConstants.PREF_USER_ID).equals(user.getText())
 				|| !getPreferenceStore().getString(IPreferenceConstants.PREF_USER_TOKEN).equals(token.getText()))) {
-			if (MessageDialog.openQuestion(getShell(), "Change Flux Server Connection Settings", "Do you want to change Flux server connection settings?\n\nIf \"Yes\" is selected workbench will be restarted and new settings will take effect.\n\nEnsure all work is saved before clicking \"Yes\"")) {
-				getPreferenceStore().setValue(IPreferenceConstants.PREF_URL, url.getText());
-				getPreferenceStore().setValue(IPreferenceConstants.PREF_USER_ID, user.getText());
-				getPreferenceStore().setValue(IPreferenceConstants.PREF_USER_TOKEN, token.getText());
+			getPreferenceStore().setValue(IPreferenceConstants.PREF_URL, url.getText());
+			getPreferenceStore().setValue(IPreferenceConstants.PREF_USER_ID, user.getText());
+			getPreferenceStore().setValue(IPreferenceConstants.PREF_USER_TOKEN, token.getText());
+			if (MessageDialog.openQuestion(getShell(), "Restart workbench", 
+					"Workbench needs to be restarted for new settings to take effect. Do you want to restart the Workbench now?\n\nEnsure all work is saved before clicking \"Yes\"")) {
 				try {
 					InstanceScope.INSTANCE.getNode(Activator.PLUGIN_ID).flush();
 					return PlatformUI.getWorkbench().restart();
@@ -146,8 +147,6 @@ public class ConnectionPreferencePage extends PreferencePage implements IWorkben
 					FluxUiPlugin.getDefault().getLog().log(new Status(IStatus.ERROR, FluxUiPlugin.PLUGIN_ID, "Cannot save preferences changes!", e));
 					e.printStackTrace();
 				}
-			} else {
-				return false;
 			}
 		}
 		return super.performOk();
