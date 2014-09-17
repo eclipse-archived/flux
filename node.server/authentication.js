@@ -247,9 +247,23 @@ function addLogging(shaker) {
  * This function is supposed to verify whether connection can be authorized.
  */
 var socketIoHandshake = addLogging(handshakeCompose(
-	sessionCookieHandshake, // browser clients use this
-	tokenHandshake			// Java and nodejs clients use this
+	tokenHandshake,			// Java and nodejs clients use this, also browser clients connecting 'cross domain'
+							// use this.
+	sessionCookieHandshake  // browser clients from same host as flux websocket use this
 ));
+//IMORTANT note about order of handshake handlers:
+// tokenHandshake should be first because
+// browser clients connecting from another domain may have both
+//    - a valid session cookie
+//    - token
+// This is because the browser automatically attaches cookie when connecting to a url on the
+// websocket host. So if the user has visited that host before and gotten a session cookie it will be
+// automatically attached, even if the XHR request comes from a different host.
+// When a user connects from another domain they shouldn't really rely on this 'implicit' login.
+// Therefore the client will attach its own user+token to the connection request.
+// In case both a token and session cookie are provide the token is the one
+// that should be used preferentially since it is provided by the app they are currently using
+// rather than a old session cookie from when they last used flux orion UI.
 
 /**
  * express middleware that checks whether req is authenticated.
