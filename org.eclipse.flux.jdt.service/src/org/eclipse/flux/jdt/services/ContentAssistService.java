@@ -128,14 +128,18 @@ public class ContentAssistService {
 		CompletionContext completionContext = completionContextParam[0];
 		for (CompletionProposal proposal : proposals) {
 			JSONObject jsonDescription = getDescription(proposal, completionContext);
-			List<Integer> positionsList = new ArrayList<Integer>();
-			StringBuilder jsonCompletion = new CompletionProposalReplacementProvider(liveEditUnit, proposal, completionContext, offset, prefix).createReplacement(positionsList);
+			ProposalReplcamentInfo replacementInfo = new CompletionProposalReplacementProvider(liveEditUnit, proposal, completionContext, offset, prefix).createReplacement();
 			
 			JSONObject jsonProposal = new JSONObject();
 			jsonProposal.put("description", jsonDescription);
-			jsonProposal.put("proposal", jsonCompletion);
-			if (positionsList != null && !positionsList.isEmpty()) {
-				jsonProposal.put("positions", getPositions(positionsList));
+			jsonProposal.put("proposal", replacementInfo.replacement);
+			int initOffset = offset - prefix.length();
+			if (replacementInfo.extraChanges != null) {
+				jsonProposal.put("additionalEdits", Utils.editsToJsonArray(replacementInfo.extraChanges));
+				initOffset += Utils.getOffsetAdjustment(replacementInfo.extraChanges, initOffset);
+			}
+			if (replacementInfo.positions != null && !replacementInfo.positions.isEmpty()) {
+				jsonProposal.put("positions", getPositions(replacementInfo.positions, initOffset));
 			}
 			jsonProposal.put("style", "attributedString");
 			jsonProposal.put("replace", true);
@@ -173,12 +177,12 @@ public class ContentAssistService {
 		return new JSONArray(jsonProposals);
 	}
 	
-	private JSONArray getPositions(List<Integer> positionsList) throws JSONException {
+	private JSONArray getPositions(List<Integer> positionsList, int initOffset) throws JSONException {
 		if (positionsList != null && positionsList.size() % 2 == 0) {
 			JSONArray jsonPositions = new JSONArray();
 			for (int i = 0; i < positionsList.size(); i += 2) {
 				JSONObject position = new JSONObject();
-				position.put("offset", positionsList.get(i));
+				position.put("offset", positionsList.get(i) + initOffset);
 				position.put("length", positionsList.get(i + 1));
 				jsonPositions.put(position);
 			}

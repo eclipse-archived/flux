@@ -13,6 +13,7 @@ package org.eclipse.flux.jdt.services;
 
 import java.util.Arrays;
 
+import org.eclipse.jdt.core.CompletionProposal;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.Signature;
@@ -317,5 +318,15 @@ public final class SignatureUtil {
 			pos++;
 		}
 		return pos + 1;
+	}
+	
+	
+	static String getQualifiedTypeName(CompletionProposal proposal) {
+		return String.valueOf(Signature.toCharArray(Signature
+				.getTypeErasure(proposal.getSignature())));
+	}
+
+	static String getSimpleTypeName(CompletionProposal proposal) {
+		return Signature.getSimpleName(getQualifiedTypeName(proposal));
 	}
 }

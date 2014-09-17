@@ -15,12 +15,15 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.ITypeHierarchy;
 import org.eclipse.jdt.core.ITypeParameter;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.Signature;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 
 /**
  * Method implementations extracted from JDT UI. Mostly from
@@ -31,6 +34,11 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
  */
 public class TypeProposalUtils {
 
+	private static final String PACKAGE_INFO_JAVA = "package-info.java"; //$NON-NLS-1$
+	private static final String[] IMPORTS_ORDER = new String[] { "java",
+			"javax", "org", "com" };
+	private static final int IMPORTS_THRESHOLD = 99;
+	 
 	static void createName(ITypeBinding type, boolean includePackage,
 			List<String> list) {
 		ITypeBinding baseType = type;
@@ -146,4 +154,49 @@ public class TypeProposalUtils {
 		return path.toArray(new IType[path.size()]);
 	}
 	
+	static boolean isPackageInfo(ICompilationUnit cu) {
+		return PACKAGE_INFO_JAVA.equals(cu.getElementName());
+	}
+
+	static ImportRewrite createImportRewrite(ICompilationUnit compilationUnit) {
+		try {
+			ImportRewrite rewrite = ImportRewrite.create(compilationUnit, true);
+			rewrite.setImportOrder(IMPORTS_ORDER);
+			rewrite.setOnDemandImportThreshold(IMPORTS_THRESHOLD);
+			rewrite.setStaticOnDemandImportThreshold(IMPORTS_THRESHOLD);
+			return rewrite;
+		} catch (JavaModelException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	static boolean isImplicitImport(String qualifier, ICompilationUnit cu) {
+		if ("java.lang".equals(qualifier)) { //$NON-NLS-1$
+			return true;
+		}
+		String packageName = cu.getParent().getElementName();
+		if (qualifier.equals(packageName)) {
+			return true;
+		}
+		String typeName = JavaCore.removeJavaLikeExtension(cu.getElementName());
+		String mainTypeName = concatenateName(packageName, typeName);
+		return qualifier.equals(mainTypeName);
+	}
+
+	private static String concatenateName(String name1, String name2) {
+		StringBuffer buf = new StringBuffer();
+		if (name1 != null && name1.length() > 0) {
+			buf.append(name1);
+		}
+		if (name2 != null && name2.length() > 0) {
+			if (buf.length() > 0) {
+				buf.append('.');
+			}
+			buf.append(name2);
+		}
+		return buf.toString();
+	}
+
 }

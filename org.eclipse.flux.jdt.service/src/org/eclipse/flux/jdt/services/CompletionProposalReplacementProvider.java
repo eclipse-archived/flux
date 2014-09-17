@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.CompletionContext;
 import org.eclipse.jdt.core.CompletionProposal;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -31,6 +33,7 @@ import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTRequestor;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 
 /**
  * Utility to calculate the completion replacement string based on JDT Core
@@ -53,6 +56,7 @@ public class CompletionProposalReplacementProvider {
 	private String prefix;
 	private CompletionProposal proposal;
 	private CompletionContext context;
+	private ImportRewrite importRewrite;
 		
 	public CompletionProposalReplacementProvider(ICompilationUnit compilationUnit, CompletionProposal proposal, CompletionContext context, int offset, String prefix) {
 		super();
@@ -61,11 +65,19 @@ public class CompletionProposalReplacementProvider {
 		this.prefix = prefix;
 		this.proposal = proposal;
 		this.context = context;
+		this.importRewrite = TypeProposalUtils.createImportRewrite(compilationUnit);
 	}
 	
 	
-	public StringBuilder createReplacement(List<Integer> positions) {
-		return createReplacement(proposal, (char) 0, positions);
+	public ProposalReplcamentInfo createReplacement() {
+		ProposalReplcamentInfo replacementInfo = new ProposalReplcamentInfo();
+		replacementInfo.replacement = createReplacement(proposal, (char) 0, replacementInfo.positions).toString();
+		try {
+			replacementInfo.extraChanges = importRewrite.rewriteImports(new NullProgressMonitor());
+		} catch (CoreException e) {
+			e.printStackTrace();
+		}
+		return replacementInfo;
 	}
 	
 	public StringBuilder createReplacement(CompletionProposal proposal, char trigger, List<Integer> positions) {
@@ -160,7 +172,7 @@ public class CompletionProposalReplacementProvider {
 
 	private void appendReplacementString(StringBuilder buffer, CompletionProposal proposal, List<Integer> positions) {
 		if (!hasArgumentList(proposal)) {
-			buffer.append(String.valueOf(proposal.getCompletion()));
+			buffer.append(computeJavaTypeReplacementString(proposal));
 			return;
 		}
 
@@ -209,7 +221,7 @@ public class CompletionProposalReplacementProvider {
 
 			char[] argument = parameterNames[i];
 			
-			positions.add(offset - prefix.length() + buffer.length());
+			positions.add(buffer.length());
 			positions.add(argument.length);
 
 			buffer.append(argument);
@@ -378,7 +390,7 @@ public class CompletionProposalReplacementProvider {
 				if (i != 0)
 					buffer.append(separator);
 	
-				positions.add(offset - prefix.length() + buffer.length());
+				positions.add(buffer.length());
 				positions.add(typeArguments[i].length());
 				buffer.append(typeArguments[i]);
 			}
@@ -443,23 +455,26 @@ public class CompletionProposalReplacementProvider {
 			 Assert.isTrue(false);
 		}
 
-// 		/* Add imports if the preference is on. */
-// 		fImportRewrite= createImportRewrite();
-// 		if (fImportRewrite != null) {
-//	 		if (proposalKind == CompletionProposal.TYPE_IMPORT) {
-//	 			String simpleType= fImportRewrite.addImport(qualifiedTypeName, fImportContext);
-//		 		if (fParentProposalKind == CompletionProposal.METHOD_REF)
-//		 			return simpleType + "."; //$NON-NLS-1$
-// 			} else {
-//				String res= fImportRewrite.addStaticImport(qualifiedTypeName, String.valueOf(fProposal.getName()), proposalKind == CompletionProposal.FIELD_IMPORT, fImportContext);
-//				int dot= res.lastIndexOf('.');
-//				if (dot != -1) {
-//					String typeName= fImportRewrite.addImport(res.substring(0, dot), fImportContext);
-//					return typeName + '.';
-//				}
-//			}
-//	 		return ""; //$NON-NLS-1$
-//	 	}
+ 		/* Add imports if the preference is on. */
+ 		if (importRewrite != null) {
+	 		if (proposalKind == CompletionProposal.TYPE_IMPORT) {
+	 			String simpleType= importRewrite.addImport(qualifiedTypeName, null);
+		 		if (coreKind == CompletionProposal.METHOD_REF) {
+		 			buffer.append(simpleType);
+		 			buffer.append(',');
+		 			return buffer;
+		 		}
+ 			} else {
+				String res= importRewrite.addStaticImport(qualifiedTypeName, String.valueOf(proposal.getName()), proposalKind == CompletionProposal.FIELD_IMPORT, null);
+				int dot= res.lastIndexOf('.');
+				if (dot != -1) {
+					buffer.append(importRewrite.addImport(res.substring(0, dot), null));
+					buffer.append('.');
+					return buffer;
+				}
+			}
+	 		return buffer; //$NON-NLS-1$
+	 	}
 
 		// Case where we don't have an import rewrite (see allowAddingImports)
 
@@ -531,13 +546,104 @@ public class CompletionProposalReplacementProvider {
 
 		return null;
 	}
+
+	private String computeJavaTypeReplacementString(CompletionProposal proposal) {
+		String replacement = String.valueOf(proposal.getCompletion());
+
+		/* No import rewriting ever from within the import section. */
+		if (isImportCompletion(proposal))
+			return replacement;
+
+		/*
+		 * Always use the simple name for non-formal javadoc references to
+		 * types.
+		 */
+		// TODO fix
+		if (proposal.getKind() == CompletionProposal.TYPE_REF
+				&& context.isInJavadocText())
+			return SignatureUtil.getSimpleTypeName(proposal);
+
+		String qualifiedTypeName = SignatureUtil.getQualifiedTypeName(proposal);
+
+		// Type in package info must be fully qualified.
+		if (compilationUnit != null
+				&& TypeProposalUtils.isPackageInfo(compilationUnit))
+			return qualifiedTypeName;
+
+		if (qualifiedTypeName.indexOf('.') == -1 && replacement.length() > 0)
+			// default package - no imports needed
+			return qualifiedTypeName;
+
+		/*
+		 * If the user types in the qualification, don't force import rewriting
+		 * on him - insert the qualified name.
+		 */
+		int dotIndex = prefix.lastIndexOf('.');
+		// match up to the last dot in order to make higher level matching still
+		// work (camel case...)
+		if (dotIndex != -1
+				&& qualifiedTypeName.toLowerCase().startsWith(
+						prefix.substring(0, dotIndex + 1).toLowerCase())) {
+			return qualifiedTypeName;
+		}
+
+		/*
+		 * The replacement does not contain a qualification (e.g. an inner type
+		 * qualified by its parent) - use the replacement directly.
+		 */
+		if (replacement.indexOf('.') == -1) {
+			if (isInJavadoc())
+				return SignatureUtil.getSimpleTypeName(proposal); // don't use
+																	// the
+																	// braces
+																	// added for
+																	// javadoc
+																	// link
+																	// proposals
+			return replacement;
+		}
+
+		/* Add imports if the preference is on. */
+		if (importRewrite != null) {
+			return importRewrite.addImport(qualifiedTypeName, null);
+		}
+
+		// fall back for the case we don't have an import rewrite (see
+		// allowAddingImports)
+
+		/* No imports for implicit imports. */
+		if (compilationUnit != null
+				&& TypeProposalUtils.isImplicitImport(
+						Signature.getQualifier(qualifiedTypeName),
+						compilationUnit)) {
+			return Signature.getSimpleName(qualifiedTypeName);
+		}
+
+		/* Default: use the fully qualified type name. */
+		return qualifiedTypeName;
+	}
+
+	private boolean isImportCompletion(CompletionProposal proposal) {
+		char[] completion = proposal.getCompletion();
+		if (completion.length == 0)
+			return false;
+
+		char last = completion[completion.length - 1];
+		/*
+		 * Proposals end in a semicolon when completing types in normal imports
+		 * or when completing static members, in a period when completing types
+		 * in static imports.
+		 */
+		return last == ';' || last == '.';
+	}		
+		
 	
-	//	private boolean isSmartTrigger(char trigger) {
-	//		return false;
-	//	}
-	//	
-	//	private void handleSmartTrigger(char trigger, int refrenceOffset) {
-	//		
-	//	}
+//	private boolean isSmartTrigger(char trigger) {
+//		return false;
+//	}
+//
+//	private void handleSmartTrigger(char trigger, int refrenceOffset) {
+//
+//	}
 
 }
