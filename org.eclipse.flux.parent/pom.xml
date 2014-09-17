@@ -64,6 +64,11 @@
 			<url>http://download.eclipse.org/tools/orbit/downloads/drops/R20140525021250/repository</url>
 			<layout>p2</layout>
 		</repository>
+		<repository>
+			<id>eclipse-license</id>
+			<layout>p2</layout>
+			<url>http://download.eclipse.org/cbi/updates/license</url>
+		</repository>
 	</repositories>
 	
     <profiles>
