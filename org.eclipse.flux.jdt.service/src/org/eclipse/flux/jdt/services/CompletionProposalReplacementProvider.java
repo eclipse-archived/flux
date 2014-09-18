@@ -172,7 +172,7 @@ public class CompletionProposalReplacementProvider {
 
 	private void appendReplacementString(StringBuilder buffer, CompletionProposal proposal, List<Integer> positions) {
 		if (!hasArgumentList(proposal)) {
-			buffer.append(computeJavaTypeReplacementString(proposal));
+			buffer.append(proposal.getSignature() == null ? proposal.getCompletion() : computeJavaTypeReplacementString(proposal));
 			return;
 		}
 
