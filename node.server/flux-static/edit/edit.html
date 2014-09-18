@@ -7,7 +7,7 @@
 		<link rel="icon" href="../images/edit.png" type="image/png">
 		<title>Editor</title>
 		<link rel="stylesheet" type="text/css" href="edit.css" />
-		<script src="../requirejs/require.min.js"></script>
+		<script src="../requirejs/require.js"></script>
 		<script type="text/javascript">
 			/*eslint-env browser, amd*/
 			require({
@@ -31,15 +31,17 @@
 			<div id="pageToolbar" class="mainToolbar toolComposite toolbarLayout"></div>
 			<div id="innerPanels" class="innerPanels">
 				<div id="auxpane" class="auxpane sidePanelLayout hasSplit">
-					<div class="fixedToolbarHolder">
-						<div id="sidebarToolbar" class="sidebarToolbar mainToolbar toolComposite toolbarLayout"></div>
-						<div id="sidebar" class="dropdownTrigger toolbarTarget"></div>
+					<div class="fixedToolbarHolder sidebarWrapper">
+						<span id="sidebarToolbar" class="sidebarToolbar mainToolbar toolComposite toolbarLayout"></span>
+						<div id="sidebar" class="dropdownTrigger toolbarTarget sidebar"></div>
 					</div>
 				</div>
 				<div class="split splitLayout" style="left: 25%;"></div>
 				<div id="rightPane" class="mainpane mainPanelLayout hasSplit">
 					<div class="fixedToolbarHolder">
 						<div id="editor" class="workingTarget"></div>
+						<div id="replaceCompareTitleDiv" class="replaceCompareTitleDiv"></div>
+						<div id="replaceCompareDiv" class="replaceCompareDiv workingTarget"></div>
 					</div>
 				</div>
 			</div>

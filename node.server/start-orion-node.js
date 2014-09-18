@@ -70,14 +70,21 @@ module.exports = function (options) {
 					"edit/content/imageViewerPlugin.html":true,
 					"edit/content/jsonEditorPlugin.html":true,
 					"plugins/webEditingPlugin.html":true,
+					"plugins/helpPlugin.html": true,
 					"plugins/languages/arduino/arduinoPlugin.html":true,
 					"plugins/languages/c/cPlugin.html":true,
 					"plugins/languages/cpp/cppPlugin.html":true,
+					"plugins/languages/erlang/erlangPlugin.html":true,
+					"plugins/languages/go/goPlugin.html":true,
+					"plugins/languages/haml/hamlPlugin.html":true,
 					"plugins/languages/java/javaPlugin.html":true,
 					"plugins/languages/lua/luaPlugin.html":true,
+					"plugins/languages/markdown/markdownPlugin.html":true,
+					"plugins/languages/objectiveC/objectiveCPlugin.html":true,
 					"plugins/languages/php/phpPlugin.html":true,
 					"plugins/languages/python/pythonPlugin.html":true,
 					"plugins/languages/ruby/rubyPlugin.html":true,
+					"plugins/languages/swift/swiftPlugin.html":true,
 					"plugins/languages/xml/xmlPlugin.html":true,
 					"plugins/languages/xquery/xqueryPlugin.html":true,
 					"plugins/languages/yaml/yamlPlugin.html":true,
@@ -85,8 +92,7 @@ module.exports = function (options) {
 					"webtools/plugins/webToolsPlugin.html":true,
 					"javascript/plugins/javascriptPlugin.html":true,
 					"shell/plugins/shellPagePlugin.html":true,
-					// "plugins/nodePlugin.html":true, // doesn't work at the moment needs socket.io added to the server
-					"search/plugins/searchPagePlugin.html":true
+					// "plugins/nodePlugin.html":true
 				},
 				"/settingsContainer":{
 					"categories":{
