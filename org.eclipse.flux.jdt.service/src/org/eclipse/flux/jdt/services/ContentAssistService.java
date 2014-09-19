@@ -141,6 +141,7 @@ public class ContentAssistService {
 			if (replacementInfo.positions != null && !replacementInfo.positions.isEmpty()) {
 				jsonProposal.put("positions", getPositions(replacementInfo.positions, initOffset));
 			}
+			jsonProposal.put("escapePosition", initOffset + replacementInfo.replacement.length());
 			jsonProposal.put("style", "attributedString");
 			jsonProposal.put("replace", true);
 			jsonProposal.put("relevance", proposal.getRelevance());
