@@ -415,6 +415,7 @@ var FluxEditor = (function() {
 									'overwrite' : proposal.replace,
 									'positions' : proposal.positions,
 									'proposal' : proposal.proposal,
+									'additionalEdits' : proposal.additionalEdits,
 									'style' : "emphasis",
 									'escapePosition' : proposal.escapePosition
 								});
