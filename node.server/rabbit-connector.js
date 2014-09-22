@@ -353,9 +353,6 @@ RabbitConnector.prototype.configure = function() {
 	this.configureRequest('javadocrequest');
 	this.configureResponse('javadocresponse');
 	
-	this.configureRequest('cfLoginRequest');
-	this.configureResponse('cfLoginResponse');
-
 	this.configureRequest('cfSpacesRequest');
 	this.configureResponse('cfSpacesResponse');
 	

@@ -12,14 +12,10 @@ package org.eclipse.flux.client;
 
 public abstract class MessageConstants {
 
-	public static final String CF_LOGIN_REQUEST = "cfLoginRequest"; // message
-																	// type
 	public static final String CF_CONTROLLER_URL = "cf_controller"; // property
 	public static final String CF_USERNAME = "cf_username"; // property
-	public static final String CF_PASSWORD = "cf_password"; // property
+	public static final String CF_TOKEN = "cf_token"; //property oath2 bearer token
 
-	public static final String CF_LOGIN_RESPONSE = "cfLoginResponse"; // message
-																		// type
 	public static final String OK = "ok";
 
 	public static final String CF_SPACES_REQUEST = "cfSpacesRequest"; // message
