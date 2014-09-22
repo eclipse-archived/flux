@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.flux.ui.integration;
 
+import org.eclipse.flux.core.Activator;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.IStartup;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -26,16 +27,24 @@ public class FluxUiPlugin extends AbstractUIPlugin implements IStartup {
 	// The shared instance
 	private static FluxUiPlugin plugin;
 
+	private AuthFailureReporter connectionListener;
+
 	@Override
 	public void start(BundleContext context) throws Exception {
 		super.start(context);
 		plugin = this;
+		connectionListener = new AuthFailureReporter(Activator.getDefault().getMessagingConnector().getState());
 	}
 
 	@Override
 	public void stop(BundleContext context) throws Exception {
 		plugin = null;
+		if (connectionListener!=null) {
+			connectionListener.dispose();
+			connectionListener = null;
+		}
 		super.stop(context);
+		
 	}
 
 	/**

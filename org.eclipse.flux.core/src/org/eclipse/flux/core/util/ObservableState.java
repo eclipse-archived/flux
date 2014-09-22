@@ -17,21 +17,38 @@ import java.util.HashSet;
  * Concrete implementation of Observable that provides a 'setter' method
  * to change the current value.
  */
-public class Variable<T> implements Observable<T> {
+public class ObservableState<T> implements Observable<T> {
 
 	private T value;
 
 	private Collection<Listener<T>> listeners;
 	
-	public Variable(T initialValue) {
+	public ObservableState(T initialValue) {
 		this.value = initialValue;
-		changed(initialValue); //Initialization is treated as a change event.
+		notifyNewValue(initialValue); //Initialization is treated as a change event.
 	}
 
-	private void changed(T value) {
-		for (Listener<T> l : listeners) {
-			l.changed(this, value);
+	@SuppressWarnings("unchecked")
+	private void notifyNewValue(T value) {
+		Listener<T>[] listeners = null; 
+		synchronized (this) {
+			if (this.listeners!=null) {
+				listeners = this.listeners.toArray(new Listener[this.listeners.size()]);
+			}
 		}
+		//Careful... we want to make sure we notify listeners outside synch block!
+		// TODO: actually it would be better to notify listeneres in a separate thread/stack. 
+		//       as we do not know which locks might be held by code calling into
+		//       to the 'setValue'.
+		if (listeners!=null) {
+			for (Listener<T> l : listeners) {
+				notifyNewValue(l, value);
+			}
+		}
+	}
+
+	private void notifyNewValue(Listener<T> l, T value) {
+		l.newValue(this, value);
 	}
 
 	@Override
@@ -40,10 +57,13 @@ public class Variable<T> implements Observable<T> {
 	}
 	
 	public synchronized void setValue(T v) {
-		if (equal(this.value, v)) {
-			return;
+		synchronized (this) {
+			if (equal(this.value, v)) {
+				return;
+			}
+			this.value = v;
 		}
-		this.value = v;
+		notifyNewValue(v);
 	}
 
 	private boolean equal(T a, T b) {
@@ -54,11 +74,14 @@ public class Variable<T> implements Observable<T> {
 	}
 
 	@Override
-	public synchronized void addListener(Listener<T> l) {
-		if (this.listeners==null) {
-			this.listeners = createCollection();
+	public void addListener(Listener<T> l) {
+		synchronized (this) {
+			if (this.listeners==null) {
+				this.listeners = createCollection();
+			}
+			this.listeners.add(l);
 		}
-		this.listeners.add(l);
+		notifyNewValue(l, value);
 	}
 
 	private HashSet<Listener<T>> createCollection() {

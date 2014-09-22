@@ -25,7 +25,10 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.flux.core.Activator;
+import org.eclipse.flux.core.ConnectionStatus;
 import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.core.util.Observable;
+import org.eclipse.flux.core.util.ObservableState;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -33,6 +36,11 @@ import org.json.JSONObject;
  * @author Martin Lippert
  */
 public class SocketIOMessagingConnector extends AbstractMessagingConnector implements IMessagingConnector {
+	
+	//TODO: much of this code is duplicated in 'org.eclipse.flux.java.client'. How can we consume it as
+	// a dependency and get rid of this code duplication.
+	// Note that connection state tracking support is not present in the java.client code. 
+	// It was added only here after the code was copied.
 
 	protected static final long INITIAL_DELAY = 0;
 
@@ -50,6 +58,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 	private String userChannel;
 	private String login;
 	private String token;
+	private final ObservableState<ConnectionStatus> connectionState = new ObservableState<ConnectionStatus>(ConnectionStatus.INITIALIZING);
 		
 	public SocketIOMessagingConnector(String host, final String login, final String token) {
 		this.host = host;
@@ -78,13 +87,19 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 
 			@Override
 			public void onError(SocketIOException ex) {
+				Activator.log(ex);
 				final IOCallback self = this;
-				if (isAuthFailure(ex)) {
-					Activator.log(ex);
+				ConnectionStatus status = connectionState.getValue().error(ex);
+				connectionState.setValue(status);
+				if (status.isAuthFailure()) {
+					//Do not keep trying when authentication failed. This is pointless as it
+					// will only keep on failing for the same reason.
+				} else {
 					new Job("Reconnect web-socket") {
 						@Override
 						protected IStatus run(IProgressMonitor arg0) {
 							try {
+								connectionState.setValue(connectionState.getValue().reconnect());
 								String channel = userChannel;
 								if (userChannel != null) {
 									processDisconnectChannel();
@@ -113,6 +128,7 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 			@Override
 			public void onConnect() {
 				try {
+					connectionState.setValue(connectionState.getValue().connect());
 					connected.compareAndSet(false, true);
 					delay = INITIAL_DELAY;
 					notifyConnected();
@@ -252,12 +268,10 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 			e.printStackTrace();
 		}
 	}
-
 	
-	private boolean isAuthFailure(SocketIOException ex) {
-		//TODO: check the message indicates a 'handshake' problem.
-		return true;
+	@Override
+	public Observable<ConnectionStatus> getState() {
+		return connectionState;
 	}
-
-
+	
 }

@@ -23,12 +23,15 @@ import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Plugin;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.internal.CloudSyncResourceListener;
 import org.eclipse.flux.core.internal.messaging.SocketIOMessagingConnector;
-import org.osgi.framework.BundleActivator;
+import org.eclipse.flux.core.util.ExceptionUtil;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
 
@@ -36,7 +39,7 @@ import org.osgi.service.prefs.BackingStoreException;
  * @author Martin Lippert
  * @author Miles Parker
  */
-public class Activator implements BundleActivator {
+public class Activator extends Plugin {
 
 	// The plug-in ID
 	public static final String PLUGIN_ID = "org.eclipse.flux.core"; //$NON-NLS-1$
@@ -306,7 +309,7 @@ public class Activator implements BundleActivator {
 	}
 
 	public static void log(Throwable ex) {
-		ex.printStackTrace();
+		getDefault().getLog().log(new Status(IStatus.ERROR, PLUGIN_ID, ExceptionUtil.getMessage(ex), ex));
 	}
 	
 	public boolean isLazyStart() {

@@ -10,6 +10,7 @@
 *******************************************************************************/
 package org.eclipse.flux.core;
 
+import org.eclipse.flux.core.util.Observable;
 import org.json.JSONObject;
 
 /**
@@ -30,5 +31,7 @@ public interface IMessagingConnector {
 	void removeChannelListener(IChannelListener channelListener);
 	void addMessageHandler(IMessageHandler messageHandler);
 	void removeMessageHandler(IMessageHandler messageHandler);
+	
+	Observable<ConnectionStatus> getState();
 
 }
