@@ -36,6 +36,7 @@ public class CloudProjectDecorator extends LabelProvider implements ILightweight
 	@Override
 	public void decorate(Object element, IDecoration decoration) {
 		if (element instanceof IProject
+				&& org.eclipse.flux.core.Activator.getDefault().getMessagingConnector() != null
 				&& org.eclipse.flux.core.Activator.getDefault()
 						.getMessagingConnector().getChannel() != null
 				&& org.eclipse.flux.core.Activator.getDefault().getRepository() != null
