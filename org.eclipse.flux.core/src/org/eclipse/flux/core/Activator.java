@@ -312,5 +312,5 @@ public class Activator implements BundleActivator {
 	public boolean isLazyStart() {
 		return lazyStart;
 	}
-	
+
 }

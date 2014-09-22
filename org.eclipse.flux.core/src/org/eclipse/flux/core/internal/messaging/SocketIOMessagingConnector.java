@@ -79,27 +79,29 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 			@Override
 			public void onError(SocketIOException ex) {
 				final IOCallback self = this;
-				Activator.log(ex);
-				new Job("Reconnect web-socket") {
-					@Override
-					protected IStatus run(IProgressMonitor arg0) {
-						try {
-							String channel = userChannel;
-							if (userChannel != null) {
-								processDisconnectChannel();
+				if (isAuthFailure(ex)) {
+					Activator.log(ex);
+					new Job("Reconnect web-socket") {
+						@Override
+						protected IStatus run(IProgressMonitor arg0) {
+							try {
+								String channel = userChannel;
+								if (userChannel != null) {
+									processDisconnectChannel();
+								}
+								notifyDisconnected();
+								socket = createSocket();
+								socket.connect(self);
+								if (channel != null) {
+									connectChannel(channel);
+								}
+							} catch (MalformedURLException e) {
+								e.printStackTrace();
 							}
-							notifyDisconnected();
-							socket = createSocket();
-							socket.connect(self);
-							if (channel != null) {
-								connectChannel(channel);
-							}
-						} catch (MalformedURLException e) {
-							e.printStackTrace();
+							return Status.OK_STATUS;
 						}
-						return Status.OK_STATUS;
-					}
-				}.schedule(reconnectDelay());
+					}.schedule(reconnectDelay());
+				}
 			}
 
 			private long reconnectDelay() {
@@ -250,5 +252,12 @@ public class SocketIOMessagingConnector extends AbstractMessagingConnector imple
 			e.printStackTrace();
 		}
 	}
+
+	
+	private boolean isAuthFailure(SocketIOException ex) {
+		//TODO: check the message indicates a 'handshake' problem.
+		return true;
+	}
+
 
 }
