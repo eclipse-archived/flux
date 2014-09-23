@@ -112,11 +112,16 @@ public final class MessageConnector {
 	}
 	
 	public void connectToChannel(final String channel) {
-		if (isConnected() && channel != null && !channels.contains(channel)) {
+		if (channel == null) {
+			throw new IllegalArgumentException("Channel cannot be null!");
+		}
+		if (channels.contains(channel)) {
+			return;
+		}
+		if (isConnected()) {
 			try {
 				JSONObject message = new JSONObject();
 				message.put("channel", channel);
-				channels.add(channel);
 				socket.emit("connectToChannel", new IOAcknowledge() {
 
 					public void ack(Object... answer) {
@@ -125,7 +130,9 @@ public final class MessageConnector {
 									&& answer[0] instanceof JSONObject
 									&& ((JSONObject) answer[0])
 											.getBoolean("connectedToChannel")) {
-								notifyChannelConnected(channel);
+								if (channels.add(channel)) {
+									notifyChannelConnected(channel);
+								}
 							}
 						} catch (Exception e) {
 							e.printStackTrace();
@@ -136,12 +143,13 @@ public final class MessageConnector {
 			} catch (JSONException e) {
 				e.printStackTrace();
 			}
+		} else {
+			channels.add(channel);
 		}
 	}
 	
 	public void disconnectFromChannel(final String channel) {
-		boolean removed = channels.remove(channel);
-		if (isConnected() && removed) {
+		if (isConnected()) {
 			try {
 				JSONObject message = new JSONObject();
 				message.put("channel", channel);
@@ -150,7 +158,9 @@ public final class MessageConnector {
 					public void ack(Object... answer) {
 						try {
 							if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("disconnectedFromChannel")) {
-								notifyChannelDisconnected(channel);
+								if (channels.remove(channel)) {
+									notifyChannelDisconnected(channel);
+								}
 							}
 						}
 						catch (Exception e) {
@@ -162,6 +172,8 @@ public final class MessageConnector {
 			} catch (JSONException e) {
 				e.printStackTrace();
 			}
+		} else {
+			channels.remove(channel);
 		}
 	}
 	
