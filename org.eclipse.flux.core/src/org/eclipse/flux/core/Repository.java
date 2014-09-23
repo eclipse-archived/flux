@@ -696,7 +696,9 @@ public class Repository {
 					message.put("hash", updateHash);
 					message.put("type", "file");
 					messagingConnector.send("resourceStored", message);
-					notifyResourceChanged(resource);
+					if (resource != null) {
+						notifyResourceChanged(resource);
+					}
 				}
 			}
 		} catch (Exception e) {

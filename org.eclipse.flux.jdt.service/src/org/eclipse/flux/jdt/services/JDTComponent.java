@@ -40,33 +40,36 @@ public class JDTComponent {
 		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
 				.getDefault().getMessagingConnector();
 		
-		new Thread() {
+		if (messagingConnector != null) {
+			new Thread() {
 
-			@Override
-			public void run() {
-				
-				String userChannel = messagingConnector.getChannel();
-				JdtChannelListener jdtChannelListener = new JdtChannelListener();
-				for (; userChannel == null; userChannel = messagingConnector
-						.getChannel()) {
-					try {
-						sleep(WAIT_TIME_PERIOD);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
+				@Override
+				public void run() {
+					
+					String userChannel = messagingConnector.getChannel();
+					JdtChannelListener jdtChannelListener = new JdtChannelListener();
+					for (; userChannel == null; userChannel = messagingConnector
+							.getChannel()) {
+						try {
+							sleep(WAIT_TIME_PERIOD);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
 					}
+					
+					discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, JDT_SERVICE_ID, lazyStart);
+					if (lazyStart) {
+						keepAliveConnector = new KeepAliveConnector(messagingConnector, JDT_SERVICE_ID);
+					}
+					
+					jdtChannelListener.connected(userChannel);
+					messagingConnector.addChannelListener(jdtChannelListener);
 				}
 				
-				discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, JDT_SERVICE_ID, lazyStart);
-				if (lazyStart) {
-					keepAliveConnector = new KeepAliveConnector(messagingConnector, JDT_SERVICE_ID);
-				}
-				
-				jdtChannelListener.connected(userChannel);
-				messagingConnector.addChannelListener(jdtChannelListener);
-			}
-			
-		}.start();
-				
+			}.start();
+					
+		}
+		
 	}
 	
 	@Deactivate

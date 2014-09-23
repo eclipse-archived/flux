@@ -198,9 +198,10 @@ public class LiveEditCoordinator {
 			e.printStackTrace();
 		}
 		
+		String path = projectName + '/' + resourcePath;
 		for (ILiveEditConnector connector : this.liveEditConnectors) {
 			if (!connector.getConnectorID().equals(changeOriginID)) {
-				connector.liveEditingStarted("local", 0, username, resourcePath, hash, timestamp);
+				connector.liveEditingStarted("local", 0, username, path, hash, timestamp);
 			}
 		}
 	}

@@ -195,6 +195,10 @@ public class LiveEditConnector {
 			}
 			@Override
 			public void resourceChanged(final IResource resource) {
+				if (resource == null) {
+					return;
+				}
+				
 				UIJob job = new UIJob("Sync Save") {
 
 					@Override
