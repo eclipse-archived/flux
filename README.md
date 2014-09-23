@@ -244,11 +244,11 @@ Flux JDT service jar that can be deployed on the Cloud Foundry can be created wi
  
 1. Navigate to _org.eclipse.flux.headless.releng_ folder
 2. Execute _"mvn clean package"_
-3. Navigate from current folder into _target/products/org.eclipse.flux.headless/linux/gtk/x86_64_
-4. Execute _"jar xf plugins/org.eclipse.equinox.launcher_1.3.0.v20140415-2008.jar"_
+3. Navigate from current folder into *"../org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/linux/gtk/x86_64"*
+4. Execute *"jar xf plugins/org.eclipse.equinox.launcher_1.3.0.v20140415-2008.jar"*
 5. Delete the META-INF folder
-6. Execute _"jar cfe flux-jdt.jar org.eclipse.equinox.launcher.Main ."_
-7. Find the _flux-jdt.jar_ file in the current folder
+6. Execute *"jar cfe flux-jdt.jar org.eclipse.equinox.launcher.Main ."*
+7. Find the *flux-jdt.jar* file in the current folder
        
 ## Status
 
