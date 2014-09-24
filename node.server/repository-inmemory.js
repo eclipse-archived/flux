@@ -240,7 +240,7 @@ InMemoryRepository.prototype.getResourceInfo = function(username, projectName, r
 		var needsUpdate = resource !== undefined && (resource.type != type || resource.timestamp < timestamp);
 
 		var deletedResource = project.deleted[resourcePath];
-		var deleted = deleted !== undefined && deleted.timestamp > timestamp;
+		var deleted = deletedResource !== undefined && deletedResource.timestamp > timestamp;
 
 		callback(null, {
 			'exists' : exists,
