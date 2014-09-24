@@ -48,6 +48,15 @@
 	               commandId="org.eclipse.flux.ui.integration.download"
 	               style="push">
 	         </command>
+             <separator
+                   name="configActions"
+                   visible="true">
+             </separator>
+             <command
+                   commandId="org.eclipse.flux.ui.integration.configure"
+                   label="Configure..."
+                   style="push">
+             </command>
           </menu> 
       </menuContribution>
    </extension>
@@ -59,25 +68,24 @@
             id="org.eclipse.flux.ui.integration.connect"
             name="Connect">
       </command>
-   </extension>
-
-   <extension
-         point="org.eclipse.ui.commands">
+      <command
+            defaultHandler="org.eclipse.flux.ui.integration.handlers.ConfigureHandler"
+            id="org.eclipse.flux.ui.integration.configure"
+            name="Configure">
+      </command>
       <command
             defaultHandler="org.eclipse.flux.ui.integration.handlers.SyncDisconnectHandler"
             id="org.eclipse.flux.ui.integration.disconnect"
             name="Disconnect">
       </command>
-   </extension>
-   
-   <extension
-         point="org.eclipse.ui.commands">
       <command
             defaultHandler="org.eclipse.flux.ui.integration.handlers.SyncDownloadHandler"
             id="org.eclipse.flux.ui.integration.download"
             name="Download">
       </command>
    </extension>
+
+   
 
    <extension point="org.eclipse.ui.decorators">
       <decorator
