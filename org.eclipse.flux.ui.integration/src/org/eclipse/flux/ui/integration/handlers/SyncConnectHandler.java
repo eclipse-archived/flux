@@ -39,24 +39,25 @@ public class SyncConnectHandler extends AbstractHandler {
 		
 		Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
 
-		for (IProject project : selectedProjects) {
-			if (!repository.isConnected(project)) {
-				repository.addProject(project);
+		if (repository != null) {
+			for (IProject project : selectedProjects) {
+				if (!repository.isConnected(project)) {
+					repository.addProject(project);
+				}
 			}
-		}
-		
+		}		
 		return null;
 	}
 
 	@Override
 	public void setEnabled(Object evaluationContext) {
-		if (evaluationContext instanceof IEvaluationContext) {
+		Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
+		if (repository != null && evaluationContext instanceof IEvaluationContext) {
 			IEvaluationContext evalContext = (IEvaluationContext) evaluationContext;
 			Object selection = evalContext.getVariable(ISources.ACTIVE_CURRENT_SELECTION_NAME);
 			if (selection instanceof ISelection) {
 				IProject[] selectedProjects = getSelectedProjects((ISelection) selection);
 				
-				Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
 				for (IProject project : selectedProjects) {
 					if (!repository.isConnected(project)) {
 						setBaseEnabled(true);

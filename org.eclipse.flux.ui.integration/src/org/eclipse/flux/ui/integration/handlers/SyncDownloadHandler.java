@@ -35,6 +35,10 @@ public class SyncDownloadHandler extends AbstractHandler {
 		final Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
 		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator.getDefault().getMessagingConnector();
 		
+		if (repository == null || messagingConnector == null) {
+			return null;
+		}
+		
 		final Shell shell = FluxUiPlugin.getDefault().getWorkbench().getActiveWorkbenchWindow().getShell();
 
 		SyncDownloadSelectionDialog selectionDialog = new SyncDownloadSelectionDialog(shell, new LabelProvider(), messagingConnector, repository.getUsername());
@@ -60,6 +64,13 @@ public class SyncDownloadHandler extends AbstractHandler {
 		}
 		
 		return null;
+	}
+
+	@Override
+	public boolean isEnabled() {
+		final Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
+		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator.getDefault().getMessagingConnector();
+		return repository != null && messagingConnector != null;
 	}
 
 }
