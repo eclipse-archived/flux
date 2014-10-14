@@ -15,6 +15,7 @@ import io.socket.IOCallback;
 import io.socket.SocketIO;
 import io.socket.SocketIOException;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,15 +26,13 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 
 import org.eclipse.flux.client.IChannelListener;
-import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.util.BasicFuture;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -45,6 +44,11 @@ import org.json.JSONObject;
  * @author kdvolder
  */
 public final class SocketIOMessageConnector implements MessageConnector {
+
+	/**
+	 * Time in milliseconds a connectToChannelSynch call will wait before timing out.
+	 */
+	private static final long CONNECT_TO_CHANNEL_TIMEOUT = 15000;
 	
 	private SocketIO socket;
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
@@ -125,8 +129,30 @@ public final class SocketIOMessageConnector implements MessageConnector {
 			e.printStackTrace();
 		}
 	}
-	
+
+	/**
+	 * Deprecated, please use connectToChannel('myChannel', true) to
+	 * connect to channel synchronously and avoid common bugs of the
+	 * type 'oops I sent messages before the channel was connected'.
+	 * <p>
+	 * Also consider catching exceptions connectToChannel('myChannel', true) might throw
+	 * if it fails to connect to the channel. 
+	 */
+	@Deprecated
 	public void connectToChannel(final String channel) {
+		try {
+			connectToChannel(channel, false);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
+	public void connectToChannelSync(final String channel) throws Exception {
+		connectToChannel(channel, true);
+	}
+	
+	private void connectToChannel(final String channel, final boolean sync) throws Exception {
 		System.out.println("Connecting to Channel: "+channel);
 		if (!isConnected()) {
 			throw new IllegalStateException("Cannot connect to channel. Not connected to socket.io");
@@ -134,6 +160,8 @@ public final class SocketIOMessageConnector implements MessageConnector {
 		if (channel==null) {
 			throw new IllegalArgumentException("Channel name should not be null");
 		}
+		final BasicFuture<Void> connectedFuture = sync ? new BasicFuture<Void>() : null;
+		
 // Commented out because this gets called to 'reconnectr' to socketio after an error
 // and in that case it already has channel in the channels list, but not actually connected
 // yet.
@@ -151,19 +179,35 @@ public final class SocketIOMessageConnector implements MessageConnector {
 									&& ((JSONObject) answer[0])
 											.getBoolean("connectedToChannel")) {
 								notifyChannelConnected(channel);
+								if (sync) {
+									connectedFuture.resolve(null);
+								}
+							} else {
+								//TODO: add a better explanation?
+								connectedFuture.reject(new IOException("Couldn't connect to channel "+channel));
 							}
 						} catch (Exception e) {
 							e.printStackTrace();
+							if (sync) {
+								connectedFuture.reject(e);
+							}
 						}
 					}
 
 				}, message);
 			} catch (JSONException e) {
+				if (sync) {
+					connectedFuture.reject(e);
+				}
 				e.printStackTrace();
 			}
 //		} else {
 //			System.out.println("Skipping channel connect "+channel+" Already connected");
 //		}
+		if (sync) {
+			connectedFuture.setTimeout(CONNECT_TO_CHANNEL_TIMEOUT);
+			connectedFuture.get();
+		}
 	}
 	
 	public void disconnectFromChannel(final String channel) {

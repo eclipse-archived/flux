@@ -12,18 +12,23 @@ package org.eclipse.flux.client.util;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
  * Basic implementation of Future interface. Note: Apache http libs have something similar to
- * this, but we don't want a dependency on that lib.
+ * this, but we don't want a hard dependency on that lib.
  * 
  * @author Kris De Volder
  */
-public class BasicFuture<T> implements Future<T> {
+public class BasicFuture<T> {
+	
+	//Note we are not implementing Future interface as its too cumbersome to
+	// implement all of it. Ideally we would make this implementation
+	// fully conform to JRE's Future interface.
 
 	private boolean isDone = false;
 	
@@ -31,23 +36,16 @@ public class BasicFuture<T> implements Future<T> {
 	private T value; //set when 'resolved'
 	
 	private Collection<CompletionCallback<T>> onDone;
-	
+
+	private Timer timer;
+
+	private TimerTask timeoutTask;
+
 	public interface CompletionCallback<T> {
 		void resolved(T result);
 		void rejected(Throwable e);
 	}
 	
-	@Override
-	public boolean cancel(boolean mayInterruptIfRunning) {
-		throw new UnsupportedOperationException("Not implemented");
-	}
-
-	@Override
-	public boolean isCancelled() {
-		return false;
-	}
-
-	@Override
 	public boolean isDone() {
 		return isDone;
 	}
@@ -103,7 +101,6 @@ public class BasicFuture<T> implements Future<T> {
 		}
 	}
 	
-	@Override
 	public synchronized T get() throws InterruptedException, ExecutionException {
 		waitUntilDone();
 		if (this.exception!=null) {
@@ -120,12 +117,6 @@ public class BasicFuture<T> implements Future<T> {
 				//ignore
 			}
 		}
-	}
-
-	@Override
-	public synchronized T get(long timeout, TimeUnit unit) throws InterruptedException,
-			ExecutionException, TimeoutException {
-		throw new UnsupportedOperationException("Not implemented");
 	}
 
 	/**
@@ -165,6 +156,38 @@ public class BasicFuture<T> implements Future<T> {
 		} else {
 			callback.resolved(value);
 		}
+	}
+
+	/**
+	 * Ensure that this future resolves or rejects within a certain time. 
+	 * <p>
+	 * If the future is already 'done' this does nothing otherwise it 
+	 * schedules a timer task that rejects the future with a TimeoutException when
+	 * the time limit is reached. 
+	 */
+	public void setTimeout(long delay) {
+		if (isDone()) {
+			return;
+		}
+		timer().schedule(timeoutTask = new TimerTask() {
+			@Override
+			public void run() {
+				reject(new TimeoutException());
+			}
+		}, delay);
+		whenDone(new Runnable() {
+			public void run() {
+				timeoutTask.cancel();
+				timeoutTask = null;
+			}
+		});
+	}
+
+	private synchronized Timer timer() {
+		if (timer==null) {
+			timer = new Timer();
+		}
+		return timer;
 	}
 
 }

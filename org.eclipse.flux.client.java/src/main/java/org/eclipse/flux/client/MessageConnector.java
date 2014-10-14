@@ -36,7 +36,18 @@ import org.json.JSONObject;
  */
 public interface MessageConnector {
 	
+	/**
+	 * Deprecated, please use connectToChannel('myChannel') to
+	 * connect to channel synchronously and avoid common bugs of the
+	 * type 'oops I sent messages before the channel was connected'.
+	 * <p>
+	 * Also consider catching/handling exceptions connectToChannelSync('myChannel') might throw
+	 * if it fails to connect to the channel.
+	 */
+	@Deprecated
 	public void connectToChannel(final String channel);
+	
+	public void connectToChannelSync(String username) throws Exception;
 	public void disconnectFromChannel(final String channel);
 	public boolean isConnected(String channel);
 	
