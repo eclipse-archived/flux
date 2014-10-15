@@ -1,0 +1,2 @@
+#Encrypt all manifest.yml files they contain various secret keys:
+manifest.yml* filter=git-crypt diff=git-crypt
