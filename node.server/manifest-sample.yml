@@ -1,0 +1,10 @@
+---
+applications:
+- name: flux
+  memory: 512M
+  host: flux
+  services:
+  - flux-rabbit-test
+  env:
+    FLUX_GITHUB_CLIENT_ID: ...get-your-own...
+    FLUX_GITHUB_CLIENT_SECRET: ...get-your-own...
