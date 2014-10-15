@@ -53,6 +53,21 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 
 	var editorService = new FluxEditor(host, wsport, base);
 
+   provider.registerServiceProvider("orion.page.link.category", null, {
+		id: "flux",
+		name: "Flux",
+		nameKey: "Flux",
+		nls: "orion-plugin/nls/messages",
+		imageClass: "flux-sprite",
+		order: 5
+	});
+	provider.registerServiceProvider("orion.page.link", null, {
+		id: "flux.deployer",
+		name: "CF Deployer",
+		category: "flux",
+		order: 10,     // Make this the first link in the 'sites' category.
+		uriTemplate: "https://flux-cf-deployer.cfapps.io"
+	});
 	provider.registerService([
 			"orion.edit.validator",
 			"orion.edit.live"
