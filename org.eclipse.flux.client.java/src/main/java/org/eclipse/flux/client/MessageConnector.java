@@ -10,6 +10,7 @@
 *******************************************************************************/
 package org.eclipse.flux.client;
 
+import org.eclipse.flux.client.config.FluxConfig;
 import org.json.JSONObject;
 
 /**
@@ -63,7 +64,6 @@ public interface MessageConnector {
 	
 	public boolean isConnected();
 	
-	public String getHost();
-	public String getUser();
+	public FluxConfig getConfig();
 
 }

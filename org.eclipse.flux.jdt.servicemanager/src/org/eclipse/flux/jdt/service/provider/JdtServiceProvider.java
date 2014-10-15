@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.eclipse.flux.client.FluxClient;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.service.common.CloudFoundryServiceLauncher;
 import org.eclipse.flux.service.common.IServiceLauncher;
 import org.eclipse.flux.service.common.LocalProcessServiceLauncher;
@@ -210,8 +211,9 @@ public class JdtServiceProvider {
 		
 		boolean localDeployment = cfUrl == null;
 		
-		final MessageConnector messageConnector = fluxClient.connect(
-				host.toString(), username, password);
+		final MessageConnector messageConnector = new SocketIOFluxConfig(
+				host.toString(), username, password
+		).connect(fluxClient);
 
 		if (localDeployment) {
 			serviceLauncher = createCFImmitationServiceLauncher(

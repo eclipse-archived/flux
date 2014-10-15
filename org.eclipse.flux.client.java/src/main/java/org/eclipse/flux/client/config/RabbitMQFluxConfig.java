@@ -12,26 +12,26 @@ package org.eclipse.flux.client.config;
 
 import org.eclipse.flux.client.FluxClient;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.impl.RabbitMQMessageConnector;
 
-
-/**
- * FluxConfig contains information needed to create a connection to flux bus.
- * <p>
- * This is a marker interface, allowing for different classes specific to 
- * specific clients to implement whatever kind of data objects they need.
- * 
- * @author Kris De Volder
- */
-public interface FluxConfig {
-
-	MessageConnector connect(FluxClient fluxClient);
-	String getUser();
+public class RabbitMQFluxConfig extends AbstractFluxConfig {
 
 	/**
-	 * Convert this config into a equivalent SocketIO config, thus allowing
-	 * a client running in an environment that does not have direct access
-	 * to RabbitMQ to connect using the websocket-based implementation.
+	 * Create default RabbitMQFluxConfig to rabbit mq instance on localhost
 	 */
-	SocketIOFluxConfig toSocketIO();
-	
+	public RabbitMQFluxConfig(String user) {
+		super(user);
+	}
+
+	@Override
+	public MessageConnector connect(FluxClient fluxClient) {
+		return new RabbitMQMessageConnector(fluxClient, this);
+	}
+
+	@Override
+	public SocketIOFluxConfig toSocketIO() {
+		throw new Error("Not implemented");
+	}
+
+
 }

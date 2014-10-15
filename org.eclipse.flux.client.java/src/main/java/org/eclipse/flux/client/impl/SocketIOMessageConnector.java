@@ -33,6 +33,8 @@ import javax.net.ssl.SSLContext;
 import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.config.FluxConfig;
+import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.client.util.BasicFuture;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -53,22 +55,18 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	private SocketIO socket;
 	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
 	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();
-	final private String host;
-	private String user;
-	private String token;
+	private final SocketIOFluxConfig conf;
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
 	private AtomicBoolean isConnected = new AtomicBoolean(false);
 	
 	private ExecutorService executor;
 	
-	public SocketIOMessageConnector(final String host, final String user, String token, ExecutorService executor) {
+	public SocketIOMessageConnector(SocketIOFluxConfig conf, ExecutorService executor) {
 		this.executor = executor;
-		this.host = host;
-		this.user = user;
-		this.token = token;
+		this.conf = conf;
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
-			this.socket = createSocket(host);
+			this.socket = createSocket();
 			final BasicFuture<Void> connectedFuture = new BasicFuture<Void>();
 			this.socket.connect(new IOCallback() {
 				
@@ -105,7 +103,7 @@ public final class SocketIOMessageConnector implements MessageConnector {
 					try {
 						onDisconnect();						
 						isConnected.compareAndSet(true, false);
-						socket = createSocket(host);
+						socket = createSocket();
 						socket.connect(this);
 					} catch (MalformedURLException e) {
 						e.printStackTrace();
@@ -236,12 +234,12 @@ public final class SocketIOMessageConnector implements MessageConnector {
 		}
 	}
 	
-	private SocketIO createSocket(String host) throws MalformedURLException {
-		System.out.println("Creating websocket to: "+host);
-		SocketIO socket = new SocketIO(host);
-		if (token != null) {
-			socket.addHeader("X-flux-user-name", user);
-			socket.addHeader("X-flux-user-token", token);
+	private SocketIO createSocket() throws MalformedURLException {
+		System.out.println("Creating websocket to: "+conf.getHost());
+		SocketIO socket = new SocketIO(conf.getHost());
+		if (conf.getToken() != null) {
+			socket.addHeader("X-flux-user-name", conf.getUser());
+			socket.addHeader("X-flux-user-token", conf.getToken());
 		}
 		System.out.println("Created websocket: "+socket);
 		return socket;
@@ -318,17 +316,13 @@ public final class SocketIOMessageConnector implements MessageConnector {
 		socket.disconnect();
 	}
 	
-	public String getHost() {
-		return host;
-	}
-	
 	public boolean isConnected() {
 		return isConnected.get();
 	}
 
 	@Override
-	public String getUser() {
-		return user;
+	public FluxConfig getConfig() {
+		return conf;
 	}
-	
+
 }
