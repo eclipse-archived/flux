@@ -28,9 +28,9 @@ var when = require('when');
 function intializeJDT(msgService, socket, username) {
 
 	//Example code snippets for using 'msgService')
-	//msgService.showProgressMessage("Looking for JDT Service...");
-	//msgService.showProgressResult("JDT Service ready for user '"+username);
-	//msgService.showProgressError("Sorry, JDT Service Currently Unavailable");
+	//msgService.setStatus({Message: "Looking for JDT Service..."});
+	//msgService.setStatus((Message: "JDT Service ready for user '"+username});
+	//msgService.setStatus({Severity: "Error", Message: "Sorry, JDT Service Currently Unavailable"});
 
 	var disposed = false;
 	var disposers = []; //things to do on dispose
@@ -106,7 +106,7 @@ function intializeJDT(msgService, socket, username) {
 		//body of 'discover'
 		var deferred = when.defer();
 		
-		msgService.showProgressMessage("Looking for "+SERVICE_NAME);
+		msgService.setStatus({ Message: "Looking for "+SERVICE_NAME });
 
 		on('discoverServiceResponse', handleDiscoveryResponse);
 		socket.emit('discoverServiceRequest', {
@@ -124,16 +124,16 @@ function intializeJDT(msgService, socket, username) {
 		var status = fluxMsg.status;
 		switch (status) {
 			case 'ready':
-				msgService.showProgressResult(SERVICE_NAME+' is Ready!');
+				msgService.setStatus({ Message: SERVICE_NAME+' is Ready!' });
 				break;
 			case 'unavailable':
 				var msg = SERVICE_NAME+' Unavailable';
 				if (fluxMsg.error) {
 					msg = msg+": "+fluxMsg.error;
-					msgService.showProgressError(msg);
+					msgService.setStatus({ Severity: "Error", Message: msg });
 				} else if (fluxMsg.info) {
 					msg = msg+": "+fluxMsg.info;
-					msgService.showProgressMessage(msg);
+					msgService.setStatus({ Message: msg });
 				}
 				setTimeout(startService, SERVICE_RESTART_DELAY)
 				break;
@@ -143,7 +143,7 @@ function intializeJDT(msgService, socket, username) {
 				//A 'starting message should appear shorthy thereafter anyhow.
 				break;
 			default:
-				msgService.showProgressMessage(SERVICE_NAME+' is '+status);
+				msgService.setStatus({ Message: SERVICE_NAME+' is '+status });
 		}
 	}
 	
@@ -183,7 +183,7 @@ function intializeJDT(msgService, socket, username) {
 		}
 		discover().then(function (discoveryResponse) {
 			if (!discoveryResponse) {
-				msgService.showProgressError("Looking for "+SERVICE_NAME+": Timed Out");
+				msgService.setStatus({ Severity: "Error", Message: "Looking for "+SERVICE_NAME+": Timed Out" });
 			} else {
 				showStatus(discoveryResponse);
 				if (discoveryResponse.status === 'available') {
