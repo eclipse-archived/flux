@@ -1,36 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
-		id="org.eclipse.flux.ide.integration.feature"
-		label="%featureName"
-		version="0.1.0.qualifier"
-		provider-name="%providerName"
-		license-feature="org.eclipse.license"
-		license-feature-version="1.0.0.qualifier">
+      id="org.eclipse.flux.ide.integration.feature"
+      label="%featureName"
+      version="0.1.0.qualifier"
+      provider-name="%providerName"
+      license-feature="org.eclipse.license"
+      license-feature-version="1.0.0.qualifier">
 
-	<description>
-        %description
-	</description>
+   <description>
+      %description
+   </description>
 
-	<copyright>
-        %copyright
-	</copyright>
+   <copyright>
+      %copyright
+   </copyright>
 
-	<license url="%licenseURL">
-        %license
-	</license>
+   <license url="%licenseURL">
+      %license
+   </license>
 
-	<plugin
-		id="org.eclipse.flux.core"
-		download-size="0"
-		install-size="0"
-		version="0.0.0"
-		unpack="false"/>
+   <plugin
+         id="org.eclipse.flux.core"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
 
-	<plugin
-		id="org.eclipse.flux.ui.integration"
-		download-size="0"
-		install-size="0"
-		version="0.0.0"
-		unpack="false"/>
+   <plugin
+         id="org.eclipse.flux.ui.integration"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
+         id="org.eclipse.flux.common"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"/>
 
 </feature>
