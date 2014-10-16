@@ -249,6 +249,33 @@ Flux JDT service jar that can be deployed on the Cloud Foundry can be created wi
 5. Delete the META-INF folder
 6. Execute *"jar cfe flux-jdt.jar org.eclipse.equinox.launcher.Main ."*
 7. Find the *flux-jdt.jar* file in the current folder
+
+## Git-Crypt
+
+ Note that the repository already contains some working 'manifest.yml*' files to
+ deploy the production version flux to cloudfoundry. However these files are encrypted 
+ with [git-crypt](https://github.com/AGWA/git-crypt). These files are only needed
+ if you need to deploy new versions of flux to their official homes on cfapps.io.
+  
+ If you are committer, and need to deploy a new version into production, you can 
+ ask another committer for the `flux.key` file and setup git-crypt. 
+ 
+ For information on installing git-crypt on your system see 
+ [git-crypt/install.md](https://github.com/AGWA/git-crypt/blob/master/INSTALL.md).
+ 
+ Once you got the key-file put it somewhere safe on your system. It is a good idea to 
+ make the key file only readable by you alone. Then `cd` into your flux repo clone
+ and enter this command to 'unlock' the encrypted files (on older version of git-crypt):
+ 
+    git-crypt init <path-to-key-file>
+    
+ On newer version of git-crypt you can use:
+ 
+    git-crypt unlock <path-to-key-file>
+ 
+ Once git-crypt is configured like this, you can forget about it. To you, the files 
+ will now work as if they are not encrypted, but they will be encrypted when 
+ they are committed to the repo.
        
 ## Status
 
