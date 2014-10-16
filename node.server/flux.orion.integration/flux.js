@@ -27,6 +27,21 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 // If we do not use domReady, then when we get here it may in
 // already be too late to capture the window.onLoad event.
 
+	function addCss(cssText) {
+		var document = window.top.document;
+		var css = document.createElement("style");
+		css.type = "text/css";
+		css.innerHTML = cssText;
+		document.head.appendChild(css);
+	}
+		
+	addCss(".flux-sprite {\n"+
+		"    background: url('/images/cloud_icon_16.png') 12px;\n"+
+		"    background-repeat: no-repeat;\n"+
+		"    width:16px;height:16px;\n" +
+		"}\n"
+	);
+
 	var host = location.hostname;
 	var port = location.port || 80;
 	var wsport = port;
