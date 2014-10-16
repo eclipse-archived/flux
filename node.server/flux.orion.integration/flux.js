@@ -27,21 +27,6 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 // If we do not use domReady, then when we get here it may in
 // already be too late to capture the window.onLoad event.
 
-	function addCss(cssText) {
-		var document = window.top.document;
-		var css = document.createElement("style");
-		css.type = "text/css";
-		css.innerHTML = cssText;
-		document.head.appendChild(css);
-	}
-		
-	addCss(".flux-sprite {\n"+
-		"    background: url('/images/cloud_icon_16.png') 12px;\n"+
-		"    background-repeat: no-repeat;\n"+
-		"    width:16px;height:16px;\n" +
-		"}\n"
-	);
-
 	var host = location.hostname;
 	var port = location.port || 80;
 	var wsport = port;
@@ -71,9 +56,9 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
    provider.registerServiceProvider("orion.page.link.category", null, {
 		id: "flux",
 		name: "Flux",
-		nameKey: "Flux",
-		nls: "orion-plugin/nls/messages",
-		imageClass: "flux-sprite",
+//		nameKey: "Flux",
+//		nls: "orion-plugin/nls/messages",
+		imageDataURI: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAABuwAAAbsBOuzj4gAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAEqSURBVDiNpdMxS9thEAbwX/6Gbm6CkrVjoYuDhygoWfwEpW4dikLngpMgguDqEopjp4JfIHMHc5CWTlla2kkEhwwuBRFNhyQQ038SxZvu3ueeu/e5971Kr9fzHCuexX5KgcyslJ1XZknIzB18RA3n2I6IbmmBzJzHKjoRcZGZb/AFo92/ox4R1w8kZOYifqCJ35n5CZ/HyLCMD8OgOgIc4uXAf4HdKcpWhs7oEOtTCNMLZObGSPfH2FJmvoZKq9Waw1f94Y3bH/05HJRgHWxWsTeBfIu3+IZ1/0t8hf0CWxOueRQR7Yjo4T3+luS8K7BQAlziNDOHr9RFoyRvvkCrBKgNiqwN4rb+bxy3nwXOcDdBxqxVbRQR0dQf1hXuxxLKFugGv3AcESf/AFmNUKHs4+bxAAAAAElFTkSuQmCC",
 		order: 5
 	});
 	provider.registerServiceProvider("orion.page.link", null, {
