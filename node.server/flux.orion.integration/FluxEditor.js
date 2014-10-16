@@ -497,7 +497,7 @@ var FluxEditor = (function() {
 					}, function(data) {
 						if (self.user === data.username && resourceMetadata.project === data.project
 							&& data.javadoc !== undefined) {
-							request.resolve(data.javadoc.javadoc);
+							request.resolve({ title: data.javadoc.javadoc });
 						} else {
 							request.resolve(false);
 						}
