@@ -11,6 +11,7 @@
 package org.eclipse.flux.client;
 
 import org.eclipse.flux.client.util.Assert;
+import org.eclipse.flux.client.util.Console;
 import org.eclipse.flux.client.util.ExceptionUtil;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,6 +31,8 @@ public abstract class RequestResponseHandler extends MessageHandler {
 	private MessageConnector flux;
 	private String responseType;
 	
+	private static final Console console = Console.get(RequestResponseHandler.class.getName());
+	
 	public RequestResponseHandler(MessageConnector flux, String type) {
 		super(type);
 		this.flux = flux;
@@ -38,16 +41,21 @@ public abstract class RequestResponseHandler extends MessageHandler {
 	}
 
 	public final void handle(String type, JSONObject req) {
-		JSONObject res;
 		try {
-			res = createResponse(type, req);
-		} catch (Throwable e) {
-			e.printStackTrace();
-			flux.send(responseType, errorResponse(req, e));
-			return;
+			JSONObject res;
+			try {
+				res = createResponse(type, req);
+			} catch (Throwable e) {
+				e.printStackTrace();
+				flux.send(responseType, errorResponse(req, e));
+				return;
+			}
+			//We only get here if no exception was caught:
+			flux.send(responseType, res);
+		} catch (Exception e) {
+			//This happens only if we had a problem sending the response
+			console.log(e);
 		}
-		//We only get here if no exception was caught:
-		flux.send(responseType, res);
 	}
 	
 	protected JSONObject createResponse(String type, JSONObject req) throws Exception {

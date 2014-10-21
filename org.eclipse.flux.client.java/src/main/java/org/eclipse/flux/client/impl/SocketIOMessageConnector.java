@@ -21,10 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -32,7 +29,6 @@ import javax.net.ssl.SSLContext;
 
 import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.IMessageHandler;
-import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.config.FluxConfig;
 import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.client.util.BasicFuture;
@@ -45,7 +41,7 @@ import org.json.JSONObject;
  * @author aboyko
  * @author kdvolder
  */
-public final class SocketIOMessageConnector implements MessageConnector {
+public final class SocketIOMessageConnector extends AbstractMessageConnector {
 
 	/**
 	 * Time in milliseconds a connectToChannelSynch call will wait before timing out.
@@ -53,16 +49,13 @@ public final class SocketIOMessageConnector implements MessageConnector {
 	private static final long CONNECT_TO_CHANNEL_TIMEOUT = 15000;
 	
 	private SocketIO socket;
-	private ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
 	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();
 	private final SocketIOFluxConfig conf;
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
 	private AtomicBoolean isConnected = new AtomicBoolean(false);
 	
-	private ExecutorService executor;
-	
 	public SocketIOMessageConnector(SocketIOFluxConfig conf, ExecutorService executor) {
-		this.executor = executor;
+		super(executor);
 		this.conf = conf;
 		try {
 			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
@@ -245,43 +238,12 @@ public final class SocketIOMessageConnector implements MessageConnector {
 		return socket;
 	}
 	
-	private void handleIncomingMessage(final String messageType, final JSONObject message) {
-		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageType);
-		if (handlers != null) {
-			for (final IMessageHandler handler : handlers) {
-				try {
-					if (handler.canHandle(messageType, message)) {
-						executor.execute(new Runnable() {
-							public void run() {
-								handler.handle(messageType, message);
-							}
-						});
-					}
-				} catch (Throwable t) {
-					t.printStackTrace();
-				}
-			}
-		}
-	}
-	
 	public void send(String messageType, JSONObject message) {
 		socket.emit(messageType, message);
 	}
 
 	public boolean isConnected(String channel) {
 		return isConnected() && channels.contains(channel);
-	}
-	
-	public void addMessageHandler(IMessageHandler messageHandler) {
-		this.messageHandlers.putIfAbsent(messageHandler.getMessageType(), new ConcurrentLinkedDeque<IMessageHandler>());
-		this.messageHandlers.get(messageHandler.getMessageType()).add(messageHandler);
-	}
-
-	public void removeMessageHandler(IMessageHandler messageHandler) {
-		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageHandler.getMessageType());
-		if (handlers != null) {
-			handlers.remove(messageHandler);
-		}
 	}
 	
 	public void addChannelListener(IChannelListener listener) {

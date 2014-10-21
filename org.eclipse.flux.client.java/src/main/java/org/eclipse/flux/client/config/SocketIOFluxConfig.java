@@ -18,18 +18,13 @@ import org.eclipse.flux.client.impl.SocketIOMessageConnector;
  * Configuration object containing the infos needed to make a connecion to
  * flux message bus via a SocketIO-based flux client.
  */
-public class SocketIOFluxConfig implements FluxConfig {
+public class SocketIOFluxConfig extends AbstractFluxConfig {
 	
 	private final String host;
-	private final String user;
 	private final String token;
 	
 	public String getHost() {
 		return host;
-	}
-
-	public String getUser() {
-		return user;
 	}
 
 	public String getToken() {
@@ -37,14 +32,14 @@ public class SocketIOFluxConfig implements FluxConfig {
 	}
 
 	public SocketIOFluxConfig(String host, String login, String token) {
+		super(login);
 		this.host = host;
-		this.user = login;
 		this.token = token;
 	}
 	
 	@Override
 	public String toString() {
-		return user + "@" + host;
+		return getUser() + "@" + host;
 	}
 	
 	/**
@@ -79,7 +74,7 @@ public class SocketIOFluxConfig implements FluxConfig {
 		return login;
 	}
 
-	private static final String DEFAULT_FLUX_USER = "defaultuser";
+	public static final String DEFAULT_FLUX_USER = "defaultuser";
 	private static final String DEFAULT_FLUX_HOST = "http://localhost:3000";
 	
 	private static String envHost() {

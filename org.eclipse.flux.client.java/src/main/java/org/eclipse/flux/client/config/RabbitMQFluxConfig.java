@@ -14,17 +14,25 @@ import org.eclipse.flux.client.FluxClient;
 import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.impl.RabbitMQMessageConnector;
 
+import com.rabbitmq.client.ConnectionFactory;
+
 public class RabbitMQFluxConfig extends AbstractFluxConfig {
 
 	/**
 	 * Create default RabbitMQFluxConfig to rabbit mq instance on localhost
 	 */
-	public RabbitMQFluxConfig(String user) {
-		super(user);
+	public RabbitMQFluxConfig(String fluxUser) {
+		super(fluxUser);
 	}
+	
+	/**
+	 * URI to configure rabbitmq connection factory. When running in deployed environment like cloudfoundry this
+	 * will be provided somehow by binding the app to an AMQP service. In localhost deployments this will be null.
+	 */
+	private String uri = null;
 
 	@Override
-	public MessageConnector connect(FluxClient fluxClient) {
+	public MessageConnector connect(FluxClient fluxClient) throws Exception {
 		return new RabbitMQMessageConnector(fluxClient, this);
 	}
 
@@ -33,5 +41,20 @@ public class RabbitMQFluxConfig extends AbstractFluxConfig {
 		throw new Error("Not implemented");
 	}
 
+	public RabbitMQFluxConfig setUri(String uri) {
+		this.uri = uri;
+		return this;
+	}
+	
+	/**
+	 * Configure the AMQP ConnectionFactory with information from this RabbitMQFluxConfig
+	 */
+	public void applyTo(ConnectionFactory f) throws Exception {
+		if (uri!=null) {
+			f.setUri(uri);
+		} else {
+			f.setHost("localhost");
+		}
+	}
 
 }

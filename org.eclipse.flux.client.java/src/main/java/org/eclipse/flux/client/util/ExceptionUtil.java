@@ -34,4 +34,12 @@ public class ExceptionUtil {
 		}
 	}
 
+	public static Exception exception(Throwable error) {
+		if (error instanceof Exception) {
+			return (Exception)error;
+		} else {
+			return new RuntimeException(error);
+		}
+	}
+
 }

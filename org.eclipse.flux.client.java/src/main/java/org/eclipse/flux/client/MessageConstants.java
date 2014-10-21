@@ -51,5 +51,10 @@ public abstract class MessageConstants {
 	public static final String CF_STREAM_STDOUT = "STDOUT";
 	public static final String CF_STREAM_STDERROR = "STDERROR";
 	public static final String CF_STREAM_SERVICE_OUT = "SVCOUT";
+	
+	/**
+	 * Name of the Flux super user.
+	 */
+	public static final String SUPER_USER = "$super$";
 
 }

@@ -13,25 +13,34 @@ package org.eclipse.flux.client.config;
 import org.eclipse.flux.client.FluxClient;
 import org.eclipse.flux.client.MessageConnector;
 
-
 /**
- * FluxConfig contains information needed to create a connection to flux bus.
- * <p>
- * This is a marker interface, allowing for different classes specific to 
- * specific clients to implement whatever kind of data objects they need.
+ * FluxConfig contains information needed to create and configure 
+ * connection to flux bus.
  * 
  * @author Kris De Volder
  */
 public interface FluxConfig {
 
-	MessageConnector connect(FluxClient fluxClient);
+	MessageConnector connect(FluxClient fluxClient) throws Exception;
+	
+	/**
+	 * Every flux MessageConnector is 'owned' by a specific Flux user. This method
+	 * returns the Flux user id associated with the flux connections that will be 
+	 * created from this config.
+	 */
 	String getUser();
 
 	/**
 	 * Convert this config into a equivalent SocketIO config, thus allowing
 	 * a client running in an environment that does not have direct access
-	 * to RabbitMQ to connect using the websocket-based implementation.
+	 * to RabbitMQ to connect using a websocket-based implementation.
 	 */
 	SocketIOFluxConfig toSocketIO();
+	
+	/**
+	 * An UserPermissions instance provides various methods to verify whether
+	 * a flux user is allowed to do certain things.
+	 */
+	UserPermissions permissions();
 	
 }

@@ -128,7 +128,7 @@ public class ToolingServiceProvider {
 					try {
 						messageConnector.send(SERVICE_REQUIRED_RESPONSE,
 								new JSONObject(message, JSON_PROPERTIES));
-					} catch (JSONException e) {
+					} catch (Exception e) {
 						e.printStackTrace();
 					}
 				}
@@ -166,7 +166,7 @@ public class ToolingServiceProvider {
 						}
 						messageConnector.send(DISCOVER_SERVICE_RESPONSE,
 								statusMessage);
-					} catch (JSONException e) {
+					} catch (Exception e) {
 						e.printStackTrace();
 					}
 				}
@@ -373,7 +373,7 @@ public class ToolingServiceProvider {
 				discoverMessage.put("username", Utils.SUPER_USER);
 				messageConnector
 						.send(DISCOVER_SERVICE_REQUEST, discoverMessage);
-			} catch (JSONException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 

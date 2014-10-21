@@ -52,7 +52,7 @@ public interface MessageConnector {
 	public void disconnectFromChannel(final String channel);
 	public boolean isConnected(String channel);
 	
-	public void send(String messageType, JSONObject message);
+	public void send(String messageType, JSONObject message) throws Exception;
 	
 	public void addMessageHandler(IMessageHandler messageHandler);
 	public void removeMessageHandler(IMessageHandler messageHandler);
