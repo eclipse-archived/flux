@@ -5,7 +5,7 @@ import org.json.JSONObject;
 /**
  * @author Martin Lippert
  */
-public abstract class CallbackIDAwareMessageHandler extends  MessageHandler {
+public abstract class CallbackIDAwareMessageHandler extends MessageHandler {
 	
 	private int expectedCallbackID;
 

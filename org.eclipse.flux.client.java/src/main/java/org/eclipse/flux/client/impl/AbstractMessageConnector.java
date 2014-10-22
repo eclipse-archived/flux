@@ -13,9 +13,11 @@ package org.eclipse.flux.client.impl;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 
+import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
 import org.json.JSONObject;
@@ -23,7 +25,8 @@ import org.json.JSONObject;
 public abstract class AbstractMessageConnector implements MessageConnector {
 
 	private final ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
-	private final ExecutorService executor;
+	protected final ExecutorService executor;
+	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();
 	
 	public AbstractMessageConnector(ExecutorService executor) {
 		this.executor = executor;
@@ -48,6 +51,34 @@ public abstract class AbstractMessageConnector implements MessageConnector {
 		}
 	}
 
+	public void addChannelListener(IChannelListener listener) {
+		this.channelListeners.add(listener);
+	}
+	
+	public void removeChannelListener(IChannelListener listener) {
+		this.channelListeners.remove(listener);
+	}
+	
+	protected void notifyChannelConnected(String userChannel) {
+		for (IChannelListener listener : channelListeners) {
+			try {
+				listener.connected(userChannel);
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+	}
+	
+	protected void notifyChannelDisconnected(String userChannel) {
+		for (IChannelListener listener : channelListeners) {
+			try {
+				listener.disconnected(userChannel);
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
+		}
+	}
+	
 	public void addMessageHandler(IMessageHandler messageHandler) {
 		this.messageHandlers.putIfAbsent(messageHandler.getMessageType(), new ConcurrentLinkedDeque<IMessageHandler>());
 		this.messageHandlers.get(messageHandler.getMessageType()).add(messageHandler);
@@ -59,5 +90,4 @@ public abstract class AbstractMessageConnector implements MessageConnector {
 			handlers.remove(messageHandler);
 		}
 	}
-
 }

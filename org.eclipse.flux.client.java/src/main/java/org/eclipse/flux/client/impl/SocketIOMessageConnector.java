@@ -17,7 +17,6 @@ import io.socket.SocketIOException;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -28,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.net.ssl.SSLContext;
 
 import org.eclipse.flux.client.IChannelListener;
-import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.config.FluxConfig;
 import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.client.util.BasicFuture;
@@ -49,7 +47,6 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 	private static final long CONNECT_TO_CHANNEL_TIMEOUT = 15000;
 	
 	private SocketIO socket;
-	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();
 	private final SocketIOFluxConfig conf;
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
 	private AtomicBoolean isConnected = new AtomicBoolean(false);
@@ -122,12 +119,12 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 	}
 
 	/**
-	 * Deprecated, please use connectToChannel('myChannel', true) to
+	 * Deprecated, please use connectToChannelSynch('myChannel') to
 	 * connect to channel synchronously and avoid common bugs of the
 	 * type 'oops I sent messages before the channel was connected'.
 	 * <p>
-	 * Also consider catching exceptions connectToChannel('myChannel', true) might throw
-	 * if it fails to connect to the channel. 
+	 * Also consider catching exceptions connectToChannelSynch('myChannel')
+	 * might throw if it fails to connect to the channel. 
 	 */
 	@Deprecated
 	public void connectToChannel(final String channel) {
@@ -144,6 +141,15 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 	}
 	
 	private void connectToChannel(final String channel, final boolean sync) throws Exception {
+		//TODO: suspected to buggy around tracking 'connected' stated for channels. 
+		// especially in asynch case. The connected list of channels is immediately changed
+		// even for asynch connection request. This means isConnected(channel) will already
+		// return true even when channel connection is still being established.
+		
+		// One way to fix this problem is remove support for asynch connectToChannel entirely.
+		// It really only serves to make for buggy code and provides there's not much reason
+		// to use it if a synched mechanism is available.
+		
 		System.out.println("Connecting to Channel: "+channel);
 		if (!isConnected()) {
 			throw new IllegalStateException("Cannot connect to channel. Not connected to socket.io");
@@ -153,7 +159,7 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 		}
 		final BasicFuture<Void> connectedFuture = sync ? new BasicFuture<Void>() : null;
 		
-// Commented out because this gets called to 'reconnectr' to socketio after an error
+// Commented out because this gets called to 'reconnect' to socketio after an error
 // and in that case it already has channel in the channels list, but not actually connected
 // yet.
 //		if (!channels.contains(channel)) {
@@ -201,7 +207,12 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 		}
 	}
 	
+	@Override
 	public void disconnectFromChannel(final String channel) {
+		//TODO: this method is expected to be buggy w.r.t to updating channels connected state.
+		// i.e. it immediately remoces channel from 'channels' but the operation is asyncronous.
+		// This means that isConnected(channel) will return false even though the channel may
+		// still be connected.
 		boolean removed = channels.remove(channel);
 		if (isConnected() && removed) {
 			try {
@@ -227,6 +238,12 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 		}
 	}
 	
+	@Override
+	public void disconnectFromChannelSync(String channelName) throws Exception {
+		//TODO: implement this
+		throw new Error("Not implemented");
+	}
+	
 	private SocketIO createSocket() throws MalformedURLException {
 		System.out.println("Creating websocket to: "+conf.getHost());
 		SocketIO socket = new SocketIO(conf.getHost());
@@ -244,34 +261,6 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 
 	public boolean isConnected(String channel) {
 		return isConnected() && channels.contains(channel);
-	}
-	
-	public void addChannelListener(IChannelListener listener) {
-		this.channelListeners.add(listener);
-	}
-	
-	public void removeChannelListener(IChannelListener listener) {
-		this.channelListeners.remove(listener);
-	}
-	
-	private void notifyChannelConnected(String userChannel) {
-		for (IChannelListener listener : channelListeners) {
-			try {
-				listener.connected(userChannel);
-			} catch (Throwable t) {
-				t.printStackTrace();
-			}
-		}
-	}
-	
-	private void notifyChannelDisconnected(String userChannel) {
-		for (IChannelListener listener : channelListeners) {
-			try {
-				listener.disconnected(userChannel);
-			} catch (Throwable t) {
-				t.printStackTrace();
-			}
-		}
 	}
 	
 	public void disconnect() {

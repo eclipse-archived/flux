@@ -11,6 +11,7 @@
 package org.eclipse.flux.client;
 
 import org.eclipse.flux.client.config.FluxConfig;
+import org.eclipse.flux.client.util.BasicFuture;
 import org.json.JSONObject;
 
 /**
@@ -47,9 +48,11 @@ public interface MessageConnector {
 	 */
 	@Deprecated
 	public void connectToChannel(final String channel);
-	
 	public void connectToChannelSync(String username) throws Exception;
-	public void disconnectFromChannel(final String channel);
+	
+	public void disconnectFromChannel(final String channel) throws Exception;
+	void disconnectFromChannelSync(String channelName) throws Exception;
+	
 	public boolean isConnected(String channel);
 	
 	public void send(String messageType, JSONObject message) throws Exception;
@@ -65,5 +68,6 @@ public interface MessageConnector {
 	public boolean isConnected();
 	
 	public FluxConfig getConfig();
+
 
 }

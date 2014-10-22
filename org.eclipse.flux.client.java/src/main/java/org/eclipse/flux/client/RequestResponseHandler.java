@@ -46,7 +46,7 @@ public abstract class RequestResponseHandler extends MessageHandler {
 			try {
 				res = createResponse(type, req);
 			} catch (Throwable e) {
-				e.printStackTrace();
+				console.log(e);
 				flux.send(responseType, errorResponse(req, e));
 				return;
 			}

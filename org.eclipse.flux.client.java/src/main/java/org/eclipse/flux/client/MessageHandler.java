@@ -10,6 +10,7 @@
 *******************************************************************************/
 package org.eclipse.flux.client;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
