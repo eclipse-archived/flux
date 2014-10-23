@@ -21,7 +21,6 @@ import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.config.FluxConfig;
 import org.eclipse.flux.client.config.RabbitMQFluxConfig;
 import org.eclipse.flux.client.config.UserPermissions;
-import org.eclipse.flux.client.util.BasicFuture;
 import org.eclipse.flux.client.util.Console;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -244,7 +243,7 @@ public class RabbitMQMessageConnector extends AbstractMessageConnector {
 	}
 
 	@Override
-	public void disconnect() {
+	public synchronized void disconnect() {
 		if (connection!=null) {
 			try {
 				connection.close();
@@ -256,8 +255,8 @@ public class RabbitMQMessageConnector extends AbstractMessageConnector {
 	}
 
 	@Override
-	public boolean isConnected() {
-		throw new Error("Not implemented");
+	public synchronized boolean isConnected() {
+		return connection!=null && connection.isOpen();
 	}
 
 	@Override
