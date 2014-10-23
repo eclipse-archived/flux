@@ -250,6 +250,10 @@ var FluxEditor = (function() {
 					self._handleMessage(data);
 				});
 			});
+			
+			this.socket.on('javadocresponse', function(data) {
+				self._handleMessage(data);
+			});
 
 		},
 
@@ -480,6 +484,29 @@ var FluxEditor = (function() {
 			this._setEditorInput(null, null);
 		},
 
+		computeHoverInfo: function(editorContext, ctxt) {
+			var self = this;
+			var request = new Deferred();
+			this._getResourceData().then(function(resourceMetadata) {
+				self.sendMessage("javadocrequest", {
+					'username': self.user,
+					'project': resourceMetadata.project,
+					'resource': resourceMetadata.resource,
+					'offset': ctxt.offset,
+					'length': 0
+					}, function(data) {
+						if (self.user === data.username && resourceMetadata.project === data.project
+							&& data.javadoc !== undefined) {
+							request.resolve({ title: data.javadoc.javadoc });
+						} else {
+							request.resolve(false);
+						}
+					}
+				);
+			});
+			return request;
+		},
+
 		/**
 		 * This function ensures the JDT service is started and shows a status message when
 		 * it is ready (or an error if it failed).
@@ -487,7 +514,7 @@ var FluxEditor = (function() {
 		_initializeJDT: function (editorContext) {
 			return require('jdt-initializer')(editorContext, this.socket, this.username);
 		}
-
+		
 	};
 
 

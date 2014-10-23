@@ -35,8 +35,6 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 	}
 	var base = "flux://" + host + ":" + wsport + "/";
 
-	var contentTypes = ["application/javascript", "text/plain" ];
-
 	var headers = {
 		'Name' : "Flux",
 		'Version' : "0.1",
@@ -70,21 +68,31 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 	});
 	provider.registerService([
 			"orion.edit.validator",
-			"orion.edit.live"
 		],
 		editorService,
 		{
-			'pattern' : base + ".*"
+			'pattern' : base + ".*",
+			'contentType' : [ "text/x-java-source" ]
 		}
 	);
 	provider.registerService([
 			"orion.edit.model",
-			"orion.edit.contentAssist"
+			"orion.edit.live"
 		],
 		editorService,
 		{
-			'contentType' : contentTypes
+			'contentType' : [ "text/plain" ]
 		}
+	);
+	
+	provider.registerService([
+   			"orion.edit.contentAssist",
+   			"orion.edit.hover"
+		],
+	    editorService,
+	    {
+	    	'contentType' : [ "text/x-java-source" ]
+	 	}
 	);
 	var openDeclaration = new OpenDeclaration(host, wsport, base);
 	provider.registerService("orion.edit.command",

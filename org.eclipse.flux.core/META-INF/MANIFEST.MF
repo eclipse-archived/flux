@@ -8,15 +8,13 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Import-Package: org.apache.commons.lang,
  org.apache.maven.model;resolution:=optional,
  org.osgi.framework
-Require-Bundle: org.json,
+Require-Bundle: org.eclipse.flux.common,
  org.eclipse.core.resources,
  org.apache.commons.codec,
  org.eclipse.core.runtime,
  org.apache.commons.io,
  org.eclipse.jdt.core,
  org.eclipse.m2e.core;resolution:=optional
-Bundle-ClassPath: lib/socketio.jar,
- .
 Export-Package: org.eclipse.flux.core,
  org.eclipse.flux.core.util
 Bundle-ActivationPolicy: lazy; exclude:="io.socket, org.java_websocket, org.java_websocket.client, org.java_websocket.drafts, org.java_websocket.exceptions, org.java_websocket.framing, org.java_websocket.handshake, org.java_websocket.server, org.java_websocket.util, org.json"
