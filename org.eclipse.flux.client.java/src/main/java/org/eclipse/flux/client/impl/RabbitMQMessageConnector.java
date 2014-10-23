@@ -22,6 +22,7 @@ import org.eclipse.flux.client.config.FluxConfig;
 import org.eclipse.flux.client.config.RabbitMQFluxConfig;
 import org.eclipse.flux.client.config.UserPermissions;
 import org.eclipse.flux.client.util.Console;
+import org.eclipse.flux.client.util.JSON;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
@@ -101,8 +102,7 @@ public class RabbitMQMessageConnector extends AbstractMessageConnector {
 			public void handleDelivery(String consumerTag, Envelope envelope,
 					BasicProperties properties, byte[] body) throws IOException {
 				try {
-					JSONTokener tokener = new JSONTokener(new String(body, "utf8"));
-					JSONObject obj = new JSONObject(tokener);
+					JSONObject obj = JSON.parse(body);
 					if (!isSelfOriginated(obj)) {
 						handleIncomingMessage(obj.getString("type"), obj.getJSONObject("data"));
 					}

@@ -17,6 +17,12 @@ import org.eclipse.flux.client.MessageConnector;
  * FluxConfig contains information needed to create and configure 
  * connection to flux bus.
  * 
+ * TODO: something about this interface feels iffy. To put a finger on it...
+ * in cf-deployer application we need to pass this kind of info around 
+ * around, but without the value of 'user' being set.
+ * I.e. the app will deal with multiple users (as these users connect to the app)
+ * and needs something to be able to create fluxconfig objects for each user.
+ * 
  * @author Kris De Volder
  */
 public interface FluxConfig {

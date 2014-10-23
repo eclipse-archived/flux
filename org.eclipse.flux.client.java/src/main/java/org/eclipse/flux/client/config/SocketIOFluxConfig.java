@@ -39,7 +39,7 @@ public class SocketIOFluxConfig extends AbstractFluxConfig {
 	
 	@Override
 	public String toString() {
-		return getUser() + "@" + host;
+		return "SocketIOFluxConfig("+getUser() + "@" + host+")";
 	}
 	
 	/**

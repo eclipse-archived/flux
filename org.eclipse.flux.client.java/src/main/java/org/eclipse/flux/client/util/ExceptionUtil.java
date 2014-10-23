@@ -42,4 +42,11 @@ public class ExceptionUtil {
 		}
 	}
 
+	public static RuntimeException unchecked(Exception e) {
+		if (e instanceof RuntimeException) {
+			return (RuntimeException) e;
+		}
+		return new RuntimeException(e);
+	}
+
 }
