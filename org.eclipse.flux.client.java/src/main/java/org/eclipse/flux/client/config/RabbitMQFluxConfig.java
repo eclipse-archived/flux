@@ -106,4 +106,8 @@ public class RabbitMQFluxConfig extends AbstractFluxConfig {
 			.setUri(rabbitUrl());
 	}
 
+	public String getURI() {
+		return uri;
+	}
+
 }

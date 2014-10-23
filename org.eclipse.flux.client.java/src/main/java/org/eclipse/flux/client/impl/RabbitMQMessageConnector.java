@@ -78,6 +78,7 @@ public class RabbitMQMessageConnector extends AbstractMessageConnector {
 		super(client.getExecutor());
 		this.conf = conf;
 		this.connection = connectionFactory().newConnection();
+		console.log("Connected to rabbitMQ: "+conf.getURI());
 		this.permissions = conf.permissions();
 		this.channel = connection.createChannel();
 		this.inbox = createInbox();
