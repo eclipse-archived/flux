@@ -96,16 +96,33 @@
   
   In case you have a MongoDB running, the in-memory repository is replaced by a MongoDB-based implementation
   that reads and writes your projects from/to a MongoDB database.
-  
+    
 ### Running the Eclipse plugin
 
   At the moment there is no update site available from which you can install the Eclipse plugins into
   an existing Eclipse installation. Instead you have to import all three projects into a workspace and
-  start a runtime workbench from there. 
+  start a runtime workbench from there.
   
-  So please import all three Eclipse projects into an empty workspace. There is a forth project that is
-  called "eclipse.releng" that contains a target platform definition. Please import that project as well and
-  set the contained target definition as your target platform. After that everything should compile fine.
+  One of the projects "org.eclipse.flux.client.java.osgi" requires some jar files to be downloaded and/or
+  built before everything will compile in an Eclipse workspace. To produce these jars in the right
+  places do the following:
+  
+       cd org.eclipse.flux.headless.releng
+       mvn clean install
+    
+  Next import at least the following projects into the workspace:
+  
+    - org.eclipse.flux.core
+	- org.eclipse.flux.jdt.service
+	- org.eclipse.flux.ui.integration
+	- org.eclipse.flux.ide.integration.repository
+	- org.eclipse.flux.client.java.osgi
+	- org.eclipse.flux.client.java (optional, source-code for the client jar embedded inside 
+	   org.eclipse.flux.client.java.osgi)
+	- org.eclipse.flux.releng
+  
+  The "org.flux.eclipse.releng" project contains a target platform definition. 
+  Set the contained target definition as your target platform. After that everything should compile fine.
   
   If you want the JDT service to run inside your Eclipse IDE (instead of as a headless service), you should
   set a start level of 4 and auto-start:true for the org.eclipse.flux.jdt.service bundle in your launch
