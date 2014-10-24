@@ -108,21 +108,25 @@
   places do the following:
   
        cd org.eclipse.flux.headless.releng
-       mvn clean install
-    
+       mvn clean install -Dmaven.test.skip=true
+           
   Next import at least the following projects into the workspace:
   
-    - org.eclipse.flux.core
-	- org.eclipse.flux.jdt.service
-	- org.eclipse.flux.ui.integration
-	- org.eclipse.flux.ide.integration.repository
 	- org.eclipse.flux.client.java.osgi
 	- org.eclipse.flux.client.java (optional, source-code for the client jar embedded inside 
 	   org.eclipse.flux.client.java.osgi)
+    - org.eclipse.flux.core
+	- org.eclipse.flux.ide.integration.repository
+	- org.eclipse.flux.jdt.service
 	- org.eclipse.flux.releng
+	- org.eclipse.flux.ui.integration
   
   The "org.flux.eclipse.releng" project contains a target platform definition. 
   Set the contained target definition as your target platform. After that everything should compile fine.
+  
+  If you get errors about missing jars on buildpath, maybe you skipped the step of running mvn build on
+  the commandline. No problem, just run it now and refresh the "client.java.osgi" project. The
+  errors should go away.
   
   If you want the JDT service to run inside your Eclipse IDE (instead of as a headless service), you should
   set a start level of 4 and auto-start:true for the org.eclipse.flux.jdt.service bundle in your launch
