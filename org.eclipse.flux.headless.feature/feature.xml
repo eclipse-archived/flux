@@ -498,7 +498,7 @@
          unpack="false"/>
 
    <plugin
-         id="org.eclipse.flux.common"
+         id="org.eclipse.flux.client.java.osgi"
          download-size="0"
          install-size="0"
          version="0.0.0"
