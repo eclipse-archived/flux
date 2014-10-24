@@ -8,7 +8,7 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Import-Package: org.apache.commons.lang,
  org.apache.maven.model;resolution:=optional,
  org.osgi.framework
-Require-Bundle: org.eclipse.flux.common,
+Require-Bundle: org.eclipse.flux.client.java.osgi,
  org.eclipse.core.resources,
  org.apache.commons.codec,
  org.eclipse.core.runtime,

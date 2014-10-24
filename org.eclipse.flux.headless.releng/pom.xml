@@ -23,7 +23,7 @@
 	<modules>
 		<module>../org.eclipse.flux.headless.product</module>
 		<module>../org.eclipse.flux.headless.feature</module>
-		<module>../org.eclipse.flux.common</module>
+		<module>../org.eclipse.flux.client.java.osgi</module>
 		<module>../org.eclipse.flux.core</module>
 		<module>../org.eclipse.flux.jdt.service</module>
 		

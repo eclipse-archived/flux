@@ -27,7 +27,7 @@
 		<module>../org.eclipse.flux.ide.integration.feature</module>
 		<module>../org.eclipse.flux.ide.integration.jdtservice.feature</module>
 		<module>../org.eclipse.flux.ide.integration.repository</module>
-		<module>../org.eclipse.flux.common</module>
+		<module>../org.eclipse.flux.client.java.osgi</module>
 		
 		<!-- bits from 'pure java' that we need here as well -->
 		<module>../org.eclipse.flux.parent.java</module>

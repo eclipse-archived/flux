@@ -6,4 +6,4 @@ node_modules/
 .scripted
 target
 classes
-/org.eclipse.flux.common/lib/*.jar
+/org.eclipse.flux.client.java.osgi/lib

@@ -4,7 +4,7 @@ Bundle-Name: JDT as a service
 Bundle-SymbolicName: org.eclipse.flux.jdt.service;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
-Require-Bundle: org.eclipse.flux.common,
+Require-Bundle: org.eclipse.flux.client.java.osgi,
  org.eclipse.flux.core,
  org.eclipse.jdt.core,
  org.eclipse.core.runtime,
