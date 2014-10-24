@@ -112,14 +112,14 @@
            
   Next import at least the following projects into the workspace:
   
-	- org.eclipse.flux.client.java.osgi
-	- org.eclipse.flux.client.java (optional, source-code for the client jar embedded inside 
-	   org.eclipse.flux.client.java.osgi)
-    - org.eclipse.flux.core
-	- org.eclipse.flux.ide.integration.repository
-	- org.eclipse.flux.jdt.service
-	- org.eclipse.flux.releng
-	- org.eclipse.flux.ui.integration
+  - org.eclipse.flux.client.java.osgi
+  - org.eclipse.flux.client.java (optional, source-code for the client jar embedded inside 
+	org.eclipse.flux.client.java.osgi)
+  - org.eclipse.flux.core
+  - org.eclipse.flux.ide.integration.repository
+  - org.eclipse.flux.jdt.service
+  - org.eclipse.flux.releng
+  - org.eclipse.flux.ui.integration
   
   The "org.flux.eclipse.releng" project contains a target platform definition. 
   Set the contained target definition as your target platform. After that everything should compile fine.
@@ -161,7 +161,7 @@ The prototype supports user authentication via github using oauth. Some setup is
 
 ### Github Client ID and Secret
 
-Get a github client ID and secret [here](https://github.com/settings/applications/new
+Get a github client ID and secret [here](https://github.com/settings/applications/new)
 and define two environment variables `FLUX_GITHUB_CLIENT_ID` and `FLUX_GITHUB_CLIENT_SECRET`
 When you start the server and these variables are defined, Flux authentication will be enabled.
 
