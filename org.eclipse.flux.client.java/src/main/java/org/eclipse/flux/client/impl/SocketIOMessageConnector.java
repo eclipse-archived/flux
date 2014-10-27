@@ -20,13 +20,11 @@ import java.net.MalformedURLException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 
-import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.config.FluxConfig;
 import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.client.util.BasicFuture;
