@@ -43,7 +43,7 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 	 * Time in milliseconds a connectToChannelSynch call will wait before timing out.
 	 */
 	private static final long CONNECT_TO_CHANNEL_TIMEOUT = 15000;
-	
+
 	private SocketIO socket;
 	private final SocketIOFluxConfig conf;
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
@@ -274,4 +274,12 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 		return conf;
 	}
 
+	@Override
+	public String[] getChannels() {
+		if (channels==null) {
+			return NO_CHANNELS;
+		}
+		return channels.toArray(new String[channels.size()]);
+	}
+	
 }

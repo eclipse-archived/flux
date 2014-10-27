@@ -68,6 +68,16 @@ public interface MessageConnector {
 	public boolean isConnected();
 	
 	public FluxConfig getConfig();
+	
+	/**
+	 * This method is here to allow older code assuming only at most one channel is ever 
+	 * simultaneously connected to obtain the name of the current channel. The current
+	 * client implementation allows multiple channels to be simultaneously connected.
+	 * 
+	 * In case more than one channel is connected this method will throw an 'IllegalStateException'.
+	 */
+	@Deprecated
+	public String getChannel();
 
 
 }

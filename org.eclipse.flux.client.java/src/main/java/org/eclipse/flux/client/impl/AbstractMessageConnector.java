@@ -24,6 +24,7 @@ import org.json.JSONObject;
 
 public abstract class AbstractMessageConnector implements MessageConnector {
 
+	protected static final String[] NO_CHANNELS = new String[0];
 	private final ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
 	protected final ExecutorService executor;
 	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();
@@ -88,6 +89,21 @@ public abstract class AbstractMessageConnector implements MessageConnector {
 		Collection<IMessageHandler> handlers = this.messageHandlers.get(messageHandler.getMessageType());
 		if (handlers != null) {
 			handlers.remove(messageHandler);
+		}
+	}
+
+	public abstract String[] getChannels();
+	
+	@Override
+	public String getChannel() {
+		String[] channels = getChannels();
+		if (channels.length==0) {
+			return null;
+		} else if (channels.length==1) {
+			return channels[0];
+		} else {
+			throw new IllegalArgumentException("getChannel assumes client never connects to more than one channel at a time.\n"
+					+ "Currently connected to: "+channels);
 		}
 	}
 }

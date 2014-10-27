@@ -332,16 +332,19 @@ public class RabbitMQFluxClientTest extends AbstractFluxClientTest {
 		Process<Void> root = new Process<Void>(SUPER_USER) {
 			protected Void execute() throws Exception {
 				assertTrue(conn.isConnected(SUPER_USER));
+				assertEquals(SUPER_USER, conn.getChannel());
 				
 				conn.disconnectFromChannelSync(SUPER_USER);
 				conn.connectToChannelSync("Bob");
 				assertFalse(conn.isConnected(SUPER_USER));
 				assertTrue(conn.isConnected("Bob"));
+				assertEquals("Bob", conn.getChannel());
 				
 				conn.disconnectFromChannelSync("Bob");
 				conn.connectToChannelSync("Alice");
 				assertFalse(conn.isConnected("Bob"));
 				assertTrue(conn.isConnected("Alice"));
+				assertEquals("Alice", conn.getChannel());
 				
 				return null;
 			}
@@ -546,6 +549,7 @@ public class RabbitMQFluxClientTest extends AbstractFluxClientTest {
 	//TODO: tests for SingleResponseHandler. Check that it properly cleans up (uregisteres message handler
 	//   when response is received, when timed out etc.
 	
+	//TODO: CallbackIDAwareMessageHandler
 	
 	/**
 	 * Create a simple single response receiver that does these steps:

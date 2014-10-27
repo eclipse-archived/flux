@@ -237,6 +237,14 @@ public class RabbitMQMessageConnector extends AbstractMessageConnector {
 	public synchronized boolean isConnected(String channel) {
 		return connectedChannels.contains(channel);
 	}
+	
+	@Override
+	public synchronized String[] getChannels() {
+		if (connectedChannels!=null) {
+			return connectedChannels.toArray(new String[connectedChannels.size()]);
+		}
+		return NO_CHANNELS;
+	}
 
 	@Override
 	public void send(String messageType, JSONObject message) throws Exception {
