@@ -551,6 +551,8 @@ public class RabbitMQFluxClientTest extends AbstractFluxClientTest {
 	
 	//TODO: CallbackIDAwareMessageHandler
 	
+	//TODO: getState method: add to MessageConnector, test, and reactivate commented code in flux ui Activator that uses it.
+	
 	/**
 	 * Create a simple single response receiver that does these steps:
 	 *   - open message connector for some 'user'
