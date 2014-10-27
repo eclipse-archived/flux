@@ -11,9 +11,9 @@
  *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
-import org.eclipse.flux.core.Constants;
-import org.eclipse.flux.core.IChannelListener;
-import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.core.KeepAliveConnector;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.Repository;
@@ -37,7 +37,7 @@ public class JDTComponent {
 	public void activate(final ComponentContext context) throws Exception {		
 		final boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
 		
-		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
+		final MessageConnector messagingConnector = org.eclipse.flux.core.Activator
 				.getDefault().getMessagingConnector();
 		
 		if (messagingConnector != null) {
@@ -100,10 +100,10 @@ public class JDTComponent {
 		@Override
 		public void connected(String userChannel) {
 			boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
-			if (lazyStart && Constants.SUPER_USER.equals(userChannel)) {
+			if (lazyStart && MessageConstants.SUPER_USER.equals(userChannel)) {
 				return;
 			}
-			IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
+			MessageConnector messagingConnector = org.eclipse.flux.core.Activator
 					.getDefault().getMessagingConnector();
 			Repository repository = org.eclipse.flux.core.Activator.getDefault()
 					.getRepository();
@@ -128,7 +128,7 @@ public class JDTComponent {
 		@Override
 		public void disconnected(String userChannel) {
 			boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
-			if (lazyStart && Constants.SUPER_USER.equals(userChannel)) {
+			if (lazyStart && MessageConstants.SUPER_USER.equals(userChannel)) {
 				return;
 			}
 			liveEditUnits.dispose();

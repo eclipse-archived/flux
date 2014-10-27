@@ -12,8 +12,8 @@ package org.eclipse.flux.ui.integration;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.flux.core.IChannelListener;
-import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.core.IRepositoryListener;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.Repository;
@@ -36,7 +36,7 @@ public class UiStartup implements IStartup {
 
 	@Override
 	public void earlyStartup() {
-		IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
+		MessageConnector messagingConnector = org.eclipse.flux.core.Activator
 				.getDefault().getMessagingConnector();
 
 		if (messagingConnector != null) {

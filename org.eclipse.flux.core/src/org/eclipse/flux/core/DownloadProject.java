@@ -26,6 +26,8 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.flux.client.CallbackIDAwareMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.m2e.core.MavenPlugin;
 import org.eclipse.m2e.core.project.ResolverConfiguration;
 import org.json.JSONArray;
@@ -42,7 +44,7 @@ public class DownloadProject {
 		public void downloadFailed();
 	}
 
-	private IMessagingConnector messagingConnector;
+	private MessageConnector messagingConnector;
 
 	private String projectName;
 	private int callbackID;
@@ -59,7 +61,7 @@ public class DownloadProject {
 	
 	private Set<String> projectFiles = new HashSet<String>();
 
-	public DownloadProject(IMessagingConnector messagingConnector, String projectName, String username) {
+	public DownloadProject(MessageConnector messagingConnector, String projectName, String username) {
 		this.messagingConnector = messagingConnector;
 		this.projectName = projectName;
 		this.username = username;
@@ -68,13 +70,13 @@ public class DownloadProject {
 
 		projectResponseHandler = new CallbackIDAwareMessageHandler("getProjectResponse", this.callbackID) {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				getProjectResponse(message);
 			}
 		};
 		resourceResponseHandler = new CallbackIDAwareMessageHandler("getResourceResponse", this.callbackID) {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				getResourceResponse(message);
 			}
 		};
@@ -106,12 +108,7 @@ public class DownloadProject {
 					message.put("project", projectName);
 
 					messagingConnector.send("getProjectRequest", message);
-				} catch (CoreException e1) {
-					e1.printStackTrace();
-					messagingConnector.removeMessageHandler(projectResponseHandler);
-					messagingConnector.removeMessageHandler(resourceResponseHandler);
-					completionCallback.downloadFailed();
-				} catch (JSONException e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 					messagingConnector.removeMessageHandler(projectResponseHandler);
 					messagingConnector.removeMessageHandler(resourceResponseHandler);

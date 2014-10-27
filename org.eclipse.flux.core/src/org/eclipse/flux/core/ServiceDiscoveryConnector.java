@@ -13,6 +13,11 @@ package org.eclipse.flux.core;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
+import org.eclipse.flux.client.MessageHandler;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -37,7 +42,7 @@ public class ServiceDiscoveryConnector {
 		"username",
 		"callback_id"
 	};
-	private IMessagingConnector mc;
+	private MessageConnector mc;
 	private String serviceTypeId;
 	
 	private List<Runnable> onDispose = new ArrayList<Runnable>();
@@ -67,7 +72,7 @@ public class ServiceDiscoveryConnector {
 		}
 	}
 	
-	public ServiceDiscoveryConnector(IMessagingConnector messagingConnector, String serviceTypeId, boolean keepAlive) {
+	public ServiceDiscoveryConnector(MessageConnector messagingConnector, String serviceTypeId, boolean keepAlive) {
 		this.mc = messagingConnector;
 		this.serviceTypeId = serviceTypeId;
 		
@@ -78,12 +83,12 @@ public class ServiceDiscoveryConnector {
 			sendStatus(userChannel, "ready");
 		}
 		
-		handler(new AbstractMessageHandler(DISCOVER_SERVICE_REQUEST) {
+		handler(new MessageHandler(DISCOVER_SERVICE_REQUEST) {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				String user = mc.getChannel();
 				try {
-					if (forMe(message) && (message.get("username").equals(user) || Constants.SUPER_USER.equals(user))) {
+					if (forMe(message) && (message.get("username").equals(user) || MessageConstants.SUPER_USER.equals(user))) {
 						JSONObject response = new JSONObject(message, COPY_PROPS);
 						response.put("status", message.get("username").equals(user) ? "ready" : "available");
 						mc.send(DISCOVER_SERVICE_RESPONSE, response);
@@ -94,22 +99,20 @@ public class ServiceDiscoveryConnector {
 			}
 		});
 		
-		this.mc.addMessageHandler(new AbstractMessageHandler(START_SERVICE_REQUEST) {
+		this.mc.addMessageHandler(new MessageHandler(START_SERVICE_REQUEST) {
 
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				mc.removeMessageHandler(this);				
 				try {
 					String user = message.getString("username");
 					JSONObject serviceStartedMessage = new JSONObject(message, COPY_PROPS);
 					mc.send(START_SERVICE_RESPONSE, serviceStartedMessage);
 					sendStatus(user, "starting");
-					mc.connectChannel(user);					
-				} catch (JSONException e) {
+					mc.connectToChannel(user);					
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
-				
-				
 			}
 			
 		});

@@ -12,9 +12,9 @@ package org.eclipse.flux.jdt.services;
 
 import java.io.IOException;
 
-import org.eclipse.flux.core.AbstractMessageHandler;
-import org.eclipse.flux.core.IMessageHandler;
-import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageHandler;
 import org.eclipse.jdt.core.IBuffer;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
@@ -25,16 +25,16 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class JavaDocService {
-	private IMessagingConnector messagingConnector;
+	private MessageConnector messagingConnector;
 	private LiveEditUnits liveEditUnits;
 	private IMessageHandler javadocRequestHandler;
 
-	public JavaDocService(IMessagingConnector messagingConnector, LiveEditUnits liveEditUnits) {
+	public JavaDocService(MessageConnector messagingConnector, LiveEditUnits liveEditUnits) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditUnits = liveEditUnits;
-		this.javadocRequestHandler = new AbstractMessageHandler("javadocrequest") {
+		this.javadocRequestHandler = new MessageHandler("javadocrequest") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				handleJavadocRequest(message);
 			}
 		};
@@ -65,7 +65,7 @@ public class JavaDocService {
 					messagingConnector.send("javadocresponse", responseMessage);
 				}
 			}
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

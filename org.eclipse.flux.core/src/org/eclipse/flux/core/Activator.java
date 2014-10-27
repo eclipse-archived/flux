@@ -28,9 +28,14 @@ import org.eclipse.core.runtime.Plugin;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.flux.client.FluxClient;
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
+import org.eclipse.flux.client.config.RabbitMQFluxConfig;
+import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.internal.CloudSyncResourceListener;
-import org.eclipse.flux.core.internal.messaging.SocketIOMessagingConnector;
 import org.eclipse.flux.core.util.ExceptionUtil;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
@@ -49,7 +54,7 @@ public class Activator extends Plugin {
 	// The shared instance
 	private static Activator plugin;
 
-	private SocketIOMessagingConnector messagingConnector;
+	private MessageConnector messagingConnector;
 	private Repository repository;
 	private LiveEditCoordinator liveEditCoordinator;
 	private boolean lazyStart = false;
@@ -62,7 +67,7 @@ public class Activator extends Plugin {
 	private final IChannelListener SERVICE_STARTER = new IChannelListener() {
 		@Override
 		public void connected(String userChannel) {
-			if (!(lazyStart && Constants.SUPER_USER.equals(userChannel))) {
+			if (!(lazyStart && MessageConstants.SUPER_USER.equals(userChannel))) {
 				try {
 					plugin.initCoreService(userChannel);
 				} catch (CoreException e) {
@@ -73,7 +78,7 @@ public class Activator extends Plugin {
 
 		@Override
 		public void disconnected(String userChannel) {
-			if (!(lazyStart && Constants.SUPER_USER.equals(userChannel))) {
+			if (!(lazyStart && MessageConstants.SUPER_USER.equals(userChannel))) {
 				disposeCoreServices(userChannel);
 			}
 		}
@@ -82,7 +87,7 @@ public class Activator extends Plugin {
 	@Override
 	public void start(BundleContext context) throws Exception {
 		plugin = this;
-		
+
 		String host = getHostUrl();
 		String login = getUserId();
 		String token = getUserToken();
@@ -95,25 +100,10 @@ public class Activator extends Plugin {
 		}
 		
 		if (!host.isEmpty()) {
-			this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
+			final String userChannel = lazyStart ? MessageConstants.SUPER_USER : channel;
+			this.messagingConnector = FluxClient.DEFAULT_INSTANCE.connect(new SocketIOFluxConfig(host, login, token));
 			this.messagingConnector.addChannelListener(SERVICE_STARTER);
-			
-			final String userChannel = lazyStart ? Constants.SUPER_USER : channel;
-			messagingConnector.addConnectionListener(new IConnectionListener() {
-			
-				@Override
-				public void connected() {
-					messagingConnector.removeConnectionListener(this);
-					messagingConnector.connectChannel(userChannel);
-				}
-			
-				@Override
-				public void disconnected() {
-					// nothing
-				}
-				
-			});
-			messagingConnector.connect();
+			messagingConnector.connectToChannel(userChannel);
 		}
 	}
 	
@@ -296,7 +286,7 @@ public class Activator extends Plugin {
 		return plugin;
 	}
 	
-	public IMessagingConnector getMessagingConnector() {
+	public MessageConnector getMessagingConnector() {
 		return messagingConnector;
 	}
 	

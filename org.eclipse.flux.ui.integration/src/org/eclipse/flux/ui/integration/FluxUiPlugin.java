@@ -10,8 +10,8 @@
  *******************************************************************************/
 package org.eclipse.flux.ui.integration;
 
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.core.Activator;
-import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.IStartup;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -34,12 +34,13 @@ public class FluxUiPlugin extends AbstractUIPlugin implements IStartup {
 	public void start(BundleContext context) throws Exception {
 		super.start(context);
 		plugin = this;
-		IMessagingConnector messagingConnector = Activator.getDefault()
-				.getMessagingConnector();
-		if (messagingConnector != null) {
-			connectionListener = new AuthFailureReporter(
-					messagingConnector.getState());
-		}
+		//TODO: add listenable 'getState' to java.client api and re-enable the code below
+//		MessageConnector messagingConnector = Activator.getDefault()
+//				.getMessagingConnector();
+//		if (messagingConnector != null) {
+//			connectionListener = new AuthFailureReporter(
+//					messagingConnector.getState());
+//		}
 	}
 
 	@Override

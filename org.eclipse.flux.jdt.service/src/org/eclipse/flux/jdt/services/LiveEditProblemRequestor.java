@@ -12,7 +12,8 @@ package org.eclipse.flux.jdt.services;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.eclipse.flux.core.IMessagingConnector;
+
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.jdt.core.IProblemRequestor;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.json.JSONArray;
@@ -24,13 +25,13 @@ import org.json.JSONObject;
  */
 public class LiveEditProblemRequestor implements IProblemRequestor {
 
-	private IMessagingConnector messagingConnector;
+	private MessageConnector messagingConnector;
 	private String resourcePath;
 	private final List<IProblem> problems;
 	private String username;
 	private String projectName;
 
-	public LiveEditProblemRequestor(IMessagingConnector messagingConnector, String username, String projectName, String resourcePath) {
+	public LiveEditProblemRequestor(MessageConnector messagingConnector, String username, String projectName, String resourcePath) {
 		this.messagingConnector = messagingConnector;
 		this.username = username;
 		this.projectName = projectName;

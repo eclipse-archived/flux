@@ -12,9 +12,10 @@ package org.eclipse.flux.jdt.services;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.eclipse.flux.core.AbstractMessageHandler;
-import org.eclipse.flux.core.IMessageHandler;
-import org.eclipse.flux.core.IMessagingConnector;
+
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageHandler;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -33,16 +34,16 @@ import org.json.JSONObject;
 public class RenameService {
 
 	private LiveEditUnits liveEditUnits;
-	private IMessagingConnector messagingConnector;
+	private MessageConnector messagingConnector;
 	private IMessageHandler contentAssistRequestHandler;
 
-	public RenameService(IMessagingConnector messagingConnector, LiveEditUnits liveEditUnits) {
+	public RenameService(MessageConnector messagingConnector, LiveEditUnits liveEditUnits) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditUnits = liveEditUnits;
 
-		this.contentAssistRequestHandler = new AbstractMessageHandler("renameinfilerequest") {
+		this.contentAssistRequestHandler = new MessageHandler("renameinfilerequest") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				handleRenameInFileRequest(message);
 			}
 		};
@@ -77,7 +78,7 @@ public class RenameService {
 					messagingConnector.send("renameinfileresponse", responseMessage);
 				}
 			}
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

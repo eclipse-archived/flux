@@ -17,6 +17,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageHandler;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -28,7 +32,7 @@ public final class KeepAliveConnector {
 	private static final long KEEP_ALIVE_DELAY = 3 * 60 * 60; // 3 hours
 	private static final long KEEP_ALIVE_RESPONSE_WAIT_TIME = 5; // 5 seconds
 	
-	private IMessagingConnector mc;
+	private MessageConnector mc;
 	private String serviceTypeId;
 	private ScheduledExecutorService executor;
 	private ScheduledFuture<?> scheduledKeepAliveMessage = null;
@@ -36,9 +40,9 @@ public final class KeepAliveConnector {
 	private long keepAliveDelay;
 	private long keepAliveResponseTimeout;
 	private List<IMessageHandler> messageHandlers = Collections.emptyList();
-	private IMessageHandler keepAliveResponseHandler = new AbstractMessageHandler(SERVICE_REQUIRED_RESPONSE) {
+	private IMessageHandler keepAliveResponseHandler = new MessageHandler(SERVICE_REQUIRED_RESPONSE) {
 		@Override
-		public void handleMessage(String messageType, JSONObject message) {
+		public void handle(String messageType, JSONObject message) {
 			unsetScheduledShutdown();
 			setKeepAliveDelayedMessage();
 		}
@@ -63,11 +67,11 @@ public final class KeepAliveConnector {
 		}
 	};
 	
-	public KeepAliveConnector(IMessagingConnector messaingConnector, String serviceTypeId) {
+	public KeepAliveConnector(MessageConnector messaingConnector, String serviceTypeId) {
 		this(messaingConnector, serviceTypeId, KEEP_ALIVE_DELAY, KEEP_ALIVE_RESPONSE_WAIT_TIME);
 	}
 	
-	public KeepAliveConnector(IMessagingConnector messaingConnector, String serviceTypeId, long keepAliveDelay, long keepAliveResponseTimeout) {
+	public KeepAliveConnector(MessageConnector messaingConnector, String serviceTypeId, long keepAliveDelay, long keepAliveResponseTimeout) {
 		this.mc = messaingConnector;
 		this.serviceTypeId = serviceTypeId;
 		this.executor = Executors.newScheduledThreadPool(2);
@@ -116,7 +120,7 @@ public final class KeepAliveConnector {
 			message.put("username", mc.getChannel());
 			message.put("service", serviceTypeId);
 			mc.send(SERVICE_REQUIRED_REQUEST, message);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

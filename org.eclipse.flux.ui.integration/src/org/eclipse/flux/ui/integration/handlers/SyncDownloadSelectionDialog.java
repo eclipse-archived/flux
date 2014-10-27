@@ -13,13 +13,12 @@ package org.eclipse.flux.ui.integration.handlers;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.flux.core.CallbackIDAwareMessageHandler;
-import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.client.CallbackIDAwareMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -27,10 +26,10 @@ import org.json.JSONObject;
  */
 public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 
-	private final IMessagingConnector messagingConnector;
+	private final MessageConnector messagingConnector;
 	private final String username;
 
-	public SyncDownloadSelectionDialog(final Shell parent, final ILabelProvider renderer, final IMessagingConnector messagingConnector, final String username) {
+	public SyncDownloadSelectionDialog(final Shell parent, final ILabelProvider renderer, final MessageConnector messagingConnector, final String username) {
 		super(parent, renderer);
 		this.messagingConnector = messagingConnector;
 		this.username = username;
@@ -47,7 +46,7 @@ public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 			
 			CallbackIDAwareMessageHandler responseHandler = new CallbackIDAwareMessageHandler("getProjectsResponse", callbackID) {
 				@Override
-				public void handleMessage(String messageType, JSONObject response) {
+				public void handle(String messageType, JSONObject response) {
 					try {
 						List<String> projectsNames = new ArrayList<String>();
 						JSONArray projects = response.getJSONArray("projects");
@@ -73,7 +72,7 @@ public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 			message.put("callback_id", callbackID);
 			message.put("username", username);
 			this.messagingConnector.send("getProjectsRequest", message);
-		} catch (JSONException e1) {
+		} catch (Exception e1) {
 			e1.printStackTrace();
 		}		
 		

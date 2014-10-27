@@ -16,9 +16,9 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.flux.core.AbstractMessageHandler;
-import org.eclipse.flux.core.IMessageHandler;
-import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageHandler;
 import org.eclipse.jdt.core.CompletionContext;
 import org.eclipse.jdt.core.CompletionProposal;
 import org.eclipse.jdt.core.CompletionRequestor;
@@ -35,16 +35,16 @@ import org.json.JSONObject;
 public class ContentAssistService {
 
 	private LiveEditUnits liveEditUnits;
-	private IMessagingConnector messagingConnector;
+	private MessageConnector messagingConnector;
 	private IMessageHandler contentAssistRequestHandler;
 
-	public ContentAssistService(IMessagingConnector messagingConnector, LiveEditUnits liveEditUnits) {
+	public ContentAssistService(MessageConnector messagingConnector, LiveEditUnits liveEditUnits) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditUnits = liveEditUnits;
 
-		this.contentAssistRequestHandler = new AbstractMessageHandler("contentassistrequest") {
+		this.contentAssistRequestHandler = new MessageHandler("contentassistrequest") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				handleContentAssistRequest(message);
 			}
 		};
@@ -76,7 +76,7 @@ public class ContentAssistService {
 
 				messagingConnector.send("contentassistresponse", responseMessage);
 			}
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

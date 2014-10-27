@@ -32,6 +32,10 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.core.resources.IResourceVisitor;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.flux.client.CallbackIDAwareMessageHandler;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageHandler;
 import org.eclipse.jdt.core.IClassFile;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
@@ -47,7 +51,7 @@ import org.json.JSONObject;
 public class Repository {
 
 	private String username;
-	private IMessagingConnector messagingConnector;
+	private MessageConnector messagingConnector;
 	private Collection<IMessageHandler> messageHandlers;
 
 	private ConcurrentMap<String, ConnectedProject> syncedProjects;
@@ -58,7 +62,7 @@ public class Repository {
 	
 	private AtomicBoolean connected;
 
-	public Repository(IMessagingConnector messagingConnector, String user) {
+	public Repository(MessageConnector messagingConnector, String user) {
 		this.username = user;
 		this.connected = new AtomicBoolean(true);
 		this.messagingConnector = messagingConnector;
@@ -68,45 +72,45 @@ public class Repository {
 		
 		this.messageHandlers = new ArrayList<IMessageHandler>(9);
 		
-		IMessageHandler resourceChangedHandler = new AbstractMessageHandler("resourceChanged") {
+		IMessageHandler resourceChangedHandler = new MessageHandler("resourceChanged") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				updateResource(message);
 			}
 		};
 		this.messagingConnector.addMessageHandler(resourceChangedHandler);
 		messageHandlers.add(resourceChangedHandler);
 		
-		IMessageHandler resourceCreatedHandler = new AbstractMessageHandler("resourceCreated") {
+		IMessageHandler resourceCreatedHandler = new MessageHandler("resourceCreated") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				createResource(message);
 			}
 		};
 		this.messagingConnector.addMessageHandler(resourceCreatedHandler);
 		this.messageHandlers.add(resourceCreatedHandler);
 		
-		IMessageHandler resourceDeletedHandler = new AbstractMessageHandler("resourceDeleted") {
+		IMessageHandler resourceDeletedHandler = new MessageHandler("resourceDeleted") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				deleteResource(message);
 			}
 		};
 		this.messagingConnector.addMessageHandler(resourceDeletedHandler);
 		this.messageHandlers.add(resourceDeletedHandler);
 
-		IMessageHandler getProjectsRequestHandler = new AbstractMessageHandler("getProjectsRequest") {
+		IMessageHandler getProjectsRequestHandler = new MessageHandler("getProjectsRequest") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				getProjects(message);
 			}
 		};
 		this.messagingConnector.addMessageHandler(getProjectsRequestHandler);
 		this.messageHandlers.add(getProjectsRequestHandler);
 		
-		IMessageHandler getProjectRequestHandler = new AbstractMessageHandler("getProjectRequest") {
+		IMessageHandler getProjectRequestHandler = new MessageHandler("getProjectRequest") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				getProject(message);
 			}
 		};
@@ -115,16 +119,16 @@ public class Repository {
 		
 		IMessageHandler getProjectResponseHandler = new CallbackIDAwareMessageHandler("getProjectResponse", Repository.GET_PROJECT_CALLBACK) {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				getProjectResponse(message);
 			}
 		};
 		this.messagingConnector.addMessageHandler(getProjectResponseHandler);
 		this.messageHandlers.add(getProjectResponseHandler);
 		
-		IMessageHandler getResourceRequestHandler = new AbstractMessageHandler("getResourceRequest") {
+		IMessageHandler getResourceRequestHandler = new MessageHandler("getResourceRequest") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				try {
 					final String resourcePath = message.getString("resource");
 					
@@ -144,16 +148,16 @@ public class Repository {
 		
 		IMessageHandler getResourceResponseHandler = new CallbackIDAwareMessageHandler("getResourceResponse", Repository.GET_RESOURCE_CALLBACK) {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				getResourceResponse(message);
 			}
 		};
 		this.messagingConnector.addMessageHandler(getResourceResponseHandler);
 		this.messageHandlers.add(getResourceResponseHandler);
 		
-		IMessageHandler getMetadataRequestHandler = new AbstractMessageHandler("getMetadataRequest") {
+		IMessageHandler getMetadataRequestHandler = new MessageHandler("getMetadataRequest") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				getMetadata(message);
 			}
 		};
@@ -208,7 +212,7 @@ public class Repository {
 				message.put("username", this.username);
 				message.put("project", projectName);
 				messagingConnector.send("projectDisconnected", message);
-			} catch (JSONException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
@@ -222,7 +226,7 @@ public class Repository {
 			message.put("includeDeleted", true);
 			message.put("callback_id", GET_PROJECT_CALLBACK);
 			messagingConnector.send("getProjectRequest", message);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -233,7 +237,7 @@ public class Repository {
 			message.put("username", this.username);
 			message.put("project", projectName);
 			messagingConnector.send("projectConnected", message);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -265,7 +269,7 @@ public class Repository {
 
 				messagingConnector.send("getProjectsResponse", message);
 			}
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -329,7 +333,7 @@ public class Repository {
 
 				messagingConnector.send("getProjectResponse", message);
 			}
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -515,9 +519,7 @@ public class Repository {
 					}
 				}
 			}
-		} catch (JSONException e) {
-			e.printStackTrace();
-		} catch (JavaModelException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
