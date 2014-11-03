@@ -24,7 +24,6 @@ import org.eclipse.flux.client.config.UserPermissions;
 import org.eclipse.flux.client.util.Console;
 import org.eclipse.flux.client.util.JSON;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.AMQP.Queue.DeclareOk;

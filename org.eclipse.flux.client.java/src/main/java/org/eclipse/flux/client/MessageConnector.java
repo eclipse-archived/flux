@@ -11,7 +11,6 @@
 package org.eclipse.flux.client;
 
 import org.eclipse.flux.client.config.FluxConfig;
-import org.eclipse.flux.client.util.BasicFuture;
 import org.json.JSONObject;
 
 /**
