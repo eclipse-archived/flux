@@ -12,3 +12,4 @@ Export-Package: io.socket,
  org.eclipse.flux.client.config,
  org.eclipse.flux.client.util,
  org.json
+Import-Package: org.json

@@ -9,7 +9,6 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.core.resources,
  org.eclipse.core.runtime,
  org.eclipse.core.expressions,
- org.json,
  org.eclipse.flux.core,
  org.eclipse.jdt.ui,
  org.eclipse.ui.workbench.texteditor,
@@ -20,3 +19,4 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.core.filebuffers
 Bundle-Activator: org.eclipse.flux.ui.integration.FluxUiPlugin
 Bundle-ActivationPolicy: lazy
+Import-Package: org.json
