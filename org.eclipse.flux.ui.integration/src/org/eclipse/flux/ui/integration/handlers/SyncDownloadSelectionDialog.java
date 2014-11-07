@@ -10,12 +10,13 @@
 *******************************************************************************/
 package org.eclipse.flux.ui.integration.handlers;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.eclipse.flux.core.CallbackIDAwareMessageHandler;
 import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.jface.viewers.ILabelProvider;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 import org.json.JSONArray;
@@ -29,6 +30,8 @@ public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 
 	private final IMessagingConnector messagingConnector;
 	private final String username;
+	private CallbackIDAwareMessageHandler responseHandler;
+	private Set<String> projects;
 
 	public SyncDownloadSelectionDialog(final Shell parent, final ILabelProvider renderer, final IMessagingConnector messagingConnector, final String username) {
 		super(parent, renderer);
@@ -38,6 +41,8 @@ public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 		this.setMultipleSelection(true);
 		this.setAllowDuplicates(false);
 		this.setTitle("Import Synced Projects...");
+		
+		this.projects = new ConcurrentSkipListSet<>();
 	}
 	
 	@Override
@@ -45,25 +50,34 @@ public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 		try {
 			int callbackID = this.hashCode();
 			
-			CallbackIDAwareMessageHandler responseHandler = new CallbackIDAwareMessageHandler("getProjectsResponse", callbackID) {
+			projects.clear();
+			
+			responseHandler = new CallbackIDAwareMessageHandler("getProjectsResponse", callbackID) {
 				@Override
 				public void handleMessage(String messageType, JSONObject response) {
 					try {
-						List<String> projectsNames = new ArrayList<String>();
-						JSONArray projects = response.getJSONArray("projects");
-						for (int i = 0; i < projects.length(); i++) {
-							JSONObject project = projects.getJSONObject(i);
+						boolean newProjects = false;
+
+						JSONArray projectsList = response.getJSONArray("projects");
+						for (int i = 0; i < projectsList.length(); i++) {
+							JSONObject project = projectsList.getJSONObject(i);
 							String projectName = project.getString("name");
 
-							projectsNames.add(projectName);
+							newProjects |= projects.add(projectName);
 						}
-						setElements((String[]) projectsNames.toArray(new String[projectsNames.size()]));
+
+						if (newProjects) {
+							Display.getDefault().asyncExec(new Runnable() {
+								@Override
+								public void run() {
+									setListElements((String[]) projects.toArray(new String[projects.size()]));
+								}
+							});
+						}
 					}
 					catch (Exception e) {
 						e.printStackTrace();
 					}
-					
-					messagingConnector.removeMessageHandler(this);
 				}
 			};
 			
@@ -78,6 +92,12 @@ public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 		}		
 		
 		return super.open();
+	}
+	
+	@Override
+	public boolean close() {
+		messagingConnector.removeMessageHandler(responseHandler);
+		return super.close();
 	}
 
 }
