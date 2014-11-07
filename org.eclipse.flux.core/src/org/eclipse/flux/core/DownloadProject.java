@@ -12,9 +12,11 @@ package org.eclipse.flux.core;
 
 import java.io.ByteArrayInputStream;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentSkipListSet;
 
+import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
@@ -51,13 +53,11 @@ public class DownloadProject {
 	private String username;
 	private IProject project;
 
-	private AtomicInteger requestedFileCount = new AtomicInteger(0);
-	private AtomicInteger downloadedFileCount = new AtomicInteger(0);
+	private Set<String> requestedProjectFiles = new ConcurrentSkipListSet<>();
+	private Set<String> projectFiles = new ConcurrentSkipListSet<String>();
 
 	private CallbackIDAwareMessageHandler projectResponseHandler;
 	private CallbackIDAwareMessageHandler resourceResponseHandler;
-	
-	private Set<String> projectFiles = new HashSet<String>();
 
 	public DownloadProject(IMessagingConnector messagingConnector, String projectName, String username) {
 		this.messagingConnector = messagingConnector;
@@ -97,7 +97,7 @@ public class DownloadProject {
 						project.create(monitor);
 					}
 					if (!project.isOpen()) {
-						project.open(null);
+						project.open(monitor);
 					}
 
 					JSONObject message = new JSONObject();
@@ -133,6 +133,8 @@ public class DownloadProject {
 			final JSONArray files = response.getJSONArray("files");
 
 			if (this.username.equals(responseUser)) {
+				Set<String> newFiles = new HashSet<String>();
+				
 				for (int i = 0; i < files.length(); i++) {
 					JSONObject resource = files.getJSONObject(i);
 
@@ -144,33 +146,29 @@ public class DownloadProject {
 					if (type.equals("folder")) {
 						if (!resourcePath.isEmpty()) {
 							IFolder folder = project.getFolder(new Path(resourcePath));
-							if (!folder.exists()) {
-								folder.create(true, true, null);
-							}
+							createFolder(folder);
 							folder.setLocalTimeStamp(timestamp);
 						}
 					} else if (type.equals("file")) {
-						requestedFileCount.incrementAndGet();
+						boolean added = this.projectFiles.add(resourcePath);
+						if (added) {
+							newFiles.add(resourcePath);
+						}
 					}
 				}
 
-				for (int i = 0; i < files.length(); i++) {
-					JSONObject resource = files.getJSONObject(i);
+				for (Iterator<String> newFilesIterator = newFiles.iterator(); newFilesIterator.hasNext();) {
+					String resourcePath = (String) newFilesIterator.next();
 
-					String resourcePath = resource.getString("path");
-					String type = resource.optString("type");
+					this.requestedProjectFiles.add(resourcePath);
 
-					if (type.equals("file")) {
-						this.projectFiles.add(resourcePath);
-						
-						JSONObject message = new JSONObject();
-						message.put("callback_id", callbackID);
-						message.put("username", this.username);
-						message.put("project", responseProject);
-						message.put("resource", resourcePath);
+					JSONObject message = new JSONObject();
+					message.put("callback_id", callbackID);
+					message.put("username", this.username);
+					message.put("project", responseProject);
+					message.put("resource", resourcePath);
 
-						messagingConnector.send("getResourceRequest", message);
-					}
+					messagingConnector.send("getResourceRequest", message);
 				}
 			}
 		} catch (Exception e) {
@@ -180,7 +178,17 @@ public class DownloadProject {
 			this.completionCallback.downloadFailed();
 		}
 	}
-
+	
+	private void createFolder(IFolder folder) throws CoreException {
+		if (!folder.exists()) {
+	        IContainer parent = folder.getParent();
+	        if (parent instanceof IFolder) {
+	        		createFolder((IFolder) parent);
+	        }
+			folder.create(true, true, null);
+		}
+	}
+	
 	public void getResourceResponse(JSONObject response) {
 		try {
 			final String responseUser = response.getString("username");
@@ -197,8 +205,8 @@ public class DownloadProject {
 				}
 				file.setLocalTimeStamp(timestamp);
 
-				int downloaded = this.downloadedFileCount.incrementAndGet();
-				if (downloaded == this.requestedFileCount.get()) {
+				this.requestedProjectFiles.remove(resourcePath);
+				if (this.requestedProjectFiles.isEmpty()) {
 					this.messagingConnector.removeMessageHandler(projectResponseHandler);
 					this.messagingConnector.removeMessageHandler(resourceResponseHandler);
 					finish();
