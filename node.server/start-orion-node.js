@@ -22,11 +22,11 @@ try {
 	createOrion = require('../../orion.client/modules/orionode');
 	console.log('Development mode: using local clone of orionode');
 } catch (e) {
-	console.log("Using 'orion-flux' from 'package.json'");
+	console.log("Using 'orion' from 'package.json'");
 	//When deployed on CF the above orion.client git clone won't
 	//be found so we'll consume a 'released' version installed via package.json
 	//dependency:
-	createOrion = require('orion-flux');
+	createOrion = require('orion');
 }
 
 module.exports = function (options) {
