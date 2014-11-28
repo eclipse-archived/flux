@@ -236,6 +236,7 @@ var FluxEditor = (function() {
 	//						console.log(lineOffset);
 
 							resourceMetadata.liveMarkers[i] = {
+								'id' : data.problems[i].id,
 								'description' : data.problems[i].description,
 	//							'line' : data.problems[i].line,
 								'severity' : data.problems[i].severity,
@@ -453,6 +454,7 @@ var FluxEditor = (function() {
 							resourceMetadata.markers = [];
 							for(var i = 0; i < data.metadata.length; i++) {
 								resourceMetadata.markers[i] = {
+									'id' : data.metadata[i].id,
 									'description' : data.metadata[i].description,
 									'severity' : data.metadata[i].severity,
 									'start' : data.metadata[i].start,
@@ -501,6 +503,26 @@ var FluxEditor = (function() {
 						} else {
 							request.resolve(false);
 						}
+					}
+				);
+			});
+			return request;
+		},
+		
+		applyQuickfix: function(editorContext, ctxt) {
+			var self = this;
+			var request = new Deferred();
+			this._getResourceData().then(function(resourceMetadata) {
+				self.sendMessage("quickfixrequest", {
+					'username': self.user,
+					'project': resourceMetadata.project,
+					'resource': resourceMetadata.resource,
+					'id' : ctxt.annotation.id,
+					'offset': ctxt.annotation.start,
+					'length': (ctxt.annotation.end - ctxt.annotation.start + 1),
+					'apply-fix' : true
+					}, function(data) {
+						console.log(data);
 					}
 				);
 			});

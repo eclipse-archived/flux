@@ -86,7 +86,8 @@ public class LiveEditProblemRequestor implements IProblemRequestor {
 			}
 
 			result.append("{");
-			result.append("\"description\":" + JSONObject.quote(problem.getMessage()));
+			result.append("\"id\":" + problem.getID());
+			result.append(",\"description\":" + JSONObject.quote(problem.getMessage()));
 			result.append(",\"line\":" + problem.getSourceLineNumber());
 			result.append(",\"severity\":\"" + (problem.isError() ? "error" : "warning") + "\"");
 			result.append(",\"start\":" + problem.getSourceStart());
