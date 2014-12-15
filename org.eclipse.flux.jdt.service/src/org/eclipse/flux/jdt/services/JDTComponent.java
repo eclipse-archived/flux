@@ -11,9 +11,10 @@
  *******************************************************************************/
 package org.eclipse.flux.jdt.services;
 
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.core.ChannelSwitcher;
 import org.eclipse.flux.core.Constants;
-import org.eclipse.flux.core.IChannelListener;
-import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.KeepAliveConnector;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.Repository;
@@ -37,8 +38,10 @@ public class JDTComponent {
 	public void activate(final ComponentContext context) throws Exception {		
 		final boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
 		
-		final IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
-				.getDefault().getMessagingConnector();
+		final ChannelSwitcher channelSwitcher = org.eclipse.flux.core.Activator
+				.getDefault().getChannelSwitcher();
+		final MessageConnector messagingConnector = org.eclipse.flux.core.Activator
+				.getDefault().getMessageConnector();
 		
 		if (messagingConnector != null) {
 			new Thread() {
@@ -46,9 +49,9 @@ public class JDTComponent {
 				@Override
 				public void run() {
 					
-					String userChannel = messagingConnector.getChannel();
+					String userChannel = channelSwitcher.getChannel();
 					JdtChannelListener jdtChannelListener = new JdtChannelListener();
-					for (; userChannel == null; userChannel = messagingConnector
+					for (; userChannel == null; userChannel = channelSwitcher
 							.getChannel()) {
 						try {
 							sleep(WAIT_TIME_PERIOD);
@@ -57,9 +60,9 @@ public class JDTComponent {
 						}
 					}
 					
-					discoveryConnector = new ServiceDiscoveryConnector(messagingConnector, JDT_SERVICE_ID, lazyStart);
+					discoveryConnector = new ServiceDiscoveryConnector(channelSwitcher, messagingConnector, JDT_SERVICE_ID, lazyStart);
 					if (lazyStart) {
-						keepAliveConnector = new KeepAliveConnector(messagingConnector, JDT_SERVICE_ID);
+						keepAliveConnector = new KeepAliveConnector(channelSwitcher, messagingConnector, JDT_SERVICE_ID);
 					}
 					
 					jdtChannelListener.connected(userChannel);
@@ -103,8 +106,8 @@ public class JDTComponent {
 			if (lazyStart && Constants.SUPER_USER.equals(userChannel)) {
 				return;
 			}
-			IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
-					.getDefault().getMessagingConnector();
+			MessageConnector messagingConnector = org.eclipse.flux.core.Activator
+					.getDefault().getMessageConnector();
 			Repository repository = org.eclipse.flux.core.Activator.getDefault()
 					.getRepository();
 			LiveEditCoordinator liveEditCoordinator = org.eclipse.flux.core.Activator

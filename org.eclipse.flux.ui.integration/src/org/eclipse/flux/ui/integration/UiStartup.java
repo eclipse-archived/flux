@@ -12,8 +12,9 @@ package org.eclipse.flux.ui.integration;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.flux.core.IChannelListener;
-import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.core.ChannelSwitcher;
 import org.eclipse.flux.core.IRepositoryListener;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.Repository;
@@ -36,14 +37,17 @@ public class UiStartup implements IStartup {
 
 	@Override
 	public void earlyStartup() {
-		IMessagingConnector messagingConnector = org.eclipse.flux.core.Activator
-				.getDefault().getMessagingConnector();
+		ChannelSwitcher channelSwitcher = org.eclipse.flux.core.Activator
+				.getDefault().getChannelSwitcher();
+
+		MessageConnector messagingConnector = org.eclipse.flux.core.Activator
+				.getDefault().getMessageConnector();
 
 		if (messagingConnector != null) {
 			UiChannelListener uiChannelListener = new UiChannelListener();
 			
-			String userChannel = messagingConnector.getChannel();
-			for (; userChannel == null; userChannel = messagingConnector
+			String userChannel = channelSwitcher.getChannel();
+			for (; userChannel == null; userChannel = channelSwitcher
 					.getChannel()) {
 				try {
 					Thread.sleep(WAIT_TIME_PERIOD);

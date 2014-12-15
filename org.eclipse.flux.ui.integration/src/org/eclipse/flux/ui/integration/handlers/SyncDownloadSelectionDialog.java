@@ -13,8 +13,8 @@ package org.eclipse.flux.ui.integration.handlers;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-import org.eclipse.flux.core.CallbackIDAwareMessageHandler;
-import org.eclipse.flux.core.IMessagingConnector;
+import org.eclipse.flux.client.CallbackIDAwareMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
@@ -28,12 +28,12 @@ import org.json.JSONObject;
  */
 public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 
-	private final IMessagingConnector messagingConnector;
+	private final MessageConnector messagingConnector;
 	private final String username;
 	private CallbackIDAwareMessageHandler responseHandler;
 	private Set<String> projects;
 
-	public SyncDownloadSelectionDialog(final Shell parent, final ILabelProvider renderer, final IMessagingConnector messagingConnector, final String username) {
+	public SyncDownloadSelectionDialog(final Shell parent, final ILabelProvider renderer, final MessageConnector messagingConnector, final String username) {
 		super(parent, renderer);
 		this.messagingConnector = messagingConnector;
 		this.username = username;
@@ -54,7 +54,7 @@ public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 			
 			responseHandler = new CallbackIDAwareMessageHandler("getProjectsResponse", callbackID) {
 				@Override
-				public void handleMessage(String messageType, JSONObject response) {
+				public void handle(String messageType, JSONObject response) {
 					try {
 						boolean newProjects = false;
 
@@ -87,7 +87,7 @@ public class SyncDownloadSelectionDialog extends ElementListSelectionDialog {
 			message.put("callback_id", callbackID);
 			message.put("username", username);
 			this.messagingConnector.send("getProjectsRequest", message);
-		} catch (JSONException e1) {
+		} catch (Exception e1) {
 			e1.printStackTrace();
 		}		
 		

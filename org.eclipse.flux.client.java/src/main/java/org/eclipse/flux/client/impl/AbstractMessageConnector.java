@@ -17,16 +17,24 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 
+import org.eclipse.flux.client.ConnectionStatus;
 import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.util.Observable;
+import org.eclipse.flux.client.util.ObservableState;
 import org.json.JSONObject;
 
 public abstract class AbstractMessageConnector implements MessageConnector {
+	
+	//TODO: keep connectionSatus up-to-date when it get connected / disconnected
+	// This should be done in both SocketIO and RabbitMQ connectors.
 
 	private final ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
 	protected final ExecutorService executor;
 	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();
+	
+	protected final ObservableState<ConnectionStatus> connectionStatus = new ObservableState<ConnectionStatus>(ConnectionStatus.INITIALIZING);
 	
 	public AbstractMessageConnector(ExecutorService executor) {
 		this.executor = executor;
@@ -89,5 +97,10 @@ public abstract class AbstractMessageConnector implements MessageConnector {
 		if (handlers != null) {
 			handlers.remove(messageHandler);
 		}
+	}
+
+	@Override
+	public Observable<ConnectionStatus> getState() {
+		return connectionStatus;
 	}
 }

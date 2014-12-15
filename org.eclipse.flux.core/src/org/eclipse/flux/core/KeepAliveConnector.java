@@ -17,6 +17,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageHandler;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -28,17 +32,18 @@ public final class KeepAliveConnector {
 	private static final long KEEP_ALIVE_DELAY = 3 * 60 * 60; // 3 hours
 	private static final long KEEP_ALIVE_RESPONSE_WAIT_TIME = 5; // 5 seconds
 	
-	private IMessagingConnector mc;
+	private ChannelSwitcher channelSwitcher;
+	private MessageConnector messageConnector;
 	private String serviceTypeId;
 	private ScheduledExecutorService executor;
 	private ScheduledFuture<?> scheduledKeepAliveMessage = null;
 	private ScheduledFuture<?> scheduledShutDown = null;
 	private long keepAliveDelay;
 	private long keepAliveResponseTimeout;
-	private List<IMessageHandler> messageHandlers = Collections.emptyList();
-	private IMessageHandler keepAliveResponseHandler = new AbstractMessageHandler(SERVICE_REQUIRED_RESPONSE) {
+	private List<MessageHandler> messageHandlers = Collections.emptyList();
+	private IMessageHandler keepAliveResponseHandler = new MessageHandler(SERVICE_REQUIRED_RESPONSE) {
 		@Override
-		public void handleMessage(String messageType, JSONObject message) {
+		public void handle(String messageType, JSONObject message) {
 			unsetScheduledShutdown();
 			setKeepAliveDelayedMessage();
 		}
@@ -63,17 +68,18 @@ public final class KeepAliveConnector {
 		}
 	};
 	
-	public KeepAliveConnector(IMessagingConnector messaingConnector, String serviceTypeId) {
-		this(messaingConnector, serviceTypeId, KEEP_ALIVE_DELAY, KEEP_ALIVE_RESPONSE_WAIT_TIME);
+	public KeepAliveConnector(ChannelSwitcher switcher, MessageConnector mc, String serviceTypeId) {
+		this(switcher, mc, serviceTypeId, KEEP_ALIVE_DELAY, KEEP_ALIVE_RESPONSE_WAIT_TIME);
 	}
 	
-	public KeepAliveConnector(IMessagingConnector messaingConnector, String serviceTypeId, long keepAliveDelay, long keepAliveResponseTimeout) {
-		this.mc = messaingConnector;
+	public KeepAliveConnector(ChannelSwitcher switcher, MessageConnector mc, String serviceTypeId, long keepAliveDelay, long keepAliveResponseTimeout) {
+		this.channelSwitcher = switcher;
+		this.messageConnector = mc;
 		this.serviceTypeId = serviceTypeId;
 		this.executor = Executors.newScheduledThreadPool(2);
 		this.keepAliveDelay = keepAliveDelay;
 		this.keepAliveResponseTimeout = keepAliveResponseTimeout;
-		this.mc.addMessageHandler(keepAliveResponseHandler);
+		this.messageConnector.addMessageHandler(keepAliveResponseHandler);
 		setKeepAliveDelayedMessage();
 		mc.addChannelListener(channelListener);
 	}
@@ -113,22 +119,22 @@ public final class KeepAliveConnector {
 				}
 			}, keepAliveResponseTimeout, TimeUnit.SECONDS);
 			JSONObject message = new JSONObject();
-			message.put("username", mc.getChannel());
+			message.put("username", channelSwitcher.getChannel());
 			message.put("service", serviceTypeId);
-			mc.send(SERVICE_REQUIRED_REQUEST, message);
-		} catch (JSONException e) {
+			messageConnector.send(SERVICE_REQUIRED_REQUEST, message);
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
 	public void dispose() {
-		mc.removeChannelListener(channelListener);
+		messageConnector.removeChannelListener(channelListener);
 		unsetScheduledShutdown();
 		unsetKeepAliveDelayedMessage();
 		executor.shutdown();
-		mc.removeMessageHandler(keepAliveResponseHandler);
+		messageConnector.removeMessageHandler(keepAliveResponseHandler);
 		for (IMessageHandler messageHandler : messageHandlers) {
-			mc.removeMessageHandler(messageHandler);
+			messageConnector.removeMessageHandler(messageHandler);
 		}
 	}
 

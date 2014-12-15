@@ -13,12 +13,12 @@ package org.eclipse.flux.jdt.services;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.flux.core.AbstractMessageHandler;
-import org.eclipse.flux.core.CallbackIDAwareMessageHandler;
+import org.eclipse.flux.client.CallbackIDAwareMessageHandler;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageHandler;
 import org.eclipse.flux.core.DownloadProject;
 import org.eclipse.flux.core.DownloadProject.CompletionCallback;
-import org.eclipse.flux.core.IMessageHandler;
-import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.Repository;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -33,13 +33,13 @@ public class InitializeServiceEnvironment {
 
 	private static int GET_PROJECTS_CALLBACK = "InitializeServiceEnvironment - getProjectsCallback".hashCode();
 
-	private final IMessagingConnector messagingConnector;
+	private final MessageConnector messagingConnector;
 	final Repository repository;
 
 	private IMessageHandler getProjectsResponseHandler;
 	private IMessageHandler projectConnectedHandler;
 
-	public InitializeServiceEnvironment(IMessagingConnector messagingConnector, Repository repository) {
+	public InitializeServiceEnvironment(MessageConnector messagingConnector, Repository repository) {
 		this.messagingConnector = messagingConnector;
 		this.repository = repository;
 	}
@@ -47,15 +47,15 @@ public class InitializeServiceEnvironment {
 	public void start() {
 		getProjectsResponseHandler = new CallbackIDAwareMessageHandler("getProjectsResponse", GET_PROJECTS_CALLBACK) {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				handleGetProjectsResponse(message);
 			}
 		};
 		messagingConnector.addMessageHandler(getProjectsResponseHandler);
 
-		projectConnectedHandler = new AbstractMessageHandler("projectConnected") {
+		projectConnectedHandler = new MessageHandler("projectConnected") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				handleProjectConnected(message);
 			}
 		};
@@ -66,7 +66,7 @@ public class InitializeServiceEnvironment {
 			message.put("username", repository.getUsername());
 			message.put("callback_id", GET_PROJECTS_CALLBACK);
 			this.messagingConnector.send("getProjectsRequest", message);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

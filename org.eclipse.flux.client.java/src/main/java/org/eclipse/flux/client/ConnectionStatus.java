@@ -8,11 +8,11 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.eclipse.flux.core;
+package org.eclipse.flux.client;
 
 import io.socket.SocketIOException;
 
-import org.eclipse.flux.core.util.ExceptionUtil;
+import org.eclipse.flux.client.util.ExceptionUtil;
 
 /**
  * An immutable object that represent the 'status' of a Flux Messaging Connector.

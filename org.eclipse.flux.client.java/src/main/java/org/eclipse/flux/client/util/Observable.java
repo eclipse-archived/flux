@@ -8,7 +8,7 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.eclipse.flux.core.util;
+package org.eclipse.flux.client.util;
 
 /**
  * An 'Observable' is a value that may change over time. The Observable interface provides

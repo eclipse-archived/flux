@@ -13,9 +13,9 @@ package org.eclipse.flux.ui.integration;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.flux.core.ConnectionStatus;
-import org.eclipse.flux.core.util.Listener;
-import org.eclipse.flux.core.util.Observable;
+import org.eclipse.flux.client.ConnectionStatus;
+import org.eclipse.flux.client.util.Listener;
+import org.eclipse.flux.client.util.Observable;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.progress.UIJob;
 
@@ -29,8 +29,8 @@ public class AuthFailureReporter implements Listener<ConnectionStatus> {
 
 	private Observable<ConnectionStatus> state;
 
-	public AuthFailureReporter(Observable<ConnectionStatus> state) {
-		this.state = state;
+	public AuthFailureReporter(Observable<ConnectionStatus> observable) {
+		this.state = observable;
 		this.state.addListener(this);
 	}
 

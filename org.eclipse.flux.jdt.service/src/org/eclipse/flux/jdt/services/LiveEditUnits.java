@@ -25,10 +25,11 @@ import org.eclipse.core.resources.IResourceDeltaVisitor;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.flux.core.CallbackIDAwareMessageHandler;
+import org.eclipse.flux.client.CallbackIDAwareMessageHandler;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.core.ChannelSwitcher;
 import org.eclipse.flux.core.ILiveEditConnector;
-import org.eclipse.flux.core.IMessageHandler;
-import org.eclipse.flux.core.IMessagingConnector;
 import org.eclipse.flux.core.IRepositoryListener;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.Repository;
@@ -53,7 +54,7 @@ public class LiveEditUnits {
 
 	private ConcurrentMap<String, ICompilationUnit> liveEditUnits;
 	private Repository repository;
-	private IMessagingConnector messagingConnector;
+	private MessageConnector messagingConnector;
 	private LiveEditCoordinator liveEditCoordinator;
 	
 	private ILiveEditConnector liveEditConnector;
@@ -61,7 +62,7 @@ public class LiveEditUnits {
 	private IResourceChangeListener metadataChangeListener;
 	private IMessageHandler liveResourcesResponseHandler;
 
-	public LiveEditUnits(IMessagingConnector messagingConnector, LiveEditCoordinator liveEditCoordinator, Repository repository) {
+	public LiveEditUnits(MessageConnector messagingConnector, LiveEditCoordinator liveEditCoordinator, Repository repository) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditCoordinator = liveEditCoordinator;
 		this.repository = repository;
@@ -118,7 +119,7 @@ public class LiveEditUnits {
 		
 		this.liveResourcesResponseHandler = new CallbackIDAwareMessageHandler("getLiveResourcesResponse", GET_LIVE_RESOURCES_CALLBACK) {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				startupLiveUnits(message);
 			}
 		};
@@ -150,7 +151,7 @@ public class LiveEditUnits {
 			message.put("callback_id", GET_LIVE_RESOURCES_CALLBACK);
 			message.put("resourceRegEx", ".*\\.java|.*\\.class");
 			messagingConnector.send("getLiveResourcesRequest", message);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -162,7 +163,7 @@ public class LiveEditUnits {
 			message.put("projectRegEx", project.getName());
 			message.put("callback_id", GET_LIVE_RESOURCES_CALLBACK);
 			messagingConnector.send("getLiveResourcesRequest", message);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

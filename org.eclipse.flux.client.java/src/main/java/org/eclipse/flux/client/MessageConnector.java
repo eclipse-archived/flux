@@ -11,6 +11,7 @@
 package org.eclipse.flux.client;
 
 import org.eclipse.flux.client.config.FluxConfig;
+import org.eclipse.flux.client.util.Observable;
 import org.json.JSONObject;
 
 /**
@@ -67,6 +68,6 @@ public interface MessageConnector {
 	public boolean isConnected();
 	
 	public FluxConfig getConfig();
-
-
+	
+	public Observable<ConnectionStatus> getState();
 }

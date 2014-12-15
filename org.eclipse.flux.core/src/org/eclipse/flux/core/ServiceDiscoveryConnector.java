@@ -13,6 +13,10 @@ package org.eclipse.flux.core;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageHandler;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -37,7 +41,8 @@ public class ServiceDiscoveryConnector {
 		"username",
 		"callback_id"
 	};
-	private IMessagingConnector mc;
+	private ChannelSwitcher channelSwitcher;
+	private MessageConnector mc;
 	private String serviceTypeId;
 	
 	private List<Runnable> onDispose = new ArrayList<Runnable>();
@@ -67,21 +72,22 @@ public class ServiceDiscoveryConnector {
 		}
 	}
 	
-	public ServiceDiscoveryConnector(IMessagingConnector messagingConnector, String serviceTypeId, boolean keepAlive) {
+	public ServiceDiscoveryConnector(ChannelSwitcher switcher, MessageConnector messagingConnector, String serviceTypeId, boolean keepAlive) {
+		this.channelSwitcher = switcher;
 		this.mc = messagingConnector;
 		this.serviceTypeId = serviceTypeId;
 		
 		this.mc.addChannelListener(channelListener);
 
-		String userChannel = mc.getChannel();
+		String userChannel = switcher.getChannel();
 		if (userChannel != null) {
 			sendStatus(userChannel, "ready");
 		}
 		
-		handler(new AbstractMessageHandler(DISCOVER_SERVICE_REQUEST) {
+		handler(new MessageHandler(DISCOVER_SERVICE_REQUEST) {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
-				String user = mc.getChannel();
+			public void handle(String messageType, JSONObject message) {
+				String user = channelSwitcher.getChannel();
 				try {
 					if (forMe(message) && (message.get("username").equals(user) || Constants.SUPER_USER.equals(user))) {
 						JSONObject response = new JSONObject(message, COPY_PROPS);
@@ -94,18 +100,18 @@ public class ServiceDiscoveryConnector {
 			}
 		});
 		
-		this.mc.addMessageHandler(new AbstractMessageHandler(START_SERVICE_REQUEST) {
+		this.mc.addMessageHandler(new MessageHandler(START_SERVICE_REQUEST) {
 
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				mc.removeMessageHandler(this);				
 				try {
 					String user = message.getString("username");
 					JSONObject serviceStartedMessage = new JSONObject(message, COPY_PROPS);
 					mc.send(START_SERVICE_RESPONSE, serviceStartedMessage);
 					sendStatus(user, "starting");
-					mc.connectChannel(user);					
-				} catch (JSONException e) {
+					channelSwitcher.switchToChannel(user);
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 				
@@ -129,7 +135,7 @@ public class ServiceDiscoveryConnector {
 	public synchronized void dispose() {
 		try {
 			if (mc!=null) {
-				sendStatus(mc.getChannel(), "unavailable", "Shutdown");
+				sendStatus(channelSwitcher.getChannel(), "unavailable", "Shutdown");
 				for (Runnable r : onDispose) {
 					r.run();
 				}

@@ -8,7 +8,7 @@
  * Contributors:
  *     Pivotal Software, Inc. - initial API and implementation
 *******************************************************************************/
-package org.eclipse.flux.core.util;
+package org.eclipse.flux.client.util;
 
 /**
  * A listener is an entity that is interested to track the value of an observable.

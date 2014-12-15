@@ -38,7 +38,7 @@ import org.json.JSONObject;
  * @author kdvolder
  */
 public final class SocketIOMessageConnector extends AbstractMessageConnector {
-
+	
 	/**
 	 * Time in milliseconds a connectToChannelSynch call will wait before timing out.
 	 */

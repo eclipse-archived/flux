@@ -28,9 +28,12 @@ import org.eclipse.core.runtime.Plugin;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.flux.client.FluxClient;
+import org.eclipse.flux.client.IChannelListener;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.internal.CloudSyncResourceListener;
-import org.eclipse.flux.core.internal.messaging.SocketIOMessagingConnector;
 import org.eclipse.flux.core.util.ExceptionUtil;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
@@ -49,7 +52,9 @@ public class Activator extends Plugin {
 	// The shared instance
 	private static Activator plugin;
 
-	private SocketIOMessagingConnector messagingConnector;
+	private MessageConnector messageConnector;
+	private ChannelSwitcher channelSwitcher;
+	
 	private Repository repository;
 	private LiveEditCoordinator liveEditCoordinator;
 	private boolean lazyStart = false;
@@ -78,7 +83,7 @@ public class Activator extends Plugin {
 			}
 		}
 	};
-	
+
 	@Override
 	public void start(BundleContext context) throws Exception {
 		plugin = this;
@@ -94,26 +99,14 @@ public class Activator extends Plugin {
 			channel = login;
 		}
 		
+		
 		if (!host.isEmpty()) {
-			this.messagingConnector = new SocketIOMessagingConnector(host, login, token);
-			this.messagingConnector.addChannelListener(SERVICE_STARTER);
+			this.messageConnector = FluxClient.DEFAULT_INSTANCE.connect(new SocketIOFluxConfig(host, login, token));
+			this.channelSwitcher = new ChannelSwitcher(messageConnector);
+			this.messageConnector.addChannelListener(SERVICE_STARTER);
 			
 			final String userChannel = lazyStart ? Constants.SUPER_USER : channel;
-			messagingConnector.addConnectionListener(new IConnectionListener() {
-			
-				@Override
-				public void connected() {
-					messagingConnector.removeConnectionListener(this);
-					messagingConnector.connectChannel(userChannel);
-				}
-			
-				@Override
-				public void disconnected() {
-					// nothing
-				}
-				
-			});
-			messagingConnector.connect();
+			channelSwitcher.switchToChannel(userChannel);
 		}
 	}
 	
@@ -152,15 +145,15 @@ public class Activator extends Plugin {
 
 	@Override
 	public void stop(BundleContext context) throws Exception {
-		if (messagingConnector != null) {
-			messagingConnector.disconnect();
+		if (messageConnector != null) {
+			messageConnector.disconnect();
 		}
 		plugin = null;
 	}
 	
 	private void initCoreService(String userChannel) throws CoreException {
-		repository = new Repository(messagingConnector, userChannel);
-		liveEditCoordinator = new LiveEditCoordinator(messagingConnector);
+		repository = new Repository(messageConnector, userChannel);
+		liveEditCoordinator = new LiveEditCoordinator(messageConnector);
 		
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
 		
@@ -296,8 +289,12 @@ public class Activator extends Plugin {
 		return plugin;
 	}
 	
-	public IMessagingConnector getMessagingConnector() {
-		return messagingConnector;
+	public ChannelSwitcher getChannelSwitcher() {
+		return channelSwitcher;
+	}
+	
+	public MessageConnector getMessageConnector() {
+		return messageConnector;
 	}
 	
 	public Repository getRepository() {
@@ -315,5 +312,6 @@ public class Activator extends Plugin {
 	public boolean isLazyStart() {
 		return lazyStart;
 	}
+
 
 }

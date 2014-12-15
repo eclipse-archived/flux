@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageHandler;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -25,36 +28,36 @@ import org.json.JSONObject;
  */
 public class LiveEditCoordinator {
 	
-	private IMessagingConnector messagingConnector;
+	private MessageConnector messagingConnector;
 	private Collection<ILiveEditConnector> liveEditConnectors;
 	private Collection<IMessageHandler> messageHandlers;
 	
-	public LiveEditCoordinator(IMessagingConnector messagingConnector) {
+	public LiveEditCoordinator(MessageConnector messagingConnector) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditConnectors = new CopyOnWriteArrayList<>();
 		this.messageHandlers = new ArrayList<IMessageHandler>(4);
 		
-		IMessageHandler startLiveUnit = new AbstractMessageHandler("liveResourceStarted") {
+		IMessageHandler startLiveUnit = new MessageHandler("liveResourceStarted") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				startLiveUnit(message);
 			}
 		};
 		messagingConnector.addMessageHandler(startLiveUnit);
 		messageHandlers.add(startLiveUnit);
 		
-		IMessageHandler startLiveUnitResponse = new AbstractMessageHandler("liveResourceStartedResponse") {
+		IMessageHandler startLiveUnitResponse = new MessageHandler("liveResourceStartedResponse") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				startLiveUnitResponse(message);
 			}
 		};
 		messagingConnector.addMessageHandler(startLiveUnitResponse);
 		messageHandlers.add(startLiveUnitResponse);
 		
-		IMessageHandler modelChangedHandler = new AbstractMessageHandler("liveResourceChanged") {
+		IMessageHandler modelChangedHandler = new MessageHandler("liveResourceChanged") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				modelChanged(message);
 			}
 		};
@@ -62,9 +65,9 @@ public class LiveEditCoordinator {
 		messageHandlers.add(modelChangedHandler);
 		
 		// Listen to the internal broadcast channel to send out info about current live edit units
-		IMessageHandler liveUnits = new AbstractMessageHandler("getLiveResourcesRequest") {
+		IMessageHandler liveUnits = new MessageHandler("getLiveResourcesRequest") {
 			@Override
-			public void handleMessage(String messageType, JSONObject message) {
+			public void handle(String messageType, JSONObject message) {
 				sendLiveUnits(message);
 			}
 		};
@@ -250,7 +253,7 @@ public class LiveEditCoordinator {
 			message.put("liveEditUnits", liveEditUnits);
 
 			this.messagingConnector.send("getLiveResourcesResponse", message);
-		} catch (JSONException e) {
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
