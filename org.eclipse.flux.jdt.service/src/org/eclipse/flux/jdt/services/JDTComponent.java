@@ -13,8 +13,8 @@ package org.eclipse.flux.jdt.services;
 
 import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.core.ChannelSwitcher;
-import org.eclipse.flux.core.Constants;
 import org.eclipse.flux.core.KeepAliveConnector;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.Repository;
@@ -103,7 +103,7 @@ public class JDTComponent {
 		@Override
 		public void connected(String userChannel) {
 			boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
-			if (lazyStart && Constants.SUPER_USER.equals(userChannel)) {
+			if (lazyStart && MessageConstants.SUPER_USER.equals(userChannel)) {
 				return;
 			}
 			MessageConnector messagingConnector = org.eclipse.flux.core.Activator
@@ -131,7 +131,7 @@ public class JDTComponent {
 		@Override
 		public void disconnected(String userChannel) {
 			boolean lazyStart = org.eclipse.flux.core.Activator.getDefault().isLazyStart();
-			if (lazyStart && Constants.SUPER_USER.equals(userChannel)) {
+			if (lazyStart && MessageConstants.SUPER_USER.equals(userChannel)) {
 				return;
 			}
 			liveEditUnits.dispose();

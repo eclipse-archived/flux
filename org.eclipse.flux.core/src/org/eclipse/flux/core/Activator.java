@@ -31,6 +31,7 @@ import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.flux.client.FluxClient;
 import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.internal.CloudSyncResourceListener;
@@ -67,7 +68,7 @@ public class Activator extends Plugin {
 	private final IChannelListener SERVICE_STARTER = new IChannelListener() {
 		@Override
 		public void connected(String userChannel) {
-			if (!(lazyStart && Constants.SUPER_USER.equals(userChannel))) {
+			if (!(lazyStart && MessageConstants.SUPER_USER.equals(userChannel))) {
 				try {
 					plugin.initCoreService(userChannel);
 				} catch (CoreException e) {
@@ -78,7 +79,7 @@ public class Activator extends Plugin {
 
 		@Override
 		public void disconnected(String userChannel) {
-			if (!(lazyStart && Constants.SUPER_USER.equals(userChannel))) {
+			if (!(lazyStart && MessageConstants.SUPER_USER.equals(userChannel))) {
 				disposeCoreServices(userChannel);
 			}
 		}
@@ -105,7 +106,7 @@ public class Activator extends Plugin {
 			this.channelSwitcher = new ChannelSwitcher(messageConnector);
 			this.messageConnector.addChannelListener(SERVICE_STARTER);
 			
-			final String userChannel = lazyStart ? Constants.SUPER_USER : channel;
+			final String userChannel = lazyStart ? MessageConstants.SUPER_USER : channel;
 			
 			//Connecting to channel done asynchronously. To avoid blocking plugin state initialization.
 			FluxClient.DEFAULT_INSTANCE.getExecutor().execute(new Runnable() {

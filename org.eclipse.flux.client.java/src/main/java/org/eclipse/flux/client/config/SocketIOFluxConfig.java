@@ -12,6 +12,7 @@ package org.eclipse.flux.client.config;
 
 import org.eclipse.flux.client.FluxClient;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.impl.SocketIOMessageConnector;
 
 /**
@@ -52,7 +53,7 @@ public class SocketIOFluxConfig extends AbstractFluxConfig {
 	}
 	
 	public static FluxConfig superConfig() {
-		return new SocketIOFluxConfig(envHost(), "$super$", envToken());
+		return new SocketIOFluxConfig(envHost(), MessageConstants.SUPER_USER, envToken());
 	}
 	
 	private static String envToken() {

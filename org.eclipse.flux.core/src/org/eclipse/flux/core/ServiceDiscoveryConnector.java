@@ -16,6 +16,7 @@ import java.util.List;
 import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.MessageHandler;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -89,7 +90,7 @@ public class ServiceDiscoveryConnector {
 			public void handle(String messageType, JSONObject message) {
 				String user = channelSwitcher.getChannel();
 				try {
-					if (forMe(message) && (message.get("username").equals(user) || Constants.SUPER_USER.equals(user))) {
+					if (forMe(message) && (message.get("username").equals(user) || MessageConstants.SUPER_USER.equals(user))) {
 						JSONObject response = new JSONObject(message, COPY_PROPS);
 						response.put("status", message.get("username").equals(user) ? "ready" : "available");
 						mc.send(DISCOVER_SERVICE_RESPONSE, response);

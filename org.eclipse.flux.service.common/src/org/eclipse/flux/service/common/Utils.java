@@ -22,8 +22,6 @@ import java.util.regex.Pattern;
  */
 public class Utils {
 	
-	public final static String SUPER_USER = "$super$";
-	
 	public static final String getEquinoxLauncherJar(String eclipseFolder) {
 		File directory = new File(eclipseFolder + File.separator + "plugins");
 		if (!directory.exists()) {

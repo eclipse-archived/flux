@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.flux.client.IChannelListener;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -78,14 +79,14 @@ public class ToolingServiceProvider {
 
 		@Override
 		public void connected(String userChannel) {
-			if (Utils.SUPER_USER.equals(userChannel)) {
+			if (MessageConstants.SUPER_USER.equals(userChannel)) {
 				init();
 			}
 		}
 
 		@Override
 		public void disconnected(String userChannel) {
-			if (Utils.SUPER_USER.equals(userChannel)) {
+			if (MessageConstants.SUPER_USER.equals(userChannel)) {
 				dispose();
 			}
 		}
@@ -115,7 +116,7 @@ public class ToolingServiceProvider {
 				@Override
 				public boolean canHandle(String type, JSONObject message) {
 					try {
-						return message.getString("username").equals(Utils.SUPER_USER) &&
+						return message.getString("username").equals(MessageConstants.SUPER_USER) &&
 								message.getString("service").equals(serviceId);
 					} catch (JSONException e) {
 						e.printStackTrace();
@@ -185,7 +186,7 @@ public class ToolingServiceProvider {
 					try {
 						return message.getString("service").equals(serviceId)
 								&& "ready".equals(message.getString("status"))
-								&& !Utils.SUPER_USER.equals(message.get("username"));
+								&& !MessageConstants.SUPER_USER.equals(message.get("username"));
 					} catch (JSONException e) {
 						e.printStackTrace();
 						return false;
@@ -288,10 +289,10 @@ public class ToolingServiceProvider {
 		}
 		active.set(true);
 		messageConnector.addChannelListener(CONNECTION_LISTENER);
-		if (messageConnector.isConnected(Utils.SUPER_USER)) {
-			CONNECTION_LISTENER.connected(Utils.SUPER_USER);
+		if (messageConnector.isConnected(MessageConstants.SUPER_USER)) {
+			CONNECTION_LISTENER.connected(MessageConstants.SUPER_USER);
 		} else {
-			messageConnector.connectToChannel(Utils.SUPER_USER);
+			messageConnector.connectToChannel(MessageConstants.SUPER_USER);
 		}
 	}
 	
@@ -370,7 +371,7 @@ public class ToolingServiceProvider {
 			try {
 				JSONObject discoverMessage = new JSONObject();
 				discoverMessage.put("service", serviceId);
-				discoverMessage.put("username", Utils.SUPER_USER);
+				discoverMessage.put("username", MessageConstants.SUPER_USER);
 				messageConnector
 						.send(DISCOVER_SERVICE_REQUEST, discoverMessage);
 			} catch (Exception e) {
@@ -412,7 +413,7 @@ public class ToolingServiceProvider {
 						try {
 							return message.getString("service").equals(serviceId)
 									&& "ready".equals(message.getString("status"))
-									&& Utils.SUPER_USER.equals(message.get("username"));
+									&& MessageConstants.SUPER_USER.equals(message.get("username"));
 						} catch (JSONException e) {
 							e.printStackTrace();
 							return false;
