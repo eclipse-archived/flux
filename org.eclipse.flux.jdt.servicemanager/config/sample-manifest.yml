@@ -8,7 +8,7 @@ applications:
   env:
     FLUX_HOST: https://flux.cfapps.io:4443
     FLUX_ADMIN_ID: \$super\$
-    FLUX_ADMIN_TOKEN: c20826a758e378e6a857a418958fee258a2d25a3
+    FLUX_ADMIN_TOKEN: <SECRET>
     FLUX_CF_CONTROLLER_URL: http://api.run.pivotal.io
     FLUX_CF_USER_ID: <CF user ID>
     FLUX_CF_PASSWORD: <CF user passworf>
