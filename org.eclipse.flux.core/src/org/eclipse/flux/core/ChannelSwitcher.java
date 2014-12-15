@@ -31,12 +31,13 @@ public class ChannelSwitcher {
 		return channelName;
 	}
 
-	public synchronized void switchToChannel(String channelName) throws Exception {
-		if (channelName!=null) {
-			messageConnector.disconnectFromChannelSync(channelName);
+	public synchronized void switchToChannel(String newChannel) throws Exception {
+		if (this.channelName!=null) {
+			//TODO: use disconnectFromChannelSync (but its not implemented yet)
+			messageConnector.disconnectFromChannel(this.channelName);
 		}
-		messageConnector.connectToChannelSync(channelName);
-		this.channelName = channelName;
+		messageConnector.connectToChannelSync(newChannel);
+		this.channelName = newChannel;
 	}
 	
 }

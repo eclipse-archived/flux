@@ -106,7 +106,18 @@ public class Activator extends Plugin {
 			this.messageConnector.addChannelListener(SERVICE_STARTER);
 			
 			final String userChannel = lazyStart ? Constants.SUPER_USER : channel;
-			channelSwitcher.switchToChannel(userChannel);
+			
+			//Connecting to channel done asynchronously. To avoid blocking plugin state initialization.
+			FluxClient.DEFAULT_INSTANCE.getExecutor().execute(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						channelSwitcher.switchToChannel(userChannel);
+					} catch (Exception e) {
+						log(e);
+					}
+				}
+			});
 		}
 	}
 	
