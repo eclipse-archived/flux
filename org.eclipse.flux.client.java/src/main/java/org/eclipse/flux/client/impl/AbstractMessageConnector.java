@@ -27,9 +27,6 @@ import org.json.JSONObject;
 
 public abstract class AbstractMessageConnector implements MessageConnector {
 	
-	//TODO: keep connectionSatus up-to-date when it get connected / disconnected
-	// This should be done in both SocketIO and RabbitMQ connectors.
-
 	private final ConcurrentMap<String, Collection<IMessageHandler>> messageHandlers = new ConcurrentHashMap<String, Collection<IMessageHandler>>();
 	protected final ExecutorService executor;
 	private ConcurrentLinkedQueue<IChannelListener> channelListeners = new ConcurrentLinkedQueue<IChannelListener>();

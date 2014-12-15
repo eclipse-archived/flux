@@ -67,6 +67,7 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 	
 				@Override
 				public void onConnect() {
+					connectionStatus.setValue(connectionStatus.getValue().connect());
 					isConnected.compareAndSet(false, true);
 					String[] channelsArray = channels.toArray(new String[channels.size()]);
 					for (String channel : channelsArray) {
@@ -77,6 +78,7 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 	
 				@Override
 				public void onDisconnect() {
+					connectionStatus.setValue(connectionStatus.getValue().close());
 					System.out.println("Socket disconnected: "+socket);
 					for (String channel : channels) {
 						notifyChannelDisconnected(channel);
@@ -86,8 +88,12 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 	
 				@Override
 				public void onError(SocketIOException ex) {
+					connectionStatus.setValue(connectionStatus.getValue().error(ex));
 					connectedFuture.reject(ex);
 					ex.printStackTrace();
+					if (connectionStatus.getValue().isAuthFailure()) {
+						return; //Don't try to reconnect it will just fail again for the same reason anyway.
+					}
 					try {
 						onDisconnect();						
 						isConnected.compareAndSet(true, false);

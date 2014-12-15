@@ -34,6 +34,10 @@ import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
 public class RabbitMQMessageConnector extends AbstractMessageConnector {
+	
+	//TODO: keep connectionSatus up-to-date when it get connected / disconnected / errors
+	// Note: that this is not implemented is ok for now, as it is only used to report authentication
+	// errors in the eclipse UI, which uses socketio connector.
 
 	//Note: a channel in 'flux is not the same thing as a channel in AMQP.
 	//  What is called a 'channel' in flux is really more like a
