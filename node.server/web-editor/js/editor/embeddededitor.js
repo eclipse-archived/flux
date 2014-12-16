@@ -126,6 +126,21 @@ function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, 
 			javadoc(editor);
 			return true;
 		});
+		
+		// Quick Fix (F6)
+		editor.getTextView().setKeyBinding(new mKeyBinding.KeyBinding(117), "quickfix");
+		editor.getTextView().setAction("quickfix", function(){
+			quickfix(editor, 'false');
+			return true;
+		});
+
+		// Quick Fix Direct Apply (Ctrl + F6)
+		editor.getTextView().setKeyBinding(new mKeyBinding.KeyBinding(117, true), "quickfix-apply");
+		editor.getTextView().setAction("quickfix-apply", function(){
+			quickfix(editor, 'true');
+			return true;
+		});
+
 
 		//Navigate to declaration (F3)
 		editor.getTextView().setKeyBinding(new mKeyBinding.KeyBinding(114), "navigate");
@@ -279,6 +294,34 @@ function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, 
 						x : editor._listener.lastMouseX,
 						y : editor._listener.lastMouseY,
 						contents : javadoc.javadoc
+					};
+					return info;
+				}
+			});
+		}
+	});
+	
+	socket.on('quickfixresponse', function(data) {
+		if (username === data.username && project === data.project
+				&& data.quickfix !== undefined) {
+			var quickfix = data.quickfix;
+			console.log(quickfix);
+			var tooltip = mTooltip.Tooltip.getTooltip(editor.getTextView());
+			if (!tooltip) {
+				return;
+			}
+			var div = "<div><ul>";
+			for(i = 0; i < quickfix.quickfix.length; i++) {
+				console.log(quickfix.quickfix[i].description.display);
+				div += "<li>" + quickfix.quickfix[i].description.display + "</li>";
+			}
+			div += "</ul></div>";
+			tooltip.setTarget({
+				getTooltipInfo : function() {
+					var info = {
+						x : editor._listener.lastMouseX,
+						y : editor._listener.lastMouseY,
+						contents : div
 					};
 					return info;
 				}
@@ -627,6 +670,22 @@ function(require, socket, mTextView, mKeyBinding, mTextStyler, mTextMateStyler, 
 				'resource' : resource,
 				'offset' : offset,
 				'length' : length,
+				'callback_id' : 0
+			 	});
+		 	}, 0);
+		 }
+	function quickfix(editor, apply) {
+		setTimeout(function() {
+			var selection = editor.getSelection();
+			var offset = selection.start;
+			var length = selection.end - selection.start;
+			socket.emit('quickfixrequest', {
+				'username' : username,
+				'project' : project,
+				'resource' : resource,
+				'offset' : offset,
+				'length' : length,
+				'apply-fix' : apply,
 				'callback_id' : 0
 			 	});
 		 	}, 0);

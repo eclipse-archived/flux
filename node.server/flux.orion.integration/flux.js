@@ -110,6 +110,27 @@ function(Deferred,         PluginProvider, FluxEditor,   FluxFileSystem,   OpenD
 		}
 	);
 
+	var quickfixImpl = {
+	        execute: function(editorContext, context) {
+				if (!context.annotation)
+					return null;
+				if (context.annotation.id) {
+					editorService.applyQuickfix(editorContext, context);
+	        	}
+	        }
+	};
+	
+	var quickfixProp = {
+			id: "orion.css.quickfix.zeroQualifier",
+			image: "../images/compare-addition.gif",
+			scopeId: "orion.edit.quickfix",
+			name: "Apply quickfix",
+			contentType: ["text/x-java-source"],
+			tooltip: "Apply Quick Fix",
+			validationProperties: []
+		};
+	
+	provider.registerService("orion.edit.command", quickfixImpl, quickfixProp);
 	provider.connect();
 
 }); //define

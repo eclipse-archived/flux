@@ -74,6 +74,9 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 	this.configureRequest(socket, 'javadocrequest');
 	this.configureResponse(socket, sockets, 'javadocresponse');
 
+	this.configureRequest(socket, 'quickfixrequest');
+	this.configureResponse(socket, sockets, 'quickfixresponse');
+
 	socket.on('disconnect', function () {
 		console.log('client disconnected from update notifications');
 	});
