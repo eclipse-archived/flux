@@ -249,7 +249,7 @@ Service Providers are applications listening to messages form Flux and maintaini
  * __-cfpassword__ Cloud Foundry user password
  * __-org__ Cloud Foundry organization name
  * __-space__ Cloud Foundry space name
- * __-app__ Application location (either the .jar to be deployed on Cloud Foundry or the JDT service product folder)
+ * __-app__ Application location (either the .jar to be deployed on Cloud Foundry or the JDT service product folder for running JDT service as a local process. The JDT service folder by default is <current workspace folder>/org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/macosx/cocoa/x86_64. If the headless service eclipse folder is located elsewhere it would have to be specified with this parameter.)
 
 __Note:__ if __-cfUrl__ parameter is not entered then JDT services would be started as local processes.
  
