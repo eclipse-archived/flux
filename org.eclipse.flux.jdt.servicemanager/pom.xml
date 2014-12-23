@@ -60,8 +60,8 @@
             <phase>process-resources</phase>
             <configuration>
               <tasks>
-              	<copy file="${basedir}/../org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/linux/gtk/x86_64/flux-jdt.jar" tofile="${basedir}/cfapps/org.eclipse.flux.jdt.jar"/>
-              	<copy file="${basedir}/config/manifest.yml" tofile="${basedir}/target/manifest.yml"/>
+              	<copy file="${basedir}/../org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/linux/gtk/x86_64/org.eclipse.flux.jdt.jar" tofile="${basedir}/cfapps/org.eclipse.flux.jdt.jar"/>
+              	<copy file="${basedir}/config/manifest.yml" tofile="${project.build.directory}/manifest.yml"/>
               </tasks>
             </configuration>
             <goals>

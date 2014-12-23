@@ -233,43 +233,46 @@ Click the 'Generate New Token' button next to 'Personal Access Tokens'.
  The prototype uses RabbitMQ to relay messages between clients. So you must create
  and bind a RabbitMQ service instance to your cloudfoundry app for it to work.
  
-## Service Provider for IDE services
+## Running Headless JDT Service Locally
+JDT service provider can be run locally such that JDT services that it provides to users would also be running as local processes.
 
-Service Providers are applications listening to messages form Flux and maintaining a pool of IDE tooling services that are not assigned a user yet. Service Providers are deployed and started once one of the services in the pool is assigned a user.
- 
-### JDT Service Provider
+1. Navigate to _org.eclipse.flux.headless.releng_ folder and execute _"mvn clean package"_
+2. Navigate to __org.eclipse.flux.service.common__ via console and execute _"mvn clean install"_
+3. Navigate to __org.eclipse.flux.jdt.service.provider__ via console and execute _"mvn clean package"_
+4. Either start __org.eclipse.flux.jdt.service.provider__ as Java application or launch it as _"java -jar org.eclipse.flux.jdt.service.provider-0.0.1-SNAPSHOT-jar-with-dependencies.jar"_ and provide the following program arguments:
+  * __-host__ Flux messaging server URL (default: http://localhost:3000)
+  * __-user__ Flux "admin" user id (Default: defaultuser)
+  * __-password__ Flux "admin" user client secret (Default: empty string)
+  * __-app__ Absolute path to the folder where built JDT service is located. For example the absolute path to *org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/linux/gtk/x86_64* (Default: relative path "../org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/macosx/cocoa/x86_64")
+  * __-poolSize__ Number of JDT services ready for use for any user being up all the time waiting for a user to be assigned (Default: 3)  
+5. Once started you should see the log messages about service pool being populated and then that it is successfully populated.
 
- JDT Service Provider is meant to maintain JDT services pool. The service provider lives in __org.eclipse.flux.jdt.service.provider__ java project. It can be launched as Java application. The application accepts the following parameters:
+If JDT Service Provider app is stopped you'll find JDT Service processes from the pool of services still running. These processes will be active for 2 hours at most if service is not being used by the web client UI. Feel free to stop these Java processes manually. If JDT service provider application is started it would check if there JDT services processes already running and if they are it would only start the number of JDT services needed to get the defined __poolSize__ number.
 
- * __-host__ Flux messaging server URL
- * __-user__ Flux "admin" user id
- * __-password__ Flux "admin" user client secret 
- * __-cfUrl__ Cloud Foundry controller URL
- * __-cfuser__ Cloud Foundry user id
- * __-cfpassword__ Cloud Foundry user password
- * __-org__ Cloud Foundry organization name
- * __-space__ Cloud Foundry space name
- * __-app__ Application location (either the .jar to be deployed on Cloud Foundry or the JDT service product folder for running JDT service as a local process. The JDT service folder by default is <current workspace folder>/org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/macosx/cocoa/x86_64. If the headless service eclipse folder is located elsewhere it would have to be specified with this parameter.)
+## Running Headless JDT Service on Cloud Foundry
+JDT service provider can be built and deployed on Cloud Foundry. JDT service provider application would deploy JDT service application on Cloud Foundry once started. Each user requiring a JDT service would have an instance of JDT service application running on the Cloud Foundry
 
-__Note:__ if __-cfUrl__ parameter is not entered then JDT services would be started as local processes.
- 
- JDT service provider can be deployed on Cloud Foundry. In order to do so follow the instructions below:
- 
-1. Build headless Flux JDT service and generate Flux JDT service jar that can be deployed on the Cloud Foundry as explained in the next list
-2. Locate __org.eclipse.flux.jdt.service.provider/config/manifest.yml__ file and provide necessary info in it (Env. variables are self-explanatory)
-3. Navigate to __org.eclipse.flux.service.common__ via console and execute _"mvn clean install"_
-4. Navigate to __org.eclipse.flux.jdt.service.provider__ via console and execute _"mvn clean package"_ twice (BUG: copying of flux-jdt.jar happens after the build)
-5. Navigate to __org.eclipse.flux.jdt.service.provider/target__ folder via console and execute _"cf p"_ 
-  
-Flux JDT service jar that can be deployed on the Cloud Foundry can be created with these steps:
- 
-1. Navigate to _org.eclipse.flux.headless.releng_ folder
-2. Execute _"mvn clean package"_
-3. Navigate from current folder into *"../org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/linux/gtk/x86_64"*
-4. Execute *"jar xf plugins/org.eclipse.equinox.launcher_1.3.0.v20140415-2008.jar"*
-5. Delete the META-INF folder
-6. Execute *"jar cfe flux-jdt.jar org.eclipse.equinox.launcher.Main ."*
-7. Find the *flux-jdt.jar* file in the current folder
+1. Navigate to _org.eclipse.flux.headless.releng_ folder and execute _"mvn clean package"_
+2. Navigate from current folder into *"../org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/linux/gtk/x86_64"*
+3. Execute *"jar xf plugins/org.eclipse.equinox.launcher_1.3.0.v20140415-2008.jar"*
+4. Delete the META-INF folder
+5. Execute *"jar cfe org.eclipse.flux.jdt.jar org.eclipse.equinox.launcher.Main ."*
+6. Locate __org.eclipse.flux.jdt.service.provider/config/sample-manifest.yml__. Rename it to __manifest.yml__, open it with text editor and fill in the values for the follwoing environment variables:
+    * __FLUX_HOST__ URL of the Flux server
+    * __FLUX_ADMIN_TOKEN__ the secret token for the admin user
+    * __FLUX_CF_CONTROLLER_URL__ the Cloud Foundry controller URL
+    * __FLUX_CF_USER_ID__ user id to login to Cloud Foundry controller
+    * __FLUX_CF_PASSWORD__ password to login to Cloud Foundry controller
+    * __FLUX_CF_SPACE__ Cloud Foundry space to deploy the JDT service provider application and spawned JDT services to
+    * __FLUX_CF_ORG__ Cloud Foundry "org" within the space to deploy the JDT service provider application and spawned JDT services to
+    * __FLUX_SERVICE_APP_ID__ (optional) the id for the JDT service application on the Cloud Foundry
+    * __FLUX_SERVICE_POOL_SIZE__ number of JDT services ready for use for any user being up all the time waiting for a user to be assigned
+    * __FLUX_SERVICE_MAX_INSTANCES__ maximum number of JDT services that can be active at any moment of time including JDT service that are serving users and those not assigned a user (service pool)
+7. Navigate to __org.eclipse.flux.service.common__ via console and execute _"mvn clean install"_
+8. Navigate to __org.eclipse.flux.jdt.service.provider__ via console and execute _"mvn clean package"_ twice (BUG: copying of org.eclipse.flux.jdt.jar happens after the build)
+9. Navigate to __org.eclipse.flux.jdt.service.provider/target__ folder via console and execute _"cf p"_
+
+Note that after shutting down the JDT service provider app on Cloud Foundry instances of JDT service application would need to be shut down manually.
 
 ## Git-Crypt
 
