@@ -5,6 +5,44 @@
   <version>0.0.1-SNAPSHOT</version>
   <name>JDT Service Manager</name>
   <description>Starts/Stops JDT service per user on demand</description>
+  
+  <profiles>
+    <profile>
+      <id>cf</id>
+      <build>
+        <plugins>
+	       <plugin>
+	        <artifactId>maven-antrun-plugin</artifactId>
+	        <version>1.4</version>
+	        <executions>
+	          <execution>
+	            <id>copy</id>
+	            <phase>process-resources</phase>
+	            <configuration>
+	              <tasks>
+	              	<copy file="${basedir}/../org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/linux/gtk/x86_64/org.eclipse.flux.jdt.jar" tofile="${basedir}/cfapps/org.eclipse.flux.jdt.jar"/>
+	              	<copy file="${basedir}/config/manifest.yml" tofile="${project.build.directory}/manifest.yml"/>
+	              </tasks>
+	            </configuration>
+	            <goals>
+	              <goal>run</goal>
+	            </goals>
+	          </execution> 
+	        </executions>
+	      </plugin>
+        </plugins>
+	    <resources>
+	      <resource>
+	        <directory>${basedir}/cfapps</directory>
+	        <includes>
+	          <include>**/*.jar</include>
+	        </includes>
+	      </resource>
+	    </resources>
+      </build>
+    </profile>
+  </profiles>
+  
   <build>
     <sourceDirectory>src</sourceDirectory>
     <plugins>
@@ -51,34 +89,7 @@
           </archive>
         </configuration>
       </plugin>
-       <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.4</version>
-        <executions>
-          <execution>
-            <id>copy</id>
-            <phase>process-resources</phase>
-            <configuration>
-              <tasks>
-              	<copy file="${basedir}/../org.eclipse.flux.headless.product/target/products/org.eclipse.flux.headless/linux/gtk/x86_64/org.eclipse.flux.jdt.jar" tofile="${basedir}/cfapps/org.eclipse.flux.jdt.jar"/>
-              	<copy file="${basedir}/config/manifest.yml" tofile="${project.build.directory}/manifest.yml"/>
-              </tasks>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution> 
-        </executions>
-      </plugin>
     </plugins>
-    <resources>
-      <resource>
-        <directory>${basedir}/cfapps</directory>
-        <includes>
-          <include>**/*.jar</include>
-        </includes>
-      </resource>
-    </resources>
   </build>
   <dependencies>
   	<dependency>
