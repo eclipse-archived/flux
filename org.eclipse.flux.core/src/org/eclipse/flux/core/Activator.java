@@ -12,6 +12,7 @@ package org.eclipse.flux.core;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.resources.IProject;
@@ -102,7 +103,7 @@ public class Activator extends Plugin {
 		
 		
 		if (!host.isEmpty()) {
-			this.messageConnector = FluxClient.DEFAULT_INSTANCE.connect(new SocketIOFluxConfig(host, login, token));
+			this.messageConnector = new FluxClient(Executors.newFixedThreadPool(1)).connect(new SocketIOFluxConfig(host, login, token));
 			this.channelSwitcher = new ChannelSwitcher(messageConnector);
 			this.messageConnector.addChannelListener(SERVICE_STARTER);
 			
