@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+
+	<artifactId>org.eclipse.flux</artifactId>
+	<packaging>pom</packaging>
+	<name>Flux Eclipse Build</name>
+
+	<parent>
+		<version>0.1.0-SNAPSHOT</version>
+		<groupId>org.eclipse.flux.group</groupId>
+		<artifactId>org.eclipse.flux.parent</artifactId>
+		<relativePath>org.eclipse.flux.parent/pom.xml</relativePath>
+	</parent>
+
+	<properties>
+		<tycho-version>0.20.0</tycho-version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<modules>
+		<!-- core bundles and libs-->
+		<module>org.eclipse.flux.core</module>
+		<module>org.eclipse.flux.jdt.service</module>
+		<module>org.eclipse.flux.client.java.osgi</module>
+		
+		<!-- Eclipse IDE integration -->
+		<module>org.eclipse.flux.ui.integration</module>
+		<module>org.eclipse.flux.ide.integration.feature</module>
+		<module>org.eclipse.flux.ide.integration.jdtservice.feature</module>
+		<module>org.eclipse.flux.ide.integration.repository</module>
+		
+		<!-- headless JDT service product -->
+		<module>org.eclipse.flux.headless.product</module>
+		<module>org.eclipse.flux.headless.feature</module>
+		
+		<!-- JDT service manager -->
+		<module>org.eclipse.flux.service.common</module>
+		<module>org.eclipse.flux.jdt.servicemanager</module>
+		
+		<!-- bits from 'pure java' that we need here as well -->
+		<module>org.eclipse.flux.parent.java</module>
+		<module>org.eclipse.flux.client.java</module>
+		
+	</modules>
+
+</project>
