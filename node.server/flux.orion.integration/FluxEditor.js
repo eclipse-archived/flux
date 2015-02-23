@@ -499,7 +499,7 @@ var FluxEditor = (function() {
 					}, function(data) {
 						if (self.user === data.username && resourceMetadata.project === data.project
 							&& data.javadoc !== undefined) {
-							request.resolve({ /*title: data.javadoc.javadoc*/ type: 'html', content: data.javadoc.javadoc });
+							request.resolve({ type: 'html', content: data.javadoc.javadoc });
 						} else {
 							request.resolve(false);
 						}
