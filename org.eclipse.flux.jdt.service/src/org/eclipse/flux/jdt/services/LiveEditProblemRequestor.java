@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 Pivotal Software, Inc. and others.
+ * Copyright (c) 2013, 2015 Pivotal Software, Inc. and others.
  * All rights reserved. This program and the accompanying materials are made 
  * available under the terms of the Eclipse Public License v1.0 
  * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
@@ -88,6 +88,7 @@ public class LiveEditProblemRequestor implements IProblemRequestor {
 
 			result.append("{");
 			result.append("\"id\":" + problem.getID());
+			result.append(",\"author\":" + JDTComponent.JDT_SERVICE_ID);
 			result.append(",\"description\":" + JSONObject.quote(problem.getMessage()));
 			result.append(",\"line\":" + problem.getSourceLineNumber());
 			result.append(",\"severity\":\"" + (problem.isError() ? "error" : "warning") + "\"");

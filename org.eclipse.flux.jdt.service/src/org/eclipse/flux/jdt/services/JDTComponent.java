@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 Pivotal Software, Inc. and others.
+ * Copyright (c) 2014, 2015 Pivotal Software, Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -28,7 +28,7 @@ import org.osgi.service.component.annotations.Deactivate;
  */
 public class JDTComponent {
 	
-	private static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
+	public static final String JDT_SERVICE_ID = "org.eclipse.flux.jdt";
 	private static long WAIT_TIME_PERIOD = 100;
 
 	private ServiceDiscoveryConnector discoveryConnector;

@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @license
- * Copyright (c) 2014 Pivotal Software Inc. and others.
+ * Copyright (c) 2014, 2015 Pivotal Software Inc. and others.
  * All rights reserved. This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License v1.0
  * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution
@@ -40,7 +40,6 @@ function createResourceMetadata(data) {
 	for (var key in data) {
 		resourceMetadata[key] = data[key];
 	}
-	resourceMetadata.liveMarkers = [];
 	resourceMetadata.markers = [];
 	resourceMetadata._muteRequests = 0;
 	resourceMetadata._queueMuteRequest = function() {
@@ -228,24 +227,38 @@ var FluxEditor = (function() {
 						&& resourceMetadata.resource === data.resource
 						&& data.problems !== undefined) {
 
-						resourceMetadata.liveMarkers = [];
 						var i;
 						for(i = 0; i < data.problems.length; i++) {
-	//						var lineOffset = editor.getModel().getLineStart(data.problems[i].line - 1);
+							var markerAuthor = data.problems[i].author !== undefined ? data.problems[i].author : 'defaultauthor';
+							self._liveMarker[markerAuthor] = [];
+						}
 
-	//						console.log(lineOffset);
+						for(i = 0; i < data.problems.length; i++) {
+//							var lineOffset = editor.getModel().getLineStart(data.problems[i].line - 1);
+//							console.log(lineOffset);
+	
+							var markerAuthor = data.problems[i].author !== undefined ? data.problems[i].author : 'defaultauthor';
 
-							resourceMetadata.liveMarkers[i] = {
+							self._liveMarker[markerAuthor].push({
 								'id' : data.problems[i].id,
+								'author' : data.problems[i].author,
 								'description' : data.problems[i].description,
-	//							'line' : data.problems[i].line,
+//								'line' : data.problems[i].line,
 								'severity' : data.problems[i].severity,
 								'start' : /*(data.problems[i].start - lineOffset) + 1*/ data.problems[i].start,
 								'end' : /*data.problems[i].end - lineOffset*/ data.problems[i].end
-							};
+							});
 						}
 						if (self._editorContext) {
-							self._editorContext.showMarkers(resourceMetadata.liveMarkers);
+							var allMarker = [];
+							
+							for (var author in self._liveMarker) {
+								if (self._liveMarker.hasOwnProperty(author)) {
+									allMarker = allMarker.concat(self._liveMarker[author]);
+								}
+							}
+							
+							self._editorContext.showMarkers(allMarker);
 						}
 					}
 					self._handleMessage(data);
@@ -323,6 +336,7 @@ var FluxEditor = (function() {
 					var location = self._rootLocation + data.project + '/' + data.resource;
 					if (self._resourceUrl === location) {
 						self._resourceMetadata = createResourceMetadata(data);
+						self._liveMarker = {};
 						request.resolve(self._resourceMetadata);
 					}
 				});
