@@ -26,7 +26,9 @@ function rabbitUrl() {
 		}
 		throw new Error('Running on CF requires that you bind a amqp service to this app');
 	} else {
-		return "amqp://localhost";
+		var uri = "amqp://localhost";
+		console.log('rabbit url = ', uri);
+		return uri;
 	}
 }
 

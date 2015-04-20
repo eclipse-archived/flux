@@ -18,7 +18,7 @@
 	"cookie"           :  "0.0.5",
 	"connect"          :  "2.7.2",
 	"when"             :  "3.4.2",
-	"amqplib"          :  "0.2.0",
+	"amqplib"          :  "0.3.2",
 	"orion"      	   :  "0.0.34"
   },
   "devDependencies" : {

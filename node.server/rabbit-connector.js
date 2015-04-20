@@ -61,6 +61,9 @@ function getConnection() {
 	if (!connection) {
 		connection = when(amqp.connect(rabbitUrl));
 		//Add some logging to the connection
+		connection.catch(function (error) {
+			console.log("error connecting to AMQP: " + error);
+		})
 		connection.done(function (connection) {
 			addLogging('AMQP connection: ', connection);
 		});
