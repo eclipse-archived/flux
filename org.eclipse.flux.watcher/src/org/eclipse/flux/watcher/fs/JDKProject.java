@@ -77,7 +77,7 @@ public class JDKProject implements Project {
         checkArgument(exists(this.path) && isDirectory(this.path) && this.path.isAbsolute());
 
         // start the watch service
-        this.watchService.start();
+        if(!this.watchService.isAlive()) this.watchService.start();
     }
 
     @Override
