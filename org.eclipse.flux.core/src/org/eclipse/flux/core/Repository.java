@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
-import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IMarker;
@@ -30,21 +29,19 @@ import org.eclipse.core.resources.IMarkerDelta;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceDelta;
-import org.eclipse.core.resources.IResourceVisitor;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.flux.client.CallbackIDAwareMessageHandler;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageHandler;
 import org.eclipse.flux.watcher.core.FluxMessageBus;
 import org.eclipse.flux.watcher.core.RepositoryModule;
+import org.eclipse.flux.watcher.core.spi.Project;
 import org.eclipse.flux.watcher.fs.JDKProjectModule;
 import org.eclipse.jdt.core.IClassFile;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.google.inject.Guice;
@@ -108,33 +105,6 @@ public class Repository {
 		};
 		this.messagingConnector.addMessageHandler(resourceDeletedHandler);
 		this.messageHandlers.add(resourceDeletedHandler);
-
-		IMessageHandler getProjectsRequestHandler = new MessageHandler("getProjectsRequest") {
-			@Override
-			public void handle(String messageType, JSONObject message) {
-				getProjects(message);
-			}
-		};
-		this.messagingConnector.addMessageHandler(getProjectsRequestHandler);
-		this.messageHandlers.add(getProjectsRequestHandler);
-		
-		IMessageHandler getProjectRequestHandler = new MessageHandler("getProjectRequest") {
-			@Override
-			public void handle(String messageType, JSONObject message) {
-				getProject(message);
-			}
-		};
-		this.messagingConnector.addMessageHandler(getProjectRequestHandler);
-		this.messageHandlers.add(getProjectRequestHandler);
-		
-		IMessageHandler getProjectResponseHandler = new CallbackIDAwareMessageHandler("getProjectResponse", Repository.GET_PROJECT_CALLBACK) {
-			@Override
-			public void handle(String messageType, JSONObject message) {
-				getProjectResponse(message);
-			}
-		};
-		this.messagingConnector.addMessageHandler(getProjectResponseHandler);
-		this.messageHandlers.add(getProjectResponseHandler);
 		
 		IMessageHandler getResourceRequestHandler = new MessageHandler("getResourceRequest") {
 			@Override
@@ -179,13 +149,6 @@ public class Repository {
 		return this.username;
 	}
 
-	protected void connect() {
-		for (String projectName : syncedProjects.keySet()) {
-			sendProjectConnectedMessage(projectName);
-			syncConnectedProject(projectName);
-		}
-	}
-
 	public ConnectedProject getProject(IProject project) {
 		return getProject(project.getName());
 	}
@@ -195,40 +158,25 @@ public class Repository {
 	}
 
 	public boolean isConnected(IProject project) {
-		return this.syncedProjects.containsKey(project.getName());
+		return isConnected(project.getName());
 	}
 
-	public boolean isConnected(String project) {
-		return this.syncedProjects.containsKey(project);
+	public boolean isConnected(String projectName) {
+		Project project = this.repository.getProject(projectName);
+		return this.repository.getSynchronizedProjects().contains(project);
 	}
 
 	public void addProject(IProject project) {
-		String projectName = project.getName();
-		if (!this.syncedProjects.containsKey(projectName)) {
-			this.syncedProjects.put(projectName, new ConnectedProject(project));
-			notifyProjectConnected(project);
-			sendProjectConnectedMessage(projectName);
-			syncConnectedProject(projectName);
-		}
+		this.repository.addProject(project.getName(), project.getLocationURI().getPath());
+		notifyProjectConnected(project);
 	}
 
 	public void removeProject(IProject project) {
-		String projectName = project.getName();
-		if (this.syncedProjects.containsKey(projectName)) {
-			this.syncedProjects.remove(projectName);
-			notifyProjectDisonnected(project);
-			try {
-				JSONObject message = new JSONObject();
-				message.put("username", this.username);
-				message.put("project", projectName);
-				messagingConnector.send("projectDisconnected", message);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
+		this.repository.removeProject(project.getName());
+		notifyProjectDisonnected(project);
 	}
 
-	protected void syncConnectedProject(String projectName) {
+	protected void syncConnectedProjects(String projectName) {
 		try {
 			JSONObject message = new JSONObject();
 			message.put("username", this.username);
@@ -240,198 +188,10 @@ public class Repository {
 			e.printStackTrace();
 		}
 	}
-
-	protected void sendProjectConnectedMessage(String projectName) {
-		try {
-			JSONObject message = new JSONObject();
-			message.put("username", this.username);
-			message.put("project", projectName);
-			messagingConnector.send("projectConnected", message);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 	
 	public ConnectedProject[] getConnectedProjects() {
 		return syncedProjects.values().toArray(
 				new ConnectedProject[syncedProjects.size()]);
-	}
-	
-	public void getProjects(JSONObject request) {
-		try {
-			int callbackID = getIntMaybe(request, "callback_id");
-			String sender = request.getString("requestSenderID");
-			String username = request.getString("username");
-
-			if (this.username.equals(username)) {
-				JSONArray projects = new JSONArray();
-				for (String projectName : this.syncedProjects.keySet()) {
-					JSONObject proj = new JSONObject();
-					proj.put("name", projectName);
-					projects.put(proj);
-				}
-
-				JSONObject message = new JSONObject();
-				message.put("callback_id", callbackID);
-				message.put("requestSenderID", sender);
-				message.put("username", this.username);
-				message.put("projects", projects);
-
-				messagingConnector.send("getProjectsResponse", message);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	private int getIntMaybe(JSONObject request, String prop) throws JSONException {
-		if (request.has(prop)) {
-			return request.getInt(prop);
-		}
-		return 0;
-	}
-
-	public void getProject(JSONObject request) {
-		try {
-			final int callbackID = request.getInt("callback_id");
-			final String sender = request.getString("requestSenderID");
-			final String projectName = request.getString("project");
-			final String username = request.getString("username");
-
-			final ConnectedProject connectedProject = this.syncedProjects.get(projectName);
-			if (this.username.equals(username) && connectedProject != null) {
-
-				final JSONArray files = new JSONArray();
-
-				IProject project = connectedProject.getProject();
-
-				try {
-					project.accept(new IResourceVisitor() {
-						@Override
-						public boolean visit(IResource resource) throws CoreException {
-							JSONObject projectResource = new JSONObject();
-							String path = resource.getProjectRelativePath().toString();
-							try {
-								projectResource.put("path", path);
-								projectResource.put("timestamp", connectedProject.getTimestamp(path));
-								projectResource.put("hash", connectedProject.getHash(path));
-
-								if (resource instanceof IFile) {
-									projectResource.put("type", "file");
-								} else if (resource instanceof IFolder) {
-									projectResource.put("type", "folder");
-								}
-
-								files.put(projectResource);
-							} catch (JSONException e) {
-								e.printStackTrace();
-							}
-							return true;
-						}
-					}, IResource.DEPTH_INFINITE, IContainer.EXCLUDE_DERIVED);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-				
-				JSONObject message = new JSONObject();
-				message.put("callback_id", callbackID);
-				message.put("requestSenderID", sender);
-				message.put("username", this.username);
-				message.put("project", projectName);
-				message.put("username", this.username);
-				message.put("files", files);
-
-				messagingConnector.send("getProjectResponse", message);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public void getProjectResponse(JSONObject response) {
-		try {
-			final String username = response.getString("username");
-			final String projectName = response.getString("project");
-			final JSONArray files = response.getJSONArray("files");
-			final JSONArray deleted = response.optJSONArray("deleted");
-
-			ConnectedProject connectedProject = this.syncedProjects.get(projectName);
-			if (this.username.equals(username) && connectedProject != null) {
-
-				for (int i = 0; i < files.length(); i++) {
-					JSONObject resource = files.getJSONObject(i);
-
-					String resourcePath = resource.getString("path");
-					long timestamp = resource.getLong("timestamp");
-
-					String type = resource.optString("type");
-					String hash = resource.optString("hash");
-					
-					boolean newFile = type != null && type.equals("file") && !connectedProject.containsResource(resourcePath);
-					boolean updatedFileTimestamp =  type != null && type.equals("file") && connectedProject.containsResource(resourcePath)
-							&& connectedProject.getHash(resourcePath).equals(hash) && connectedProject.getTimestamp(resourcePath) < timestamp;
-					boolean updatedFile = type != null && type.equals("file") && connectedProject.containsResource(resourcePath)
-							&& !connectedProject.getHash(resourcePath).equals(hash) && connectedProject.getTimestamp(resourcePath) < timestamp;
-
-					if (newFile || updatedFile) {
-						JSONObject message = new JSONObject();
-						message.put("callback_id", GET_RESOURCE_CALLBACK);
-						message.put("project", projectName);
-						message.put("username", this.username);
-						message.put("resource", resourcePath);
-						message.put("timestamp", timestamp);
-						message.put("hash", hash);
-
-						messagingConnector.send("getResourceRequest", message);
-					}
-					
-					if (updatedFileTimestamp) {
-						connectedProject.setTimestamp(resourcePath, timestamp);
-						IResource file  = connectedProject.getProject().findMember(resourcePath);
-						file.setLocalTimeStamp(timestamp);
-					}
-					
-					boolean newFolder = type != null && type.equals("folder") && !connectedProject.containsResource(resourcePath);
-					boolean updatedFolder = type != null && type.equals("folder") && connectedProject.containsResource(resourcePath)
-							&& !(connectedProject.getHash(resourcePath) == null || connectedProject.getHash(resourcePath).equals(hash)) && connectedProject.getTimestamp(resourcePath) < timestamp;
-
-					if (newFolder) {
-						IProject project = connectedProject.getProject();
-						IFolder folder = project.getFolder(resourcePath);
-
-						connectedProject.setHash(resourcePath, hash);
-						connectedProject.setTimestamp(resourcePath, timestamp);
-
-						folder.create(true, true, null);
-						folder.setLocalTimeStamp(timestamp);
-					}
-					else if (updatedFolder) {
-					}
-				}
-				
-				if (deleted != null) {
-					for (int i = 0; i < deleted.length(); i++) {
-						JSONObject deletedResource = deleted.getJSONObject(i);
-
-						String resourcePath = deletedResource.getString("path");
-						long deletedTimestamp = deletedResource.getLong("timestamp");
-
-						IProject project = connectedProject.getProject();
-						IResource resource = project.findMember(resourcePath);
-
-						if (resource != null && resource.exists() && (resource instanceof IFile || resource instanceof IFolder)) {
-							long localTimestamp = connectedProject.getTimestamp(resourcePath);
-
-							if (localTimestamp < deletedTimestamp) {
-								resource.delete(true, null);
-							}
-						}
-					}
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
 
 	public void getResource(JSONObject request) {
