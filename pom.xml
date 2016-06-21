@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 
@@ -43,7 +42,8 @@
 		<!-- bits from 'pure java' that we need here as well -->
 		<module>org.eclipse.flux.parent.java</module>
 		<module>org.eclipse.flux.client.java</module>
-		
-	</modules>
+    	
+    	<module>org.eclipse.flux.watcher</module>
+  </modules>
 
 </project>
