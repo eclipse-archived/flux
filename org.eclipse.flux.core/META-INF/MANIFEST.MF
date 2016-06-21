@@ -14,7 +14,9 @@ Require-Bundle: org.eclipse.flux.client.java.osgi,
  org.eclipse.core.runtime,
  org.apache.commons.io,
  org.eclipse.jdt.core,
- org.eclipse.m2e.core;resolution:=optional
+ org.eclipse.m2e.core;resolution:=optional,
+ org.eclipse.flux.watcher;bundle-version="1.0.0",
+ com.google.inject;bundle-version="3.0.0"
 Export-Package: org.eclipse.flux.core,
  org.eclipse.flux.core.util
 Bundle-ActivationPolicy: lazy; exclude:="io.socket, org.java_websocket, org.java_websocket.client, org.java_websocket.drafts, org.java_websocket.exceptions, org.java_websocket.framing, org.java_websocket.handshake, org.java_websocket.server, org.java_websocket.util, org.json"
