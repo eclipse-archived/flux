@@ -35,7 +35,6 @@ import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
-import org.eclipse.flux.core.internal.CloudSyncResourceListener;
 import org.eclipse.flux.core.util.ExceptionUtil;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
@@ -61,7 +60,6 @@ public class Activator extends Plugin {
 	private LiveEditCoordinator liveEditCoordinator;
 	private boolean lazyStart = false;
 	
-	private CloudSyncResourceListener resourceListener;
 	private CloudSyncMetadataListener metadataListener;
 	private IRepositoryListener repositoryListener;
 	private IResourceChangeListener workspaceListener;
@@ -170,9 +168,6 @@ public class Activator extends Plugin {
 		
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
 		
-		resourceListener = new CloudSyncResourceListener(repository);
-		workspace.addResourceChangeListener(resourceListener, IResourceChangeEvent.POST_CHANGE);
-
 		metadataListener = new CloudSyncMetadataListener(repository);
 		workspace.addResourceChangeListener(metadataListener, IResourceChangeEvent.POST_BUILD);
 		
@@ -225,7 +220,6 @@ public class Activator extends Plugin {
 		if (userChannel.equals(repository.getUsername())) {
 			IWorkspace workspace = ResourcesPlugin.getWorkspace();
 			workspace.removeResourceChangeListener(workspaceListener);
-			workspace.removeResourceChangeListener(resourceListener);
 			workspace.removeResourceChangeListener(metadataListener);
 			repository.removeRepositoryListener(repositoryListener);
 			liveEditCoordinator.dispose();
