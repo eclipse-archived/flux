@@ -25,15 +25,9 @@ import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageHandler;
-import org.eclipse.flux.watcher.core.FluxMessageBus;
-import org.eclipse.flux.watcher.core.RepositoryModule;
 import org.eclipse.flux.watcher.core.spi.Project;
-import org.eclipse.flux.watcher.fs.JDKProjectModule;
 import org.json.JSONArray;
 import org.json.JSONObject;
-
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 
 /**
  * @author Martin Lippert
@@ -50,13 +44,10 @@ public class Repository {
 	private AtomicBoolean connected;
 	
 	private org.eclipse.flux.watcher.core.Repository repository;
-	private FluxMessageBus messageBus;
 
-	public Repository(MessageConnector messagingConnector, String user) {
-		Injector injector = Guice.createInjector(new RepositoryModule(), new JDKProjectModule());
+	public Repository(MessageConnector messagingConnector, org.eclipse.flux.watcher.core.Repository fluxRepository, String user) {
+		this.repository = fluxRepository;
 		this.username = user;
-		this.repository = injector.getInstance(org.eclipse.flux.watcher.core.Repository.class);
-		this.messageBus = injector.getInstance(FluxMessageBus.class);
 		this.connected = new AtomicBoolean(true);
 		this.messagingConnector = messagingConnector;
 		this.syncedProjects = new ConcurrentHashMap<String, ConnectedProject>();
