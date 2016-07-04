@@ -61,7 +61,6 @@ MessageCore.prototype.initialize = function(socket, sockets) {
 
 	this.configureBroadcast(socket, 'liveResourceChanged');
 	this.configureBroadcast(socket, 'liveMetadataChanged');
-
 	this.configureBroadcast(socket, 'liveCursorOffsetChanged');
 
 	this.configureRequest(socket, 'contentassistrequest');
