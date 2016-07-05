@@ -344,6 +344,8 @@ RabbitConnector.prototype.configure = function() {
 	this.configureBroadcast('liveResourceChanged');
 	this.configureBroadcast('liveMetadataChanged');
 
+	this.configureBroadcast('liveCursorOffsetChanged');
+
 	this.configureRequest('contentassistrequest');
 	this.configureResponse('contentassistresponse');
 
