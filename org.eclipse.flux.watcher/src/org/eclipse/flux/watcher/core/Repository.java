@@ -194,5 +194,8 @@ public class Repository {
         return repositoryEventBus;
     }
 
+    public FluxMessageBus getMessageBus(){
+    	return messageBus;
+    }
 
 }

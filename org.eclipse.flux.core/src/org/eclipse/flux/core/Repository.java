@@ -25,6 +25,7 @@ import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageHandler;
+import org.eclipse.flux.core.listeners.ResourceListener;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -63,6 +64,8 @@ public class Repository {
 		};
 		this.messagingConnector.addMessageHandler(getMetadataRequestHandler);
 		this.messageHandlers.add(getMetadataRequestHandler);
+		
+		fluxRepository.getMessageBus().addMessageHandler(new ResourceListener());
 	}
 	
 	public String getUsername() {
