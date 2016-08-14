@@ -10,22 +10,20 @@
 *******************************************************************************/
 package org.eclipse.flux.core;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IMarkerDelta;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceDelta;
-import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
-import org.eclipse.flux.client.MessageHandler;
+import org.eclipse.flux.core.listeners.MetadataRequestHandler;
 import org.eclipse.flux.core.listeners.ResourceListener;
+import org.eclipse.flux.watcher.core.FluxMessage;
+import org.eclipse.flux.watcher.core.FluxMessageType;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -36,36 +34,20 @@ import org.json.JSONObject;
 public class Repository {
 
 	private String username;
-	private MessageConnector messagingConnector;
-	private Collection<IMessageHandler> messageHandlers;
 
 	private ConcurrentMap<String, ConnectedProject> syncedProjects;
 	private Collection<IRepositoryListener> repositoryListeners;
-	
-	private AtomicBoolean connected;
-	
+		
 	private org.eclipse.flux.watcher.core.Repository repository;
 
 	public Repository(MessageConnector messagingConnector, org.eclipse.flux.watcher.core.Repository fluxRepository, String user) {
 		this.repository = fluxRepository;
 		this.username = user;
-		this.connected = new AtomicBoolean(true);
-		this.messagingConnector = messagingConnector;
 		this.syncedProjects = new ConcurrentHashMap<String, ConnectedProject>();
 		this.repositoryListeners = new ConcurrentLinkedDeque<>();
-		
-		this.messageHandlers = new ArrayList<IMessageHandler>(9);
-		
-		IMessageHandler getMetadataRequestHandler = new MessageHandler("getMetadataRequest") {
-			@Override
-			public void handle(String messageType, JSONObject message) {
-				getMetadata(message);
-			}
-		};
-		this.messagingConnector.addMessageHandler(getMetadataRequestHandler);
-		this.messageHandlers.add(getMetadataRequestHandler);
-		
+			
 		fluxRepository.getMessageBus().addMessageHandler(new ResourceListener());
+		fluxRepository.getMessageBus().addMessageHandler(new MetadataRequestHandler());
 	}
 	
 	public String getUsername() {
@@ -104,39 +86,6 @@ public class Repository {
 				new ConnectedProject[syncedProjects.size()]);
 	}
 
-	public void getMetadata(JSONObject request) {
-		try {
-			final String username = request.getString("username");
-			final int callbackID = request.getInt("callback_id");
-			final String sender = request.getString("requestSenderID");
-			final String projectName = request.getString("project");
-			final String resourcePath = request.getString("resource");
-
-			ConnectedProject connectedProject = this.syncedProjects.get(projectName);
-			if (this.username.equals(username) && connectedProject != null) {
-				IProject project = connectedProject.getProject();
-				IResource resource = project.findMember(resourcePath);
-
-				JSONObject message = new JSONObject();
-				message.put("callback_id", callbackID);
-				message.put("requestSenderID", sender);
-				message.put("username", this.username);
-				message.put("project", projectName);
-				message.put("resource", resourcePath);
-				message.put("type", "marker");
-
-				IMarker[] markers = resource.findMarkers(null, true, IResource.DEPTH_INFINITE);
-				String markerJSON = toJSON(markers);
-				JSONArray content = new JSONArray(markerJSON);
-				message.put("metadata", content);
-
-				messagingConnector.send("getMetadataResponse", message);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 	public void metadataChanged(IResourceDelta delta) {
 		IProject project = delta.getResource().getProject();
 		IMarkerDelta[] markerDeltas = delta.getMarkerDeltas();
@@ -161,7 +110,7 @@ public class Repository {
 			JSONArray content = new JSONArray(markerJSON);
 			message.put("metadata", content);
 
-			messagingConnector.send("metadataChanged", message);
+			repository.getMessageBus().sendMessages(new FluxMessage(FluxMessageType.METADATA_CHANGED, message));
 		} catch (Exception e) {
 
 		}
@@ -218,10 +167,6 @@ public class Repository {
 	}
 	
 	public void dispose() {
-		connected.set(false);
-		for (IMessageHandler messageHandler : messageHandlers) {
-			messagingConnector.removeMessageHandler(messageHandler);
-		}
 		syncedProjects.clear();
 	}
 

@@ -23,12 +23,15 @@ public enum FluxMessageType {
     GET_PROJECT_RESPONSE("getProjectResponse"),
     GET_RESOURCE_REQUEST("getResourceRequest"),
     GET_RESOURCE_RESPONSE("getResourceResponse"),
+    GET_METADATA_REQUEST("getMetadataRequest"),
+    GET_METADATA_RESPONSE("getMetadataResponse"),
     PROJECT_CONNECTED("projectConnected"),
     PROJECT_DISCONNECTED("projectDisconnected"),
     RESOURCE_CHANGED("resourceChanged"),
     RESOURCE_CREATED("resourceCreated"),
     RESOURCE_DELETED("resourceDeleted"),
-    RESOURCE_STORED("resourceStored");
+    RESOURCE_STORED("resourceStored"),
+	METADATA_CHANGED("metadataChanged");
 
     private final String value;
 

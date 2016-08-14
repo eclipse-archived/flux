@@ -1,9 +1,7 @@
 package org.eclipse.flux.core.listeners;
 
-import java.io.ByteArrayOutputStream;
 import java.text.MessageFormat;
 
-import org.apache.commons.io.IOUtils;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
