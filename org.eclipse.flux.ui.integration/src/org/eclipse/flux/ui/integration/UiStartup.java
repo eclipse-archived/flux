@@ -17,7 +17,7 @@ import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.core.ChannelSwitcher;
 import org.eclipse.flux.core.IRepositoryListener;
 import org.eclipse.flux.core.LiveEditCoordinator;
-import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.RepositoryAdapter;
 import org.eclipse.flux.ui.integration.handlers.LiveEditConnector;
 import org.eclipse.jface.viewers.LabelProviderChangedEvent;
 import org.eclipse.swt.widgets.Display;
@@ -84,7 +84,7 @@ public class UiStartup implements IStartup {
 
 		@Override
 		public void connected(String userChannel) {
-			Repository repository = org.eclipse.flux.core.Activator
+			RepositoryAdapter repository = org.eclipse.flux.core.Activator
 					.getDefault().getRepository();
 			
 			repository.addRepositoryListener(repositoryListener);

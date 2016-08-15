@@ -15,16 +15,16 @@ import org.eclipse.core.resources.IResourceChangeListener;
 import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.core.resources.IResourceDeltaVisitor;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.RepositoryAdapter;
 
 /**
  * @author Martin Lippert
  */
 public class CloudSyncMetadataListener implements IResourceChangeListener{
 
-	private Repository repository;
+	private RepositoryAdapter repository;
 
-	public CloudSyncMetadataListener(Repository repository) {
+	public CloudSyncMetadataListener(RepositoryAdapter repository) {
 		this.repository = repository;
 	}
 

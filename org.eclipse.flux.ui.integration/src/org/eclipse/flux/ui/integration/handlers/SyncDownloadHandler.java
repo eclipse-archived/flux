@@ -17,7 +17,7 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.core.DownloadProject;
 import org.eclipse.flux.core.DownloadProject.CompletionCallback;
-import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.RepositoryAdapter;
 import org.eclipse.flux.ui.integration.FluxUiPlugin;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.viewers.LabelProvider;
@@ -32,7 +32,7 @@ public class SyncDownloadHandler extends AbstractHandler {
 	
 	@Override
 	public Object execute(final ExecutionEvent event) throws ExecutionException {
-		final Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
+		final RepositoryAdapter repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
 		final MessageConnector messagingConnector = org.eclipse.flux.core.Activator.getDefault().getMessageConnector();
 		
 		if (repository == null || messagingConnector == null) {
@@ -68,7 +68,7 @@ public class SyncDownloadHandler extends AbstractHandler {
 
 	@Override
 	public boolean isEnabled() {
-		final Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
+		final RepositoryAdapter repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
 		final MessageConnector messagingConnector = org.eclipse.flux.core.Activator.getDefault().getMessageConnector();
 		return repository != null && messagingConnector != null;
 	}

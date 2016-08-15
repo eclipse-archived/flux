@@ -63,7 +63,7 @@ public class Activator extends Plugin {
 	private MessageConnector messageConnector;
 	private ChannelSwitcher channelSwitcher;
 	
-	private Repository repository;
+	private RepositoryAdapter repository;
 	private LiveEditCoordinator liveEditCoordinator;
 	private boolean lazyStart = false;
 	
@@ -175,7 +175,7 @@ public class Activator extends Plugin {
 	}
 	
 	private void initCoreService(String userChannel) throws CoreException {
-		repository = new Repository(messageConnector, fluxRepository, userChannel);
+		repository = new RepositoryAdapter(fluxRepository, userChannel);
 		liveEditCoordinator = new LiveEditCoordinator(messageConnector);
 		
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
@@ -248,7 +248,7 @@ public class Activator extends Plugin {
 				if (!project.isOpen()) {
 					project.open(null);
 				}
-				Repository repository = org.eclipse.flux.core.Activator.getDefault()
+				RepositoryAdapter repository = org.eclipse.flux.core.Activator.getDefault()
 						.getRepository();
 				repository.addProject(project);
 			}
@@ -316,7 +316,7 @@ public class Activator extends Plugin {
 		return messageConnector;
 	}
 	
-	public Repository getRepository() {
+	public RepositoryAdapter getRepository() {
 		return repository;
 	}
 	

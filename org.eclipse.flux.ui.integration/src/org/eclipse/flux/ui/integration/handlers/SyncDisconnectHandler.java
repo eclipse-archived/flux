@@ -19,7 +19,7 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.expressions.IEvaluationContext;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IAdaptable;
-import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.RepositoryAdapter;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.ISources;
@@ -38,7 +38,7 @@ public class SyncDisconnectHandler extends AbstractHandler {
 //		selectedProjects[0].getLocalTimeStamp();
 //		selectedProjects[0].getFile(".project").getLocalTimeStamp();
 		
-		Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
+		RepositoryAdapter repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
 
 		if (repository != null) {
 			for (IProject project : selectedProjects) {
@@ -53,7 +53,7 @@ public class SyncDisconnectHandler extends AbstractHandler {
 
 	@Override
 	public void setEnabled(Object evaluationContext) {
-		Repository repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
+		RepositoryAdapter repository = org.eclipse.flux.core.Activator.getDefault().getRepository();
 		if (repository != null && evaluationContext instanceof IEvaluationContext) {
 			IEvaluationContext evalContext = (IEvaluationContext) evaluationContext;
 			Object selection = evalContext.getVariable(ISources.ACTIVE_CURRENT_SELECTION_NAME);
