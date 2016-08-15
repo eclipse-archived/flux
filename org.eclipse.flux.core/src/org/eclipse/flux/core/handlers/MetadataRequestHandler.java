@@ -1,4 +1,4 @@
-package org.eclipse.flux.core.listeners;
+package org.eclipse.flux.core.handlers;
 
 import java.text.MessageFormat;
 

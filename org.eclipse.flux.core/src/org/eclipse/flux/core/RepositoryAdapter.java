@@ -19,9 +19,10 @@ import org.eclipse.core.resources.IMarkerDelta;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceDelta;
-import org.eclipse.flux.core.listeners.MetadataRequestHandler;
-import org.eclipse.flux.core.listeners.ResourceListener;
+import org.eclipse.flux.core.handlers.MetadataRequestHandler;
+import org.eclipse.flux.core.handlers.EclipseResourceResponseHandler;
 import org.eclipse.flux.watcher.core.FluxMessage;
+import org.eclipse.flux.watcher.core.FluxMessageBus;
 import org.eclipse.flux.watcher.core.FluxMessageType;
 import org.eclipse.flux.watcher.core.Repository;
 import org.eclipse.flux.watcher.core.spi.Project;
@@ -40,15 +41,21 @@ public class RepositoryAdapter {
 	private Collection<IRepositoryListener> repositoryListeners;
 		
 	private Repository repository;
+	private FluxMessageBus messageBus;
 
 	public RepositoryAdapter(Repository repository, String user) {
 		this.repository = repository;
+		this.messageBus = repository.getMessageBus();
 		this.username = user;
 		this.syncedProjects = new ConcurrentHashMap<String, ConnectedProject>();
 		this.repositoryListeners = new ConcurrentLinkedDeque<>();
 			
-		repository.getMessageBus().addMessageHandler(new ResourceListener());
-		repository.getMessageBus().addMessageHandler(new MetadataRequestHandler());
+		messageBus.addMessageHandler(new EclipseResourceResponseHandler());
+		messageBus.addMessageHandler(new MetadataRequestHandler());
+	}
+	
+	public FluxMessageBus getMessageBus(){
+		return this.messageBus;
 	}
 	
 	public String getUsername() {

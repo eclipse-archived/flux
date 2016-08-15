@@ -1,4 +1,4 @@
-package org.eclipse.flux.core.listeners;
+package org.eclipse.flux.core.handlers;
 
 import java.text.MessageFormat;
 
@@ -16,7 +16,7 @@ import com.google.inject.Singleton;
 
 @Singleton
 @FluxMessageTypes(FluxMessageType.GET_RESOURCE_RESPONSE)
-public class ResourceListener implements FluxMessageHandler {
+public class EclipseResourceResponseHandler implements FluxMessageHandler {
 
 	@Override
 	public void onMessage(FluxMessage message, Repository repository) throws Exception {
