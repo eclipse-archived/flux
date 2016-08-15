@@ -15,6 +15,7 @@ import org.eclipse.flux.watcher.core.Repository;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.google.inject.Singleton;
@@ -35,33 +36,30 @@ public class MetadataRequestHandler implements FluxMessageHandler {
 				Path path = new Path(MessageFormat.format("{0}/{1}", projectName, resourcePath));
 				IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(path);
 				content.put("type", "marker");
-				content.put("metadata", new JSONArray(toJSON(file.findMarkers(null, true, IResource.DEPTH_INFINITE))));
+				content.put("metadata", toJSON(file.findMarkers(null, true, IResource.DEPTH_INFINITE)));
 				message.source().sendMessage(new FluxMessage(FluxMessageType.GET_METADATA_RESPONSE, content));
 			}
 		}
 	}
 	
-	private String toJSON(IMarker[] markers) {
-		StringBuilder result = new StringBuilder();
-		boolean flag = false;
-		result.append("[");
-		for (IMarker m : markers) {
-			if (flag) {
-				result.append(",");
+	public JSONArray toJSON(IMarker[] markers) throws JSONException{
+		JSONArray objects = new JSONArray();
+		for(IMarker marker : markers){
+			JSONObject object = new JSONObject();
+			object.put("description", marker.getAttribute("message", ""));
+			object.put("line", marker.getAttribute("lineNumber", 0));
+			switch(marker.getAttribute("severity", IMarker.SEVERITY_WARNING)){
+				case IMarker.SEVERITY_WARNING:
+					object.put("severity", marker.getAttribute("severity", "warning"));
+					break;
+				case IMarker.SEVERITY_ERROR:
+					object.put("severity", marker.getAttribute("severity", "error"));
+					break;
 			}
-
-			result.append("{");
-			result.append("\"description\":" + JSONObject.quote(m.getAttribute("message", "")));
-			result.append(",\"line\":" + m.getAttribute("lineNumber", 0));
-			result.append(",\"severity\":\"" + (m.getAttribute("severity", IMarker.SEVERITY_WARNING) == IMarker.SEVERITY_ERROR ? "error" : "warning")
-					+ "\"");
-			result.append(",\"start\":" + m.getAttribute("charStart", 0));
-			result.append(",\"end\":" + m.getAttribute("charEnd", 0));
-			result.append("}");
-
-			flag = true;
+			object.put("start", marker.getAttribute("charStart", 0));
+			object.put("end", marker.getAttribute("charEnd", 0));
+			objects.put(object);
 		}
-		result.append("]");
-		return result.toString();
+		return objects;
 	}
 }

@@ -26,6 +26,7 @@ import org.eclipse.flux.watcher.core.FluxMessageType;
 import org.eclipse.flux.watcher.core.Repository;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -106,38 +107,33 @@ public class RepositoryAdapter {
 			message.put("type", "marker");
 
 			IMarker[] markers = resource.findMarkers(null, true, IResource.DEPTH_INFINITE);
-			String markerJSON = toJSON(markers);
-			JSONArray content = new JSONArray(markerJSON);
+			JSONArray content = toJSON(markers);
 			message.put("metadata", content);
-
 			repository.getMessageBus().sendMessages(new FluxMessage(FluxMessageType.METADATA_CHANGED, message));
 		} catch (Exception e) {
 
 		}
 	}
 
-	public String toJSON(IMarker[] markers) {
-		StringBuilder result = new StringBuilder();
-		boolean flag = false;
-		result.append("[");
-		for (IMarker m : markers) {
-			if (flag) {
-				result.append(",");
+	public JSONArray toJSON(IMarker[] markers) throws JSONException{
+		JSONArray objects = new JSONArray();
+		for(IMarker marker : markers){
+			JSONObject object = new JSONObject();
+			object.put("description", marker.getAttribute("message", ""));
+			object.put("line", marker.getAttribute("lineNumber", 0));
+			switch(marker.getAttribute("severity", IMarker.SEVERITY_WARNING)){
+				case IMarker.SEVERITY_WARNING:
+					object.put("severity", marker.getAttribute("severity", "warning"));
+					break;
+				case IMarker.SEVERITY_ERROR:
+					object.put("severity", marker.getAttribute("severity", "error"));
+					break;
 			}
-
-			result.append("{");
-			result.append("\"description\":" + JSONObject.quote(m.getAttribute("message", "")));
-			result.append(",\"line\":" + m.getAttribute("lineNumber", 0));
-			result.append(",\"severity\":\"" + (m.getAttribute("severity", IMarker.SEVERITY_WARNING) == IMarker.SEVERITY_ERROR ? "error" : "warning")
-					+ "\"");
-			result.append(",\"start\":" + m.getAttribute("charStart", 0));
-			result.append(",\"end\":" + m.getAttribute("charEnd", 0));
-			result.append("}");
-
-			flag = true;
+			object.put("start", marker.getAttribute("charStart", 0));
+			object.put("end", marker.getAttribute("charEnd", 0));
+			objects.put(object);
 		}
-		result.append("]");
-		return result.toString();
+		return objects;
 	}
 	
 	public void addRepositoryListener(IRepositoryListener listener) {
