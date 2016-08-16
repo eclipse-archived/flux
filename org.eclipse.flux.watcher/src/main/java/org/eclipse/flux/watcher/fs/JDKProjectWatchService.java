@@ -249,7 +249,13 @@ public class JDKProjectWatchService extends Thread {
 
             final Path projectPath = fileSystem.getPath(project.path());
             final String relativeResourcePath = projectPath.relativize(resourcePath).toString();
-            final long timestamp = exists ? getLastModifiedTime(resourcePath).toMillis() : System.currentTimeMillis();
+            long timestamp;
+            if (exists){
+                timestamp = getLastModifiedTime(resourcePath).toMillis();
+            }
+            else {
+                timestamp = (System.currentTimeMillis());
+            }
 
             if (exists) {
                 final boolean isDirectory = isDirectory(resourcePath);

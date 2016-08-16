@@ -236,7 +236,7 @@ MessagesRepository.prototype.resourceCreated = function(data) {
 	var type = data.type;
 
 	this.repository.hasResource(username, projectName, resource, function(err, resourceExists) {
-		if (err === null && !resourceExists) {
+		if (err === null) {
 			this.socket.emit('getResourceRequest', {
 				'callback_id' : 0,
 				'username' : username,
