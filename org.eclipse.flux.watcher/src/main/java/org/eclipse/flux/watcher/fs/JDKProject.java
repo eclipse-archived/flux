@@ -251,4 +251,9 @@ public class JDKProject implements Project {
         result = 31 * result + path.hashCode();
         return result;
     }
+
+	@Override
+	public boolean hasResource(String resourcePath) {
+		return exists(path.resolve(resourcePath));
+	}
 }

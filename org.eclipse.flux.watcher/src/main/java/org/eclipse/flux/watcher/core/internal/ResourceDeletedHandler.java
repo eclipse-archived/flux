@@ -43,12 +43,10 @@ public final class ResourceDeletedHandler implements FluxMessageHandler {
         final long resourceTimestamp = request.getLong(TIMESTAMP);
 
         final Project project = repository.getProject(projectName);
-        if (project != null) {
-            final Resource localResource = project.getResource(resourcePath);
-
-            if (localResource != null && localResource.timestamp() < resourceTimestamp) {
-                project.deleteResource(Resource.newUnknown(resourcePath, resourceTimestamp));
-            }
-        }
+        if(project == null || !project.hasResource(resourcePath))
+        	return;
+        Resource localResource = project.getResource(resourcePath);
+        if(localResource.timestamp() < resourceTimestamp)
+        	project.deleteResource(Resource.newUnknown(resourcePath, resourceTimestamp));
     }
 }

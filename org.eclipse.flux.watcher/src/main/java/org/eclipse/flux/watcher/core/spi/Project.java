@@ -58,6 +58,8 @@ public interface Project {
      */
     Set<Resource> getResources();
 
+    boolean hasResource(String resourcePath);
+    
     /**
      * Returns the {@link com.codenvy.flux.watcher.core.Resource} with the given relative resource path.
      *
