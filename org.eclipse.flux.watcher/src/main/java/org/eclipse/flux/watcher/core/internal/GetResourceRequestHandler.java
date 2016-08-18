@@ -44,34 +44,34 @@ import static org.eclipse.flux.watcher.core.Resource.ResourceType.FILE;
 public final class GetResourceRequestHandler implements FluxMessageHandler {
     @Override
     public void onMessage(FluxMessage message, Repository repository) throws JSONException {
-        final JSONObject request = message.content();
-        final int callbackId = request.getInt(CALLBACK_ID.value());
-        final String requestSenderId = request.getString(REQUEST_SENDER_ID.value());
-        final String projectName = request.getString(PROJECT.value());
-        final String resourcePath = request.getString(RESOURCE.value());
+        final JSONObject request = message.getContent();
+        final int callbackId = request.getInt(CALLBACK_ID);
+        final String requestSenderId = request.getString(REQUEST_SENDER_ID);
+        final String projectName = request.getString(PROJECT);
+        final String resourcePath = request.getString(RESOURCE);
 
         final Project project = repository.getProject(projectName);
         if (project != null) {
             final Resource resource = project.getResource(resourcePath);
 
             // compare the time stamp and allow a nearly difference for now TODO find out why CodenvyVFS -> Eclipse has different timestamp
-            long requestTimeStamp = request.has(TIMESTAMP.value()) ? request.getLong(TIMESTAMP.value()) : 0;
+            long requestTimeStamp = request.has(TIMESTAMP) ? request.getLong(TIMESTAMP) : 0;
             long resourceTimeStamp = resource.timestamp();
-            if (!request.has(TIMESTAMP.value()) || Math.abs(requestTimeStamp - resourceTimeStamp) < 10000) {
+            if (!request.has(TIMESTAMP) || Math.abs(requestTimeStamp - resourceTimeStamp) < 10000) {
                 final JSONObject content = new JSONObject()
-                                                           .put(CALLBACK_ID.value(), callbackId)
-                                                           .put(REQUEST_SENDER_ID.value(), requestSenderId)
-                                                           .put(PROJECT.value(), projectName)
-                                                           .put(RESOURCE.value(), resourcePath)
-                                                           .put(TIMESTAMP.value(), resourceTimeStamp)
-                                                           .put(HASH.value(), resource.hash())
-                                                           .put(TYPE.value(), resource.type().name().toLowerCase());
+                                                           .put(CALLBACK_ID, callbackId)
+                                                           .put(REQUEST_SENDER_ID, requestSenderId)
+                                                           .put(PROJECT, projectName)
+                                                           .put(RESOURCE, resourcePath)
+                                                           .put(TIMESTAMP, resourceTimeStamp)
+                                                           .put(HASH, resource.hash())
+                                                           .put(TYPE, resource.type().name().toLowerCase());
 
                 if (resource.type() == FILE) {
-                    content.put(CONTENT.value(), new String(resource.content()));
+                    content.put(CONTENT, new String(resource.content()));
                 }
 
-                message.source()
+                message.getSource()
                        .sendMessage(new FluxMessage(GET_RESOURCE_RESPONSE, content));
             }
         }

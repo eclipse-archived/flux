@@ -59,10 +59,10 @@ public final class ProjectResourceModifiedListener implements RepositoryListener
     public void onEvent(RepositoryEvent event) throws JSONException {
         if (event.resource().type() == FILE) {
             final JSONObject content = new JSONObject()
-                    .put(PROJECT.value(), event.project().id())
-                    .put(RESOURCE.value(), event.resource().path())
-                    .put(TIMESTAMP.value(), event.resource().timestamp())
-                    .put(HASH.value(), event.resource().hash());
+                    .put(PROJECT, event.project().id())
+                    .put(RESOURCE, event.resource().path())
+                    .put(TIMESTAMP, event.resource().timestamp())
+                    .put(HASH, event.resource().hash());
 
             messageBus.sendMessages(new FluxMessage(RESOURCE_CHANGED, content), new FluxMessage(RESOURCE_STORED, content));
         }

@@ -48,20 +48,20 @@ import static org.eclipse.flux.watcher.core.Resource.ResourceType.UNKNOWN;
 public final class GetProjectResponseHandler implements FluxMessageHandler {
     @Override
     public void onMessage(FluxMessage message, Repository repository) throws Exception {
-        final JSONObject request = message.content();
-        final String projectName = request.getString(PROJECT.value());
-        final JSONArray files = request.getJSONArray(FILES.value());
-        final JSONArray deleted = request.optJSONArray(DELETED.value());
+        final JSONObject request = message.getContent();
+        final String projectName = request.getString(PROJECT);
+        final JSONArray files = request.getJSONArray(FILES);
+        final JSONArray deleted = request.optJSONArray(DELETED);
 
         final Project project = repository.getProject(projectName);
         if (project != null) {
             // new files
             for (int i = 0; i < files.length(); i++) {
                 final JSONObject resource = files.getJSONObject(i);
-                final String resourcePath = resource.getString(PATH.value());
-                final long resourceTimestamp = resource.getLong(TIMESTAMP.value());
-                final ResourceType resourceType = ResourceType.valueOf(resource.optString(TYPE.value(), UNKNOWN.name()).toUpperCase());
-                final String resourceHash = resource.optString(HASH.value(), "0");
+                final String resourcePath = resource.getString(PATH);
+                final long resourceTimestamp = resource.getLong(TIMESTAMP);
+                final ResourceType resourceType = ResourceType.valueOf(resource.optString(TYPE, UNKNOWN.name()).toUpperCase());
+                final String resourceHash = resource.optString(HASH, "0");
 
                 final Resource localResource = project.getResource(resourcePath);
                 if (resourceType == FILE) {
@@ -70,12 +70,12 @@ public final class GetProjectResponseHandler implements FluxMessageHandler {
                            && !Objects.equals(resourceHash, localResource.hash())) {
 
                         final JSONObject content = new JSONObject()
-                                .put(PROJECT.value(), projectName)
-                                .put(RESOURCE.value(), resourcePath)
-                                .put(TIMESTAMP.value(), resourceTimestamp)
-                                .put(HASH.value(), resourceHash);
+                                .put(PROJECT, projectName)
+                                .put(RESOURCE, resourcePath)
+                                .put(TIMESTAMP, resourceTimestamp)
+                                .put(HASH, resourceHash);
 
-                        message.source()
+                        message.getSource()
                                .sendMessage(new FluxMessage(GET_RESOURCE_REQUEST, content));
                     }
 
@@ -88,8 +88,8 @@ public final class GetProjectResponseHandler implements FluxMessageHandler {
             if (deleted != null) {
                 for (int i = 0; i < deleted.length(); i++) {
                     final JSONObject resource = deleted.getJSONObject(i);
-                    final String resourcePath = resource.getString(PATH.value());
-                    final long resourceTimestamp = resource.getLong(TIMESTAMP.value());
+                    final String resourcePath = resource.getString(PATH);
+                    final long resourceTimestamp = resource.getLong(TIMESTAMP);
 
                     final Resource localResource = project.getResource(resourcePath);
                     if (localResource != null && localResource.timestamp() < resourceTimestamp) {

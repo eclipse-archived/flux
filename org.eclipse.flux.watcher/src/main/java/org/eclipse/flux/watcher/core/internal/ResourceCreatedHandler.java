@@ -43,29 +43,27 @@ import static org.eclipse.flux.watcher.core.Resource.ResourceType.FOLDER;
 public final class ResourceCreatedHandler implements FluxMessageHandler {
     @Override
     public void onMessage(FluxMessage message, Repository repository) throws JSONException {
-        final JSONObject request = message.content();
-        final String projectName = request.getString(PROJECT.value());
-        final String resourcePath = request.getString(RESOURCE.value());
-        final long resourceTimestamp = request.getLong(TIMESTAMP.value());
-        final String resourceHash = request.getString(HASH.value());
+        final JSONObject request = message.getContent();
+        final String projectName = request.getString(PROJECT);
+        final String resourcePath = request.getString(RESOURCE);
+        final long resourceTimestamp = request.getLong(TIMESTAMP);
+        final String resourceHash = request.getString(HASH);
 
         final Project project = repository.getProject(projectName);
         if (project != null && project.getResource(resourcePath) == null) {
-            final ResourceType resourceType = ResourceType.valueOf(request.getString(TYPE.value()).toUpperCase());
+            final ResourceType resourceType = ResourceType.valueOf(request.getString(TYPE).toUpperCase());
             if (resourceType == FOLDER) {
                 final Resource folder = Resource.newFolder(resourcePath, resourceTimestamp);
                 project.createResource(folder);
             }
-
             final JSONObject content = new JSONObject()
-                    .put(PROJECT.value(), projectName)
-                    .put(RESOURCE.value(), resourcePath)
-                    .put(TIMESTAMP.value(), resourceTimestamp)
-                    .put(HASH.value(), resourceHash)
-                    .put(TYPE.value(), resourceType.name().toLowerCase());
-
-            message.source()
-                   .sendMessage(new FluxMessage(resourceType == FOLDER ? RESOURCE_STORED : GET_RESOURCE_REQUEST, content));
+                    .put(PROJECT, projectName)
+                    .put(RESOURCE, resourcePath)
+                    .put(TIMESTAMP, resourceTimestamp)
+                    .put(HASH, resourceHash)
+                    .put(TYPE, resourceType.name().toLowerCase());
+            
+            message.getSource().sendMessage(new FluxMessage(resourceType == FOLDER ? RESOURCE_STORED : GET_RESOURCE_REQUEST, content));
         }
     }
 }

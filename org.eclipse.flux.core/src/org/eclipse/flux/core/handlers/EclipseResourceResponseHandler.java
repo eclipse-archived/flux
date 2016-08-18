@@ -20,8 +20,8 @@ public class EclipseResourceResponseHandler implements FluxMessageHandler {
 
 	@Override
 	public void onMessage(FluxMessage message, Repository repository) throws Exception {
-		final String resourcePath = message.content().getString("resource");
-		final String project = message.content().getString("project");
+		final String resourcePath = message.getContent().getString("resource");
+		final String project = message.getContent().getString("project");
 		Path path = new Path(MessageFormat.format("{0}/{1}", project, resourcePath));
 		IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(path);
 		file.refreshLocal(IResource.DEPTH_ZERO, null);

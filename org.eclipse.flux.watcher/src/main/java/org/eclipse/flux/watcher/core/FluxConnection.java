@@ -82,7 +82,7 @@ public class FluxConnection {
                 public void onConnect() {
                     try {
 
-                        final JSONObject content = new JSONObject().put(CHANNEL.value(), credentials.username());
+                        final JSONObject content = new JSONObject().put(CHANNEL, credentials.username());
                         socket.emit(CONNECT_TO_CHANNEL.value(), new IOAcknowledge() {
                             @Override
                             public void ack(Object... objects) {
@@ -90,7 +90,7 @@ public class FluxConnection {
                                     final JSONObject ack = (JSONObject)objects[0];
                                     try {
 
-                                        if (ack.has(CONNECTED_TO_CHANNEL.value()) && ack.getBoolean(CONNECTED_TO_CHANNEL.value())) {
+                                        if (ack.has(CONNECTED_TO_CHANNEL) && ack.getBoolean(CONNECTED_TO_CHANNEL)) {
                                             return;
                                         }
 
@@ -156,16 +156,16 @@ public class FluxConnection {
     public void sendMessage(FluxMessage message) {
         checkNotNull(message);
 
-        final JSONObject content = message.content();
+        final JSONObject content = message.getContent();
 
         try {
-            if (!content.has(USERNAME.value())) {
-                content.put(USERNAME.value(), credentials.username());
+            if (!content.has(USERNAME)) {
+                content.put(USERNAME, credentials.username());
             }
 
-            if (!content.has(CALLBACK_ID.value())) {
-                if (message.type() == GET_RESOURCE_REQUEST || message.type() == GET_PROJECT_REQUEST) {
-                    content.put(CALLBACK_ID.value(), messageBus.id());
+            if (!content.has(CALLBACK_ID)) {
+                if (message.getType() == GET_RESOURCE_REQUEST || message.getType() == GET_PROJECT_REQUEST) {
+                    content.put(CALLBACK_ID, messageBus.id());
                 }
             }
 
@@ -173,6 +173,6 @@ public class FluxConnection {
             throw new RuntimeException(e);
         }
 
-        socket.emit(message.type().value(), message.content());
+        socket.emit(message.getType().value(), message.getContent());
     }
 }

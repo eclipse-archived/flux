@@ -177,14 +177,14 @@ public class FluxMessageBus {
     public void messageReceived(FluxMessage message) {
         checkNotNull(message);
 
-        if (message.type() == GET_RESOURCE_RESPONSE || message.type() == GET_PROJECT_RESPONSE) {
-            final JSONObject content = message.content();
-            if (content.optInt(CALLBACK_ID.value()) != id) {
+        if (message.getType() == GET_RESOURCE_RESPONSE || message.getType() == GET_PROJECT_RESPONSE) {
+            final JSONObject content = message.getContent();
+            if (content.optInt(CALLBACK_ID) != id) {
                 return;
             }
         }
 
-        final Set<FluxMessageHandler> messageHandlers = getMessageHandlersFor(message.type().value());
+        final Set<FluxMessageHandler> messageHandlers = getMessageHandlersFor(message.getType().value());
         for (FluxMessageHandler oneMessageHandler : messageHandlers) {
             try {
 

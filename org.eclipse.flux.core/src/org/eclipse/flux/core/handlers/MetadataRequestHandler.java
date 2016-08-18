@@ -26,9 +26,9 @@ public class MetadataRequestHandler implements FluxMessageHandler {
 
 	@Override
 	public void onMessage(FluxMessage message, Repository repository) throws Exception {
-		JSONObject content = message.content();
-		String projectName = message.content().getString("project");
-		String resourcePath = message.content().getString("resource");
+		JSONObject content = message.getContent();
+		String projectName = message.getContent().getString("project");
+		String resourcePath = message.getContent().getString("resource");
 		Project project = repository.getProject(projectName);
 		if(project != null){
 			Resource resource = project.getResource(resourcePath);
@@ -37,7 +37,7 @@ public class MetadataRequestHandler implements FluxMessageHandler {
 				IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(path);
 				content.put("type", "marker");
 				content.put("metadata", toJSON(file.findMarkers(null, true, IResource.DEPTH_INFINITE)));
-				message.source().sendMessage(new FluxMessage(FluxMessageType.GET_METADATA_RESPONSE, content));
+				message.getSource().sendMessage(new FluxMessage(FluxMessageType.GET_METADATA_RESPONSE, content));
 			}
 		}
 	}

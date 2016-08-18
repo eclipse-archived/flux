@@ -115,10 +115,10 @@ public class Repository {
 
             try {
 
-                JSONObject content = new JSONObject().put(PROJECT.value(), projectId);
+                JSONObject content = new JSONObject().put(PROJECT, projectId);
                 messageBus.sendMessages(new FluxMessage(PROJECT_CONNECTED, content));
 
-                content = new JSONObject().put(PROJECT.value(), projectId).put(INCLUDE_DELETED.value(), true);
+                content = new JSONObject().put(PROJECT, projectId).put(INCLUDE_DELETED, true);
                 messageBus.sendMessages(new FluxMessage(GET_PROJECT_REQUEST, content));
 
             } catch (JSONException e) {
@@ -143,7 +143,7 @@ public class Repository {
 
             try {
 
-                final JSONObject content = new JSONObject().put(PROJECT.value(), projectId);
+                final JSONObject content = new JSONObject().put(PROJECT, projectId);
                 messageBus.sendMessages(new FluxMessage(PROJECT_DISCONNECTED, content));
 
             } catch (JSONException e) {

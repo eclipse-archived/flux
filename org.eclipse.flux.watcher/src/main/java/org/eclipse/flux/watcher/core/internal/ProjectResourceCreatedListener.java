@@ -58,11 +58,11 @@ public final class ProjectResourceCreatedListener implements RepositoryListener 
     @Override
     public void onEvent(RepositoryEvent event) throws JSONException {
         final JSONObject content = new JSONObject()
-                .put(PROJECT.value(), event.project().id())
-                .put(RESOURCE.value(), event.resource().path())
-                .put(TIMESTAMP.value(), event.resource().timestamp())
-                .put(HASH.value(), event.resource().hash())
-                .put(TYPE.value(), event.resource().type().name().toLowerCase());
+                .put(PROJECT, event.project().id())
+                .put(RESOURCE, event.resource().path())
+                .put(TIMESTAMP, event.resource().timestamp())
+                .put(HASH, event.resource().hash())
+                .put(TYPE, event.resource().type().name().toLowerCase());
 
         messageBus.sendMessages(new FluxMessage(RESOURCE_CREATED, content), new FluxMessage(RESOURCE_STORED, content));
     }

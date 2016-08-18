@@ -39,11 +39,11 @@ import static org.eclipse.flux.watcher.core.FluxMessageType.RESOURCE_CHANGED;
 public final class ResourceChangedHandler implements FluxMessageHandler {
     @Override
     public void onMessage(FluxMessage message, Repository repository) throws JSONException {
-        final JSONObject request = message.content();
-        final String projectName = request.getString(PROJECT.value());
-        final String resourcePath = request.getString(RESOURCE.value());
-        final long resourceTimestamp = request.getLong(TIMESTAMP.value());
-        final String resourceHash = request.getString(HASH.value());
+        final JSONObject request = message.getContent();
+        final String projectName = request.getString(PROJECT);
+        final String resourcePath = request.getString(RESOURCE);
+        final long resourceTimestamp = request.getLong(TIMESTAMP);
+        final String resourceHash = request.getString(HASH);
 
         final Project project = repository.getProject(projectName);
         if (project != null) {
@@ -54,12 +54,12 @@ public final class ResourceChangedHandler implements FluxMessageHandler {
                 && localResource.timestamp() < resourceTimestamp) {
 
                 final JSONObject content = new JSONObject()
-                        .put(PROJECT.value(), projectName)
-                        .put(RESOURCE.value(), resourcePath)
-                        .put(TIMESTAMP.value(), resourceTimestamp)
-                        .put(HASH.value(), resourceHash);
+                        .put(PROJECT, projectName)
+                        .put(RESOURCE, resourcePath)
+                        .put(TIMESTAMP, resourceTimestamp)
+                        .put(HASH, resourceHash);
 
-                message.source()
+                message.getSource()
                        .sendMessage(new FluxMessage(GET_RESOURCE_REQUEST, content));
             }
         }

@@ -37,10 +37,10 @@ import static org.eclipse.flux.watcher.core.FluxMessageType.RESOURCE_DELETED;
 public final class ResourceDeletedHandler implements FluxMessageHandler {
     @Override
     public void onMessage(FluxMessage message, Repository repository) throws JSONException {
-        final JSONObject request = message.content();
-        final String projectName = request.getString(PROJECT.value());
-        final String resourcePath = request.getString(RESOURCE.value());
-        final long resourceTimestamp = request.getLong(TIMESTAMP.value());
+        final JSONObject request = message.getContent();
+        final String projectName = request.getString(PROJECT);
+        final String resourcePath = request.getString(RESOURCE);
+        final long resourceTimestamp = request.getLong(TIMESTAMP);
 
         final Project project = repository.getProject(projectName);
         if (project != null) {
