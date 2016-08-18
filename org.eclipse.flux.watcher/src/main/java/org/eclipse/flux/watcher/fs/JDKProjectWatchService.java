@@ -14,6 +14,7 @@ import org.eclipse.flux.watcher.core.RepositoryEvent;
 import org.eclipse.flux.watcher.core.RepositoryEventBus;
 import org.eclipse.flux.watcher.core.RepositoryEventType;
 import org.eclipse.flux.watcher.core.Resource;
+import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.eclipse.flux.watcher.core.spi.Project;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.WatchEvent;
@@ -38,7 +40,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.nio.file.FileVisitResult.CONTINUE;
 import static java.nio.file.Files.exists;
-import static java.nio.file.Files.getLastModifiedTime;
 import static java.nio.file.Files.isDirectory;
 import static java.nio.file.Files.readAllBytes;
 import static java.nio.file.Files.walkFileTree;
@@ -244,31 +245,42 @@ public class JDKProjectWatchService extends Thread {
 
         try {
 
-            final boolean exists = exists(resourcePath);
-            checkArgument(kind == ENTRY_DELETE || exists);
-
-            final Path projectPath = fileSystem.getPath(project.path());
-            final String relativeResourcePath = projectPath.relativize(resourcePath).toString();
-            long timestamp;
-            if (exists){
-                timestamp = getLastModifiedTime(resourcePath).toMillis();
+            Path projectPath = fileSystem.getPath(project.path());
+            String relativeResourcePath = projectPath.relativize(resourcePath).toString();
+            long timestamp = getLastModifiedTime(resourcePath);
+            switch (getResourceType(resourcePath)) {
+                case FILE:
+                    return Resource.newFile(relativeResourcePath, timestamp, readAllBytes(resourcePath));
+                case FOLDER:
+                    return Resource.newFolder(relativeResourcePath, timestamp);
+                default:
+                    return Resource.newUnknown(relativeResourcePath, timestamp);
             }
-            else {
-                timestamp = (System.currentTimeMillis());
-            }
-
-            if (exists) {
-                final boolean isDirectory = isDirectory(resourcePath);
-                return isDirectory ? Resource.newFolder(relativeResourcePath, timestamp)
-                                   : Resource.newFile(relativeResourcePath, timestamp, readAllBytes(resourcePath));
-
-            } else {
-                return Resource.newUnknown(relativeResourcePath, timestamp);
-            }
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private long getLastModifiedTime(Path resourcePath) {
+        try {
+            return Files.getLastModifiedTime(resourcePath).toMillis() / 1000 * 1000;
+        } catch (IOException | NullPointerException e) {
+            return System.currentTimeMillis() / 1000 * 1000;
+        }
+    }
+
+    private ResourceType getResourceType(Path path) {
+        boolean isExists = Files.exists(path);
+        boolean isDirectory = Files.isDirectory(path);
+        if (isExists) {
+            if (isDirectory) {
+                return ResourceType.FOLDER;
+            } else {
+                return ResourceType.FILE;
+            }
+
+        }
+        return ResourceType.UNKNOWN;
     }
 
     /**
