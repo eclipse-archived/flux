@@ -177,7 +177,7 @@ public class Activator extends Plugin {
 	
 	private void initCoreService(String userChannel) throws CoreException {
 		repository = new RepositoryAdapter(fluxRepository, userChannel);
-		liveEditCoordinator = new LiveEditCoordinator(messageConnector);
+		liveEditCoordinator = new LiveEditCoordinator(fluxRepository);
 		
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
 		

@@ -41,6 +41,16 @@ public class FluxMessage {
 		public static final String TIMESTAMP = "timestamp";
 		public static final String TYPE = "type";
 		public static final String USERNAME = "username";
+		public static final String SAVE_POINT_HASH = "savePointHash";
+		public static final String SAVE_POINT_TIMESTAMP = "savePointTimestamp";
+		public static final String LIVE_CONTENT = "liveContent";
+		public static final String OFFSET = "offset";
+		public static final String REMOVED_CHAR_COUNT = "removedCharCount";
+	    public static final String ADDED_CHARACTERS = "addedCharacters";
+	    public static final String PROJECT_REG_EX = "projectRegEx";
+	    public static final String RESOURCE_REG_EX = "resourceRegEx";
+
+
 	}
 
 	private final FluxConnection source;
