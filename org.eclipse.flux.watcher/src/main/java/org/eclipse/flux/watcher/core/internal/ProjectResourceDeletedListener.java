@@ -54,10 +54,10 @@ public final class ProjectResourceDeletedListener implements RepositoryListener 
 
     @Override
     public void onEvent(RepositoryEvent event) throws JSONException {
-        final JSONObject content = new JSONObject()
-                .put(PROJECT, event.project().id())
-                .put(RESOURCE, event.resource().path())
-                .put(TIMESTAMP, event.resource().timestamp());
+        JSONObject content = new JSONObject();
+        content.put(PROJECT, event.project().id());
+        content.put(RESOURCE, event.resource().path());
+        content.put(TIMESTAMP, event.resource().timestamp());
 
         messageBus.sendMessages(new FluxMessage(RESOURCE_DELETED, content));
     }
