@@ -11,9 +11,9 @@
 package org.eclipse.flux.core;
 
 import java.util.Collection;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentMap;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IMarkerDelta;
 import org.eclipse.core.resources.IProject;
@@ -37,7 +37,6 @@ public class RepositoryAdapter {
 
 	private String username;
 
-	private ConcurrentMap<String, ConnectedProject> syncedProjects;
 	private Collection<IRepositoryListener> repositoryListeners;
 		
 	private Repository repository;
@@ -47,7 +46,6 @@ public class RepositoryAdapter {
 		this.repository = repository;
 		this.messageBus = repository.getMessageBus();
 		this.username = user;
-		this.syncedProjects = new ConcurrentHashMap<String, ConnectedProject>();
 		this.repositoryListeners = new ConcurrentLinkedDeque<>();
 			
 		messageBus.addMessageHandler(new EclipseResourceResponseHandler());
@@ -67,7 +65,7 @@ public class RepositoryAdapter {
 	}
 	
 	public ConnectedProject getProject(String projectName) {
-		return this.syncedProjects.get(projectName);
+		return new ConnectedProject(repository.getProject(projectName));
 	}
 
 	public boolean isConnected(IProject project) {
@@ -90,8 +88,12 @@ public class RepositoryAdapter {
 	}
 	
 	public ConnectedProject[] getConnectedProjects() {
-		return syncedProjects.values().toArray(
-				new ConnectedProject[syncedProjects.size()]);
+	    Set<Project> projects = repository.getSynchronizedProjects();
+	    Set<ConnectedProject> connectedProjects = new HashSet<>();
+	    for(Project project : projects){
+	        connectedProjects.add(new ConnectedProject(project));
+	    }
+		return connectedProjects.toArray(new ConnectedProject[connectedProjects.size()]);
 	}
 
 	public void metadataChanged(IResourceDelta delta) {
@@ -149,7 +151,6 @@ public class RepositoryAdapter {
 	}
 	
 	public void dispose() {
-		syncedProjects.clear();
 	}
 
 }
