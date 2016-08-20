@@ -3,7 +3,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: Watch
 Bundle-SymbolicName: org.eclipse.flux.watcher
 Bundle-Version: 1.0.0.qualifier
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Require-Bundle: org.eclipse.flux.client.java.osgi;bundle-version="1.0.0",
  org.mockito,
  org.junit
