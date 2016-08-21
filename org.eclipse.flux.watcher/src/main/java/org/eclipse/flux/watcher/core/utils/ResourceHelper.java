@@ -45,7 +45,7 @@ public final class ResourceHelper {
      */
     public static String sha1(byte[] bytes) {
         final byte[] digest = messageDigest.digest(checkNotNull(bytes));
-        return DatatypeConverter.printHexBinary(digest);
+        return DatatypeConverter.printHexBinary(digest).toLowerCase();
     }
 
     /**

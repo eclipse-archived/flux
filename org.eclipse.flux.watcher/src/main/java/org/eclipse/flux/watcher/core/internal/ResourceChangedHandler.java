@@ -34,7 +34,6 @@ import static org.eclipse.flux.watcher.core.FluxMessageType.RESOURCE_CHANGED;
  *
  * @author Kevin Pollet
  */
-@Singleton
 @FluxMessageTypes(RESOURCE_CHANGED)
 public final class ResourceChangedHandler implements FluxMessageHandler {
     @Override

@@ -28,18 +28,18 @@ public class RepositoryModule extends AbstractModule {
 
         // message handler bindings
         final Multibinder<FluxMessageHandler> messageHandlers = Multibinder.newSetBinder(binder(), FluxMessageHandler.class);
-        messageHandlers.addBinding().to(GetResourceRequestHandler.class);
-        messageHandlers.addBinding().to(GetResourceResponseHandler.class);
-        messageHandlers.addBinding().to(GetProjectRequestHandler.class);
-        messageHandlers.addBinding().to(GetProjectResponseHandler.class);
-        messageHandlers.addBinding().to(ResourceCreatedHandler.class);
-        messageHandlers.addBinding().to(ResourceDeletedHandler.class);
-        messageHandlers.addBinding().to(ResourceChangedHandler.class);
+        //messageHandlers.addBinding().to(GetResourceRequestHandler.class);
+        //messageHandlers.addBinding().to(GetResourceResponseHandler.class);
+        //messageHandlers.addBinding().to(GetProjectRequestHandler.class);
+        //messageHandlers.addBinding().to(GetProjectResponseHandler.class);
+        //messageHandlers.addBinding().to(ResourceCreatedHandler.class);
+        //messageHandlers.addBinding().to(ResourceDeletedHandler.class);
+        //messageHandlers.addBinding().to(ResourceChangedHandler.class);
 
         // repository listener bindings
         final Multibinder<RepositoryListener> repositoryListeners = Multibinder.newSetBinder(binder(), RepositoryListener.class);
-        repositoryListeners.addBinding().to(ProjectResourceCreatedListener.class);
-        repositoryListeners.addBinding().to(ProjectResourceDeletedListener.class);
-        repositoryListeners.addBinding().to(ProjectResourceModifiedListener.class);
+        //repositoryListeners.addBinding().to(ProjectResourceCreatedListener.class);
+        //repositoryListeners.addBinding().to(ProjectResourceDeletedListener.class);
+        //repositoryListeners.addBinding().to(ProjectResourceModifiedListener.class);
     }
 }

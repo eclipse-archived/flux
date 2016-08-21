@@ -32,7 +32,6 @@ import static org.eclipse.flux.watcher.core.FluxMessageType.RESOURCE_DELETED;
  *
  * @author Kevin Pollet
  */
-@Singleton
 @FluxMessageTypes(RESOURCE_DELETED)
 public final class ResourceDeletedHandler implements FluxMessageHandler {
     @Override

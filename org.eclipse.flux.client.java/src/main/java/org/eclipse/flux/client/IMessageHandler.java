@@ -29,6 +29,7 @@ public interface IMessageHandler {
     public static final String LIVE_RESOURCE_STARTED = "liveResourceStarted";
     public static final String LIVE_RESOURCE_STARTED_RESPONSE = "liveResourceStartedResponse";
     public static final String LIVE_RESOURCE_CHANGED = "liveResourceChanged";
+    public static final String METADATA_CHANGED = "metadataChanged";
     public static final String PROJECT_CONNECTED = "projectConnected";
     public static final String PROJECT_DISCONNECTED = "projectDisconnected";
     public static final String RESOURCE_CHANGED = "resourceChanged";

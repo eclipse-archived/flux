@@ -1,0 +1,71 @@
+package org.eclipse.flux.core.handlers;
+
+import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
+import org.eclipse.flux.watcher.core.Repository;
+import org.eclipse.flux.watcher.core.Resource;
+import org.eclipse.flux.watcher.core.spi.Project;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+public class ProjectResponseHandler extends AbstractFluxMessageHandler {
+    private int callbackID;
+    
+    public ProjectResponseHandler(MessageConnector messageConnector, Repository repository, int callbackID) {
+        super(messageConnector, repository, GET_PROJECT_RESPONSE);
+        this.callbackID = callbackID;
+    }
+
+    @Override
+    protected void onMessage(String type, JSONObject message) throws Exception {
+        JSONArray files = message.getJSONArray(MessageConstants.FILES);
+        JSONArray deleted = message.getJSONArray(MessageConstants.DELETED);
+        Project project = repository.getProject(message.getString(MessageConstants.PROJECT_NAME));
+        if(project == null)
+            return;
+        for(int i = 0; i < files.length(); i++){
+            JSONObject resource = files.getJSONObject(i);
+            String path = resource.getString(MessageConstants.PATH);
+            long timestamp = resource.getLong(MessageConstants.TIMESTAMP);
+            String hash = resource.optString(MessageConstants.HASH);
+            Resource localResource = project.getResource(path);
+            switch(getResourceType(resource)){
+                case FILE:
+                    if(localResource == null || IsResourcesNotEquals(localResource, hash, timestamp)){
+                        JSONObject content = new JSONObject();
+                        content.put(MessageConstants.CALLBACK_ID, callbackID);
+                        content.put(MessageConstants.PROJECT, project.id());
+                        content.put(MessageConstants.RESOURCE, path);
+                        content.put(MessageConstants.TIMESTAMP, timestamp);
+                        content.put(MessageConstants.HASH, hash);
+                        messageConnector.send(GET_RESOURCE_REQUEST, content);
+                    }
+                    break;
+                case FOLDER:
+                    if(localResource == null)
+                        project.createResource(Resource.newFolder(path, timestamp));
+                    break;
+                default:
+                    break;
+            }
+        }
+        if(deleted != null){
+            for(int i = 0; i < deleted.length(); i++){
+                JSONObject resource = deleted.getJSONObject(i);
+                String path = resource.getString(MessageConstants.PATH);
+                long timestamp = resource.getLong(MessageConstants.TIMESTAMP);
+                Resource localResource = project.getResource(path);
+                if(localResource != null && localResource.timestamp() < timestamp)
+                    project.deleteResource(localResource);
+            }
+        }
+        
+    }
+
+    @Override
+    public boolean canHandle(String messageType, JSONObject message) {
+        return super.canHandle(messageType, message) && message.has("callback_id")
+                && message.optInt("callback_id") == this.callbackID;
+    }
+
+}

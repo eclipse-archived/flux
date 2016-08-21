@@ -263,9 +263,9 @@ public class JDKProjectWatchService extends Thread {
 
     private long getLastModifiedTime(Path resourcePath) {
         try {
-            return Files.getLastModifiedTime(resourcePath).toMillis() / 1000 * 1000;
+            return Files.getLastModifiedTime(resourcePath).toMillis();
         } catch (IOException | NullPointerException e) {
-            return System.currentTimeMillis() / 1000 * 1000;
+            return System.currentTimeMillis();
         }
     }
 

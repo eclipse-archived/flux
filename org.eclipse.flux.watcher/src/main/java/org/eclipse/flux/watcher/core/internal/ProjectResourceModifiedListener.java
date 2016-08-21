@@ -38,7 +38,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * @author Kevin Pollet
  */
 @Singleton
-@RepositoryEventTypes(PROJECT_RESOURCE_MODIFIED)
+//@RepositoryEventTypes(PROJECT_RESOURCE_MODIFIED)
 public final class ProjectResourceModifiedListener implements RepositoryListener {
     private final FluxMessageBus messageBus;
 

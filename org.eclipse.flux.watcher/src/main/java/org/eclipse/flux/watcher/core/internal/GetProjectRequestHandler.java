@@ -39,7 +39,6 @@ import static org.eclipse.flux.watcher.core.FluxMessageType.GET_PROJECT_RESPONSE
  *
  * @author Kevin Pollet
  */
-@Singleton
 @FluxMessageTypes(GET_PROJECT_REQUEST)
 public final class GetProjectRequestHandler implements FluxMessageHandler {
     @Override

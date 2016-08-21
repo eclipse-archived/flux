@@ -39,7 +39,6 @@ import static org.eclipse.flux.watcher.core.Resource.ResourceType.FILE;
  *
  * @author Kevin Pollet
  */
-@Singleton
 @FluxMessageTypes(GET_RESOURCE_REQUEST)
 public final class GetResourceRequestHandler implements FluxMessageHandler {
     @Override

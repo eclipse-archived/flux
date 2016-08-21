@@ -113,7 +113,7 @@ public class Repository {
             project.setSynchronized(true);
             projects.add(project);
 
-            try {
+            /*try {
 
                 JSONObject content = new JSONObject().put(PROJECT, projectId);
                 messageBus.sendMessages(new FluxMessage(PROJECT_CONNECTED, content));
@@ -123,7 +123,7 @@ public class Repository {
 
             } catch (JSONException e) {
                 throw new RuntimeException(e);
-            }
+            }*/
         }
         return project;
     }
@@ -141,14 +141,14 @@ public class Repository {
             projects.remove(project);
             project.setSynchronized(false);
 
-            try {
+            /*try {
 
                 final JSONObject content = new JSONObject().put(PROJECT, projectId);
                 messageBus.sendMessages(new FluxMessage(PROJECT_DISCONNECTED, content));
 
             } catch (JSONException e) {
                 throw new RuntimeException(e);
-            }
+            }*/
         }
         return project;
     }

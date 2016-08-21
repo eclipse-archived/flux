@@ -38,7 +38,6 @@ import static org.eclipse.flux.watcher.core.Resource.ResourceType.FOLDER;
  *
  * @author Kevin Pollet
  */
-@Singleton
 @FluxMessageTypes(RESOURCE_CREATED)
 public final class ResourceCreatedHandler implements FluxMessageHandler {
     @Override

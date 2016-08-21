@@ -102,6 +102,8 @@ public class RepositoryEventBus {
                     @Override
                     public boolean apply(RepositoryListener listener) {
                         final RepositoryEventTypes repositoryEventTypes = listener.getClass().getAnnotation(RepositoryEventTypes.class);
+                        if(repositoryEventTypes == null)
+                            return true;
                         return asList(repositoryEventTypes.value()).contains(event.type());
                     }
                 }));;
