@@ -31,6 +31,7 @@ import org.eclipse.flux.core.handlers.ResourceDeletedHandler;
 import org.eclipse.flux.core.handlers.ResourceRequestHandler;
 import org.eclipse.flux.core.handlers.ResourceResponseHandler;
 import org.eclipse.flux.core.util.JSONUtils;
+import org.eclipse.flux.core.util.Utils;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.watcher.core.Repository;
@@ -253,8 +254,8 @@ public class RepositoryAdapter implements IRepositoryCallback{
 	}
 	
     @Override
-    public void notifyResourceChanged(Resource resource) {
-        // TODO Auto-generated method stub
+    public void notifyResourceChanged(Resource resource, Project project) {
+        notifyResourceChanged(Utils.getResourceByPath(project.id(), resource.path()));
         
     }
 

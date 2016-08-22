@@ -6,7 +6,7 @@ import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONObject;
-//Add listener for notifyResourceChanged
+
 public class ResourceChangedHandler extends AbstractMsgHandler {
     private int callbackId;
     
@@ -36,7 +36,8 @@ public class ResourceChangedHandler extends AbstractMsgHandler {
             content.put(MessageConstants.RESOURCE, resourcePath);
             content.put(MessageConstants.TIMESTAMP, resourceTimestamp);
             content.put(MessageConstants.HASH, resourceHash);
-            repositoryCallback.sendMessage(GET_RESOURCE_REQUEST, content);        
+            repositoryCallback.sendMessage(GET_RESOURCE_REQUEST, content);
+            repositoryCallback.notifyResourceChanged(localResource, project);
         }
     }
 }

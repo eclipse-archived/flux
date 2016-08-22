@@ -1,12 +1,9 @@
 package org.eclipse.flux.core.handlers;
 
-import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.core.IRepositoryCallback;
+import org.eclipse.flux.core.util.Utils;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.eclipse.flux.watcher.core.spi.Project;
@@ -48,7 +45,7 @@ public class ResourceResponseHandler extends AbstractMsgHandler {
         }
 
         if(isResourceStore){
-            updateEclipseEditor(projectName, resourcePath);
+            Utils.getResourceByPath(projectName, resourcePath).refreshLocal(IResource.DEPTH_ZERO, null);
             JSONObject content = new JSONObject();
             content.put(MessageConstants.USERNAME, username);
             content.put(MessageConstants.PROJECT_NAME, projectName);
@@ -57,13 +54,9 @@ public class ResourceResponseHandler extends AbstractMsgHandler {
             content.put(MessageConstants.HASH, resourceHash);
             content.put(MessageConstants.TYPE, "file");
             repositoryCallback.sendMessage(RESOURCE_STORED, content);
+            if(localResource != null)
+                repositoryCallback.notifyResourceChanged(localResource, project);
         }
-    }
-
-    private void updateEclipseEditor(String projectName, String resourcePath) throws CoreException {
-        Path path = new Path(projectName + "/" + resourcePath);
-        IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(path);
-        file.refreshLocal(IResource.DEPTH_ZERO, null);
     }
     
     @Override

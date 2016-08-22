@@ -7,7 +7,7 @@ import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONObject;
 
 public interface IRepositoryCallback {
-    void notifyResourceChanged(Resource resource);
+    void notifyResourceChanged(Resource resource, Project project);
     void sendMessage(String messageType, JSONObject content) throws Exception;
     Project getProject(String projectName);
     Set<Project> getSynchronizedProjects();
