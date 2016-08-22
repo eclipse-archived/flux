@@ -19,7 +19,7 @@ public class ProjectResponseHandler extends AbstractMsgHandler {
     protected void onMessage(String type, JSONObject message) throws Exception {
         JSONArray files = message.getJSONArray(MessageConstants.FILES);
         JSONArray deleted = message.getJSONArray(MessageConstants.DELETED);
-        Project project = repositoryCallback.getProject(message.getString(MessageConstants.PROJECT_NAME));
+        Project project = repositoryCallback.getWatcherProject(message.getString(MessageConstants.PROJECT_NAME));
         if(project == null)
             return;
         for(int i = 0; i < files.length(); i++){

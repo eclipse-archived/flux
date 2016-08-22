@@ -10,19 +10,18 @@
 *******************************************************************************/
 package org.eclipse.flux.core;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.eclipse.flux.client.IMessageHandler;
+import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.core.handlers.LiveResourceChangedHandler;
 import org.eclipse.flux.core.handlers.LiveResourceRequestHandler;
 import org.eclipse.flux.core.handlers.LiveResourceStartedHandler;
 import org.eclipse.flux.core.handlers.LiveResourceStartedResponseHandler;
-import org.eclipse.flux.watcher.core.FluxMessage;
-import org.eclipse.flux.watcher.core.FluxMessageBus;
-import org.eclipse.flux.watcher.core.FluxMessageType;
-import org.eclipse.flux.watcher.core.Repository;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -32,18 +31,19 @@ import org.json.JSONObject;
  */
 public class LiveEditCoordinator {
 	
+    private MessageConnector messagingConnector;
 	private Collection<ILiveEditConnector> liveEditConnectors;
+    private Collection<IMessageHandler> messageHandlers;
 	
-	private FluxMessageBus messageBus;
-	
-	public LiveEditCoordinator(Repository repository) {
-	    this.messageBus = repository.getMessageBus();
+	public LiveEditCoordinator(MessageConnector messageConnector) {
+	    this.messagingConnector = messageConnector;
 		this.liveEditConnectors = new CopyOnWriteArrayList<>();
+	    this.messageHandlers = new ArrayList<IMessageHandler>(4);
 		
-		messageBus.addMessageHandler(new LiveResourceStartedHandler(liveEditConnectors));
-		messageBus.addMessageHandler(new LiveResourceStartedResponseHandler(liveEditConnectors));
-		messageBus.addMessageHandler(new LiveResourceChangedHandler(liveEditConnectors));
-		messageBus.addMessageHandler(new LiveResourceRequestHandler(liveEditConnectors));
+		addMessageHandler(new LiveResourceStartedHandler(liveEditConnectors));
+		addMessageHandler(new LiveResourceStartedResponseHandler(liveEditConnectors));
+		addMessageHandler(new LiveResourceChangedHandler(liveEditConnectors));
+		addMessageHandler(new LiveResourceRequestHandler(liveEditConnectors));
 	}
 	
 	public void addLiveEditConnector(ILiveEditConnector connector) {
@@ -63,8 +63,7 @@ public class LiveEditCoordinator {
 			message.put("offset", offset);
 			message.put("removedCharCount", removedCharactersCount);
 			message.put("addedCharacters", newText != null ? newText : "");
-
-	        this.messageBus.sendMessages(new FluxMessage(FluxMessageType.LIVE_RESOURCE_CHANGED, message));
+            this.messagingConnector.send(IMessageHandler.LIVE_RESOURCE_CHANGED, message);           
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -88,8 +87,7 @@ public class LiveEditCoordinator {
 			message.put("resource", resourcePath);
 			message.put("hash", hash);
 			message.put("timestamp", timestamp);
-			
-			this.messageBus.sendMessages(new FluxMessage(FluxMessageType.LIVE_RESOURCE_STARTED, message));
+            this.messagingConnector.send(IMessageHandler.LIVE_RESOURCE_STARTED, message);			
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -114,8 +112,7 @@ public class LiveEditCoordinator {
 			message.put("savePointTimestamp", savePointTimestamp);
 			message.put("savePointHash", savePointHash);
 			message.put("liveContent", content);
-	
-	        this.messageBus.sendMessages(new FluxMessage(FluxMessageType.LIVE_RESOURCE_STARTED_RESPONSE, message));
+			this.messagingConnector.send(IMessageHandler.LIVE_RESOURCE_STARTED_RESPONSE, message);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -145,8 +142,7 @@ public class LiveEditCoordinator {
 				liveEditUnits.put(entry.getKey(), new JSONArray(entry.getValue()));
 			}
 			message.put("liveEditUnits", liveEditUnits);
-
-	        this.messageBus.sendMessages(new FluxMessage(FluxMessageType.GET_LIVE_RESOURCE_REQUEST, message));
+            this.messagingConnector.send(IMessageHandler.GET_LIVE_RESOURCE_REQUEST, message);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -168,7 +164,14 @@ public class LiveEditCoordinator {
 	}
 	
 	public void dispose() {
-
+        for (IMessageHandler messageHanlder : messageHandlers) {
+            messagingConnector.removeMessageHandler(messageHanlder);
+        }
 	}
+	
+	private void addMessageHandler(IMessageHandler messageHandler){
+        this.messagingConnector.addMessageHandler(messageHandler);
+        this.messageHandlers.add(messageHandler);
+    }
 
 }

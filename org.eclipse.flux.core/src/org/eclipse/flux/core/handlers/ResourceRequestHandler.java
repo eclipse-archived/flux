@@ -14,7 +14,7 @@ public class ResourceRequestHandler extends AbstractMsgHandler {
 
     @Override
     protected void onMessage(String type, JSONObject message) throws Exception {
-        Project project = repositoryCallback.getProject(message.getString(MessageConstants.PROJECT_NAME));
+        Project project = repositoryCallback.getWatcherProject(message.getString(MessageConstants.PROJECT_NAME));
         if (project == null)
             return;
         Resource resource = project.getResource(message.getString(MessageConstants.RESOURCE));

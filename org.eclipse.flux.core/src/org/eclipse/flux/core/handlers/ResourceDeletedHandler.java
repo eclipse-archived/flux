@@ -17,7 +17,7 @@ public class ResourceDeletedHandler extends AbstractMsgHandler {
         String projectName = message.getString(MessageConstants.PROJECT_NAME);
         String resourcePath = message.getString(MessageConstants.RESOURCE);
         long resourceTimestamp = message.getLong(MessageConstants.TIMESTAMP);
-        Project project = repositoryCallback.getProject(projectName);
+        Project project = repositoryCallback.getWatcherProject(projectName);
         if(project == null)
             return;
         Resource localResource = project.getResource(resourcePath);

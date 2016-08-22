@@ -125,7 +125,11 @@ public class RepositoryAdapter implements IRepositoryCallback{
 
 	public ConnectedProject getProject(IProject project) {
 		return new ConnectedProject(repository.getProject(project.getName()));
-	}       
+	}
+	
+	public ConnectedProject getProject(String projectName) {
+        return new ConnectedProject(repository.getProject(projectName));
+    }
 
 	public boolean isConnected(IProject project) {
 		return isConnected(project.getName());
@@ -265,7 +269,7 @@ public class RepositoryAdapter implements IRepositoryCallback{
     }
 
     @Override
-    public Project getProject(String projectName) {
+    public Project getWatcherProject(String projectName) {
         return repository.getProject(projectName);
     }
 

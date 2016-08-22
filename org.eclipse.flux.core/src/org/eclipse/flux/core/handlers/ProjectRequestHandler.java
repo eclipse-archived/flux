@@ -16,7 +16,7 @@ public class ProjectRequestHandler extends AbstractMsgHandler {
     @Override
     protected void onMessage(String type, JSONObject message) throws Exception {
         String projectName = message.getString(MessageConstants.PROJECT_NAME);
-        Project project = repositoryCallback.getProject(projectName);
+        Project project = repositoryCallback.getWatcherProject(projectName);
         if(project == null)
             return;
         JSONArray files = new JSONArray();

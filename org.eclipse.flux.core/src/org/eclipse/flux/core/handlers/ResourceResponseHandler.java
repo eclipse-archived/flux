@@ -26,7 +26,7 @@ public class ResourceResponseHandler extends AbstractMsgHandler {
         String resourceContent = message.getString(MessageConstants.CONTENT);
         String username = message.getString(MessageConstants.USERNAME);
         
-        Project project = repositoryCallback.getProject(projectName);
+        Project project = repositoryCallback.getWatcherProject(projectName);
         if(project == null)
             return;
         boolean isResourceStore = false;

@@ -22,7 +22,7 @@ public class ResourceChangedHandler extends AbstractMsgHandler {
         String resourcePath = message.getString(MessageConstants.RESOURCE);
         long resourceTimestamp = message.getLong(MessageConstants.TIMESTAMP);
         String resourceHash = message.getString(MessageConstants.HASH);
-        Project project = repositoryCallback.getProject(projectName);
+        Project project = repositoryCallback.getWatcherProject(projectName);
         if(project == null) 
             return;
         Resource localResource = project.getResource(resourcePath);

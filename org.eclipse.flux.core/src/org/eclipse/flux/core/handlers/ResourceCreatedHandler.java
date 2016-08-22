@@ -21,7 +21,7 @@ public class ResourceCreatedHandler extends AbstractMsgHandler {
         long resourceTimestamp = message.getLong(MessageConstants.TIMESTAMP);
         String resourceHash = message.getString(MessageConstants.HASH);
         String username = message.getString(MessageConstants.USERNAME);
-        Project project = repositoryCallback.getProject(projectName);
+        Project project = repositoryCallback.getWatcherProject(projectName);
         if(project == null || project.hasResource(resourcePath))
             return;
         JSONObject content = new JSONObject();

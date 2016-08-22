@@ -18,7 +18,7 @@ public class MetadataRequestHandler extends AbstractMsgHandler {
     protected void onMessage(String type, JSONObject message) throws Exception {
         String projectName = message.getString("project");
         String resourcePath = message.getString("resource");
-        Project project = repositoryCallback.getProject(projectName);
+        Project project = repositoryCallback.getWatcherProject(projectName);
         if(project != null){
             Resource resource = project.getResource(resourcePath);
             if(resource != null){
