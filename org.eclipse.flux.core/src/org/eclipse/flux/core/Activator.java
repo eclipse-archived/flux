@@ -37,7 +37,6 @@ import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.util.ExceptionUtil;
-import org.eclipse.flux.watcher.core.Credentials;
 import org.eclipse.flux.watcher.core.Repository;
 import org.eclipse.flux.watcher.core.RepositoryModule;
 import org.eclipse.flux.watcher.fs.JDKProjectModule;
@@ -119,7 +118,6 @@ public class Activator extends Plugin {
 			
 			Injector injector = Guice.createInjector(new RepositoryModule(), new JDKProjectModule());
 			fluxRepository = injector.getInstance(Repository.class);
-			fluxRepository.addRemote(new URL(host), new Credentials(login, token));
 			//Connecting to channel done asynchronously. To avoid blocking plugin state initialization.
 			FluxClient.DEFAULT_INSTANCE.getExecutor().execute(new Runnable() {
 				@Override
