@@ -1,21 +1,18 @@
 package org.eclipse.flux.core.handlers;
 
-import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.MessageHandler;
-import org.eclipse.flux.watcher.core.Repository;
+import org.eclipse.flux.core.IRepositoryCallback;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.json.JSONObject;
 
-public abstract class AbstractFluxMessageHandler extends MessageHandler {
-    protected Repository repository;
-    protected MessageConnector messageConnector;
+public abstract class AbstractMsgHandler extends MessageHandler {
+    protected IRepositoryCallback repositoryCallback;
     
-    public AbstractFluxMessageHandler(MessageConnector messageConnector, Repository repository, String type) {
+    public AbstractMsgHandler(IRepositoryCallback repositoryCallback, String type) {
         super(type);
-        this.repository = repository;
-        this.messageConnector = messageConnector;
+        this.repositoryCallback = repositoryCallback;
     }
 
     @Override

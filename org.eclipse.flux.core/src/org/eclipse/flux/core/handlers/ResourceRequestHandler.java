@@ -1,21 +1,20 @@
 package org.eclipse.flux.core.handlers;
 
-import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.watcher.core.Repository;
+import org.eclipse.flux.core.IRepositoryCallback;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONObject;
 
-public class ResourceRequestHandler extends AbstractFluxMessageHandler {
-    public ResourceRequestHandler(MessageConnector messageConnector, Repository repository) {
-        super(messageConnector, repository, GET_RESOURCE_REQUEST);
+public class ResourceRequestHandler extends AbstractMsgHandler {
+    public ResourceRequestHandler(IRepositoryCallback repositoryCallback) {
+        super(repositoryCallback, GET_RESOURCE_REQUEST);
     }
 
     @Override
     protected void onMessage(String type, JSONObject message) throws Exception {
-        Project project = repository.getProject(message.getString(MessageConstants.PROJECT_NAME));
+        Project project = repositoryCallback.getProject(message.getString(MessageConstants.PROJECT_NAME));
         if (project == null)
             return;
         Resource resource = project.getResource(message.getString(MessageConstants.RESOURCE));
@@ -29,6 +28,6 @@ public class ResourceRequestHandler extends AbstractFluxMessageHandler {
                 return;
             message.put(MessageConstants.CONTENT, new String(resource.content()));
         }
-        messageConnector.send(GET_RESOURCE_RESPONSE, message);
+        repositoryCallback.sendMessage(GET_RESOURCE_RESPONSE, message);
     }
 }

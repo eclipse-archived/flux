@@ -5,19 +5,18 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.watcher.core.Repository;
+import org.eclipse.flux.core.IRepositoryCallback;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONObject;
 
-public class ResourceResponseHandler extends AbstractFluxMessageHandler {
+public class ResourceResponseHandler extends AbstractMsgHandler {
     private int callbackID;
 
-    public ResourceResponseHandler(MessageConnector messageConnector, Repository repository, int callbackID) {
-        super(messageConnector, repository, GET_RESOURCE_RESPONSE);
+    public ResourceResponseHandler(IRepositoryCallback repositoryCallback, int callbackID) {
+        super(repositoryCallback, GET_RESOURCE_RESPONSE);
         this.callbackID = callbackID;
     }
 
@@ -30,7 +29,7 @@ public class ResourceResponseHandler extends AbstractFluxMessageHandler {
         String resourceContent = message.getString(MessageConstants.CONTENT);
         String username = message.getString(MessageConstants.USERNAME);
         
-        Project project = repository.getProject(projectName);
+        Project project = repositoryCallback.getProject(projectName);
         if(project == null)
             return;
         boolean isResourceStore = false;
@@ -57,7 +56,7 @@ public class ResourceResponseHandler extends AbstractFluxMessageHandler {
             content.put(MessageConstants.TIMESTAMP, resourceTimestamp);
             content.put(MessageConstants.HASH, resourceHash);
             content.put(MessageConstants.TYPE, "file");
-            messageConnector.send(RESOURCE_STORED, content);
+            repositoryCallback.sendMessage(RESOURCE_STORED, content);
         }
     }
 

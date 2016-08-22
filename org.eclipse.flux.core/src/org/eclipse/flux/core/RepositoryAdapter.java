@@ -45,7 +45,7 @@ import org.json.JSONObject;
 /**
  * @author Martin Lippert
  */
-public class RepositoryAdapter {
+public class RepositoryAdapter implements IRepositoryCallback{
     private static int GET_PROJECT_CALLBACK = "Repository - getProjectCallback".hashCode();
     private static int GET_RESOURCE_CALLBACK = "Repository - getResourceCallback".hashCode();
 
@@ -65,42 +65,16 @@ public class RepositoryAdapter {
 		this.username = user;
 		this.messageHandlers = new ArrayList<>();
 		this.repositoryListeners = new ConcurrentLinkedDeque<>();
-				
-		IMessageHandler metadataRequestHandler = new MetadataRequestHandler(messageConnector, repository);
-		this.messageConnector.addMessageHandler(metadataRequestHandler);
-		this.messageHandlers.add(metadataRequestHandler);
 		
-		IMessageHandler projectsRequestHandler = new ProjectsResponseHandler(messageConnector, repository);
-        this.messageConnector.addMessageHandler(projectsRequestHandler);
-        this.messageHandlers.add(projectsRequestHandler);
-        
-        IMessageHandler projectRequestHandler = new ProjectRequestHandler(messageConnector, repository);
-        this.messageConnector.addMessageHandler(projectRequestHandler);
-        this.messageHandlers.add(projectRequestHandler);
-        
-        IMessageHandler projectResponseHandler = new ProjectResponseHandler(messageConnector, repository, GET_PROJECT_CALLBACK);
-        this.messageConnector.addMessageHandler(projectResponseHandler);
-        this.messageHandlers.add(projectResponseHandler);
-        
-        IMessageHandler resourceRequestHandler = new ResourceRequestHandler(messageConnector, repository);
-        this.messageConnector.addMessageHandler(resourceRequestHandler);
-        this.messageHandlers.add(resourceRequestHandler);
-        
-        IMessageHandler resourceResponseHandler = new ResourceResponseHandler(messageConnector, repository, GET_RESOURCE_CALLBACK);
-        this.messageConnector.addMessageHandler(resourceResponseHandler);
-        this.messageHandlers.add(resourceResponseHandler);
-        
-        IMessageHandler resourceCreatedHandler = new ResourceCreatedHandler(messageConnector, repository, GET_RESOURCE_CALLBACK);
-        this.messageConnector.addMessageHandler(resourceCreatedHandler);
-        this.messageHandlers.add(resourceCreatedHandler);
-        
-        IMessageHandler resourceChangedHandler = new ResourceChangedHandler(messageConnector, repository, GET_RESOURCE_CALLBACK);
-        this.messageConnector.addMessageHandler(resourceChangedHandler);
-        this.messageHandlers.add(resourceChangedHandler);
-        
-        IMessageHandler resourceDeletedHandler = new ResourceDeletedHandler(messageConnector, repository);
-        this.messageConnector.addMessageHandler(resourceDeletedHandler);
-        this.messageHandlers.add(resourceDeletedHandler);
+		addMessageHandler(new MetadataRequestHandler(this));
+		addMessageHandler(new ProjectsResponseHandler(this));
+		addMessageHandler(new ProjectRequestHandler(this));
+		addMessageHandler(new ProjectResponseHandler(this, GET_PROJECT_CALLBACK));
+		addMessageHandler(new ResourceRequestHandler(this));
+		addMessageHandler(new ResourceResponseHandler(this, GET_RESOURCE_CALLBACK));
+		addMessageHandler(new ResourceCreatedHandler(this, GET_RESOURCE_CALLBACK));
+		addMessageHandler(new ResourceChangedHandler(this, GET_RESOURCE_CALLBACK));
+		addMessageHandler(new ResourceDeletedHandler(this));
         
         this.repositoryEventBus.addRepositoryListener(new RepositoryListener() {
             @Override
@@ -149,13 +123,8 @@ public class RepositoryAdapter {
 	}
 
 	public ConnectedProject getProject(IProject project) {
-		return getProject(project.getName());
-	}
-	
-	public ConnectedProject getProject(String projectName) {
-		return new ConnectedProject(repository.getProject(projectName));
-	}
-        
+		return new ConnectedProject(repository.getProject(project.getName()));
+	}       
 
 	public boolean isConnected(IProject project) {
 		return isConnected(project.getName());
@@ -277,5 +246,32 @@ public class RepositoryAdapter {
 	        messageConnector.removeMessageHandler(messageHandler);
 	    }
 	}
+
+	private void addMessageHandler(IMessageHandler messageHandler){
+        this.messageConnector.addMessageHandler(messageHandler);
+        this.messageHandlers.add(messageHandler);
+	}
+	
+    @Override
+    public void notifyResourceChanged(Resource resource) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void sendMessage(String messageType, JSONObject content) throws Exception {
+        messageConnector.send(messageType, content);
+    }
+
+    @Override
+    public Project getProject(String projectName) {
+        return repository.getProject(projectName);
+    }
+
+    @Override
+    public Set<Project> getSynchronizedProjects() {
+        return repository.getSynchronizedProjects();
+    }
+
 
 }

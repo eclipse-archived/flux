@@ -1,17 +1,16 @@
 package org.eclipse.flux.core.handlers;
 
-import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.watcher.core.Repository;
+import org.eclipse.flux.core.IRepositoryCallback;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONObject;
 
-public class ResourceCreatedHandler extends AbstractFluxMessageHandler {
+public class ResourceCreatedHandler extends AbstractMsgHandler {
     private int callbackID;
 
-    public ResourceCreatedHandler(MessageConnector messageConnector, Repository repository, int callbackID) {
-        super(messageConnector, repository, RESOURCE_CREATED);
+    public ResourceCreatedHandler(IRepositoryCallback repositoryCallback, int callbackID) {
+        super(repositoryCallback, RESOURCE_CREATED);
         this.callbackID = callbackID;
     }
 
@@ -22,7 +21,7 @@ public class ResourceCreatedHandler extends AbstractFluxMessageHandler {
         long resourceTimestamp = message.getLong(MessageConstants.TIMESTAMP);
         String resourceHash = message.getString(MessageConstants.HASH);
         String username = message.getString(MessageConstants.USERNAME);
-        Project project = repository.getProject(projectName);
+        Project project = repositoryCallback.getProject(projectName);
         if(project == null || project.hasResource(resourcePath))
             return;
         JSONObject content = new JSONObject();
@@ -35,11 +34,11 @@ public class ResourceCreatedHandler extends AbstractFluxMessageHandler {
         switch(getResourceType(message)){
             case FILE:
                 content.put(MessageConstants.CALLBACK_ID, callbackID);
-                messageConnector.send(GET_RESOURCE_REQUEST, content);
+                repositoryCallback.sendMessage(GET_RESOURCE_REQUEST, content);
                 break;
             case FOLDER:
                 project.createResource(Resource.newFolder(resourcePath, resourceTimestamp));
-                messageConnector.send(RESOURCE_STORED, content);
+                repositoryCallback.sendMessage(RESOURCE_STORED, content);
                 break;
             default:
                 break;

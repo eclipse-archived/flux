@@ -1,18 +1,17 @@
 package org.eclipse.flux.core.handlers;
 
-import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.watcher.core.Repository;
+import org.eclipse.flux.core.IRepositoryCallback;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONObject;
 //Add listener for notifyResourceChanged
-public class ResourceChangedHandler extends AbstractFluxMessageHandler {
+public class ResourceChangedHandler extends AbstractMsgHandler {
     private int callbackId;
     
-    public ResourceChangedHandler(MessageConnector messageConnector, Repository repository, int callbackID) {
-        super(messageConnector, repository, RESOURCE_CHANGED);
+    public ResourceChangedHandler(IRepositoryCallback repositoryCallback, int callbackID) {
+        super(repositoryCallback, RESOURCE_CHANGED);
         this.callbackId = callbackID;
     }
 
@@ -23,7 +22,7 @@ public class ResourceChangedHandler extends AbstractFluxMessageHandler {
         String resourcePath = message.getString(MessageConstants.RESOURCE);
         long resourceTimestamp = message.getLong(MessageConstants.TIMESTAMP);
         String resourceHash = message.getString(MessageConstants.HASH);
-        Project project = repository.getProject(projectName);
+        Project project = repositoryCallback.getProject(projectName);
         if(project == null) 
             return;
         Resource localResource = project.getResource(resourcePath);
@@ -37,7 +36,7 @@ public class ResourceChangedHandler extends AbstractFluxMessageHandler {
             content.put(MessageConstants.RESOURCE, resourcePath);
             content.put(MessageConstants.TIMESTAMP, resourceTimestamp);
             content.put(MessageConstants.HASH, resourceHash);
-            messageConnector.send(GET_RESOURCE_REQUEST, content);        
+            repositoryCallback.sendMessage(GET_RESOURCE_REQUEST, content);        
         }
     }
 }

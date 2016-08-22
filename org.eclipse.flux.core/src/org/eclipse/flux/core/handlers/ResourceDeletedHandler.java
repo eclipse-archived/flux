@@ -1,16 +1,15 @@
 package org.eclipse.flux.core.handlers;
 
-import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.watcher.core.Repository;
+import org.eclipse.flux.core.IRepositoryCallback;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONObject;
 
-public class ResourceDeletedHandler extends AbstractFluxMessageHandler {
+public class ResourceDeletedHandler extends AbstractMsgHandler {
 
-    public ResourceDeletedHandler(MessageConnector messageConnector, Repository repository) {
-        super(messageConnector, repository, RESOURCE_DELETED);
+    public ResourceDeletedHandler(IRepositoryCallback repositoryCallback) {
+        super(repositoryCallback, RESOURCE_DELETED);
     }
 
     @Override
@@ -18,7 +17,7 @@ public class ResourceDeletedHandler extends AbstractFluxMessageHandler {
         String projectName = message.getString(MessageConstants.PROJECT_NAME);
         String resourcePath = message.getString(MessageConstants.RESOURCE);
         long resourceTimestamp = message.getLong(MessageConstants.TIMESTAMP);
-        Project project = repository.getProject(projectName);
+        Project project = repositoryCallback.getProject(projectName);
         if(project == null)
             return;
         Resource localResource = project.getResource(resourcePath);

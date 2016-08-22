@@ -1,18 +1,17 @@
 package org.eclipse.flux.core.handlers;
 
-import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.watcher.core.Repository;
+import org.eclipse.flux.core.IRepositoryCallback;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class ProjectResponseHandler extends AbstractFluxMessageHandler {
+public class ProjectResponseHandler extends AbstractMsgHandler {
     private int callbackID;
     
-    public ProjectResponseHandler(MessageConnector messageConnector, Repository repository, int callbackID) {
-        super(messageConnector, repository, GET_PROJECT_RESPONSE);
+    public ProjectResponseHandler(IRepositoryCallback repositoryCallback, int callbackID) {
+        super(repositoryCallback, GET_PROJECT_RESPONSE);
         this.callbackID = callbackID;
     }
 
@@ -20,7 +19,7 @@ public class ProjectResponseHandler extends AbstractFluxMessageHandler {
     protected void onMessage(String type, JSONObject message) throws Exception {
         JSONArray files = message.getJSONArray(MessageConstants.FILES);
         JSONArray deleted = message.getJSONArray(MessageConstants.DELETED);
-        Project project = repository.getProject(message.getString(MessageConstants.PROJECT_NAME));
+        Project project = repositoryCallback.getProject(message.getString(MessageConstants.PROJECT_NAME));
         if(project == null)
             return;
         for(int i = 0; i < files.length(); i++){
@@ -38,7 +37,7 @@ public class ProjectResponseHandler extends AbstractFluxMessageHandler {
                         content.put(MessageConstants.RESOURCE, path);
                         content.put(MessageConstants.TIMESTAMP, timestamp);
                         content.put(MessageConstants.HASH, hash);
-                        messageConnector.send(GET_RESOURCE_REQUEST, content);
+                        repositoryCallback.sendMessage(GET_RESOURCE_REQUEST, content);
                     }
                     break;
                 case FOLDER:
