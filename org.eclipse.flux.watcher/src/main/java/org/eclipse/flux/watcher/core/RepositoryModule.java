@@ -10,7 +10,6 @@
  *******************************************************************************/
 package org.eclipse.flux.watcher.core;
 
-import org.eclipse.flux.watcher.core.internal.*;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 
@@ -23,18 +22,7 @@ public class RepositoryModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(Repository.class);
-        bind(FluxMessageBus.class);
         bind(RepositoryEventBus.class);
-
-        // message handler bindings
-        final Multibinder<FluxMessageHandler> messageHandlers = Multibinder.newSetBinder(binder(), FluxMessageHandler.class);
-        //messageHandlers.addBinding().to(GetResourceRequestHandler.class);
-        //messageHandlers.addBinding().to(GetResourceResponseHandler.class);
-        //messageHandlers.addBinding().to(GetProjectRequestHandler.class);
-        //messageHandlers.addBinding().to(GetProjectResponseHandler.class);
-        //messageHandlers.addBinding().to(ResourceCreatedHandler.class);
-        //messageHandlers.addBinding().to(ResourceDeletedHandler.class);
-        //messageHandlers.addBinding().to(ResourceChangedHandler.class);
 
         // repository listener bindings
         final Multibinder<RepositoryListener> repositoryListeners = Multibinder.newSetBinder(binder(), RepositoryListener.class);

@@ -15,19 +15,13 @@ import org.eclipse.flux.watcher.core.spi.ProjectFactory;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.net.URL;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import static org.eclipse.flux.watcher.core.FluxMessage.Fields.INCLUDE_DELETED;
-import static org.eclipse.flux.watcher.core.FluxMessage.Fields.PROJECT;
-import static org.eclipse.flux.watcher.core.FluxMessageType.*;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Predicates.notNull;
 
@@ -39,7 +33,6 @@ import static com.google.common.base.Predicates.notNull;
 @Singleton
 public class Repository {
     private final Set<Project>       projects;
-    private final FluxMessageBus     messageBus;
     private final RepositoryEventBus repositoryEventBus;
     private final ProjectFactory     projectFactory;
 
@@ -56,38 +49,10 @@ public class Repository {
      *         if {@code messageBus}, {@code projectFactory} or {@code repositoryEventBus} parameter is {@code null}.
      */
     @Inject
-    Repository(FluxMessageBus messageBus, ProjectFactory projectFactory, RepositoryEventBus repositoryEventBus) {
+    Repository(ProjectFactory projectFactory, RepositoryEventBus repositoryEventBus) {
         this.repositoryEventBus = checkNotNull(repositoryEventBus);
-        this.messageBus = checkNotNull(messageBus);
         this.projectFactory = checkNotNull(projectFactory);
         this.projects = new CopyOnWriteArraySet<>();
-    }
-
-    /**
-     * Connects this {@link Repository} to a Flux remote.
-     *
-     * @param remoteURL
-     *         the remote {@link java.net.URL}.
-     * @param credentials
-     *         the {@link com.codenvy.flux.watcher.core.Credentials} used to connect.
-     * @return the opened {@link com.codenvy.flux.watcher.core.FluxConnection}.
-     * @throws java.lang.NullPointerException
-     *         if {@code remoteURL} or {@code credentials} parameter is {@code null}.
-     */
-    public FluxConnection addRemote(URL remoteURL, Credentials credentials) {
-        return messageBus.connect(checkNotNull(remoteURL), checkNotNull(credentials));
-    }
-
-    /**
-     * Disconnects this {@link Repository} from a Flux remote.
-     *
-     * @param remoteURL
-     *         the server {@link java.net.URL}.
-     * @throws java.lang.NullPointerException
-     *         if {@code remoteURL} parameter is {@code null}.
-     */
-    public void removeRemote(URL remoteURL) {
-        messageBus.disconnect(checkNotNull(remoteURL));
     }
 
     /**
@@ -112,18 +77,6 @@ public class Repository {
             project = projectFactory.newProject(projectId, projectPath);
             project.setSynchronized(true);
             projects.add(project);
-
-            /*try {
-
-                JSONObject content = new JSONObject().put(PROJECT, projectId);
-                messageBus.sendMessages(new FluxMessage(PROJECT_CONNECTED, content));
-
-                content = new JSONObject().put(PROJECT, projectId).put(INCLUDE_DELETED, true);
-                messageBus.sendMessages(new FluxMessage(GET_PROJECT_REQUEST, content));
-
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
-            }*/
         }
         return project;
     }
@@ -140,15 +93,6 @@ public class Repository {
         if (project != null) {
             projects.remove(project);
             project.setSynchronized(false);
-
-            /*try {
-
-                final JSONObject content = new JSONObject().put(PROJECT, projectId);
-                messageBus.sendMessages(new FluxMessage(PROJECT_DISCONNECTED, content));
-
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
-            }*/
         }
         return project;
     }
@@ -193,9 +137,4 @@ public class Repository {
     public RepositoryEventBus repositoryEventBus() {
         return repositoryEventBus;
     }
-
-    public FluxMessageBus getMessageBus(){
-    	return messageBus;
-    }
-
 }

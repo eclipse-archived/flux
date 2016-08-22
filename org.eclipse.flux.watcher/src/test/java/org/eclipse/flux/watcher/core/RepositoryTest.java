@@ -17,13 +17,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -36,7 +31,6 @@ public final class RepositoryTest {
     private final static String PROJECT_PATH = "/project-id";
 
     private Repository     repository;
-    private FluxMessageBus fluxMessageBusMock;
 
     @Before
     public void beforeTest() {
@@ -46,58 +40,6 @@ public final class RepositoryTest {
 
         final ProjectFactory projectFactoryMock = mock(ProjectFactory.class);
         when(projectFactoryMock.newProject(anyString(), anyString())).thenReturn(projectMock);
-
-        fluxMessageBusMock = mock(FluxMessageBus.class);
-
-        repository = new Repository(fluxMessageBusMock, projectFactoryMock, mock(RepositoryEventBus.class));
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testNewWithNullMessageBus() {
-        new Repository(null, mock(ProjectFactory.class), mock(RepositoryEventBus.class));
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testNewWithNullProjectFactory() {
-        new Repository(mock(FluxMessageBus.class), null, mock(RepositoryEventBus.class));
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testNewWithNullRepositoryEventBus() {
-        new Repository(mock(FluxMessageBus.class), mock(ProjectFactory.class), null);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testAddRemoteWithNullRemoteURL() {
-        repository.addRemote(null, Credentials.DEFAULT_USER_CREDENTIALS);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testAddRemoteWithNullCredentials() throws MalformedURLException {
-        repository.addRemote(new URL("http://localhost:8080"), null);
-    }
-
-    @Test
-    public void testAddRemote() throws MalformedURLException {
-        final URL remoteURL = new URL("http://localhost:8080");
-
-        repository.addRemote(remoteURL, Credentials.DEFAULT_USER_CREDENTIALS);
-
-        verify(fluxMessageBusMock, times(1)).connect(remoteURL, Credentials.DEFAULT_USER_CREDENTIALS);
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testRemoveRemoteWithNullRemoteURL() {
-        repository.removeRemote(null);
-    }
-
-    @Test
-    public void testRemoveRemote() throws MalformedURLException {
-        final URL remoteURL = new URL("http://localhost:8080");
-
-        repository.removeRemote(remoteURL);
-
-        verify(fluxMessageBusMock, times(1)).disconnect(remoteURL);
     }
 
     @Test(expected = NullPointerException.class)
