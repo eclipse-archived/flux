@@ -34,6 +34,7 @@ import org.eclipse.flux.core.util.JSONUtils;
 import org.eclipse.flux.core.util.Utils;
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
+import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.watcher.core.Repository;
 import org.eclipse.flux.watcher.core.RepositoryEvent;
 import org.eclipse.flux.watcher.core.RepositoryEventBus;
@@ -85,32 +86,32 @@ public class RepositoryAdapter implements IRepositoryCallback{
                 switch (event.type()) {
                     case PROJECT_RESOURCE_CREATED:
                         JSONObject createdStoredMessage = new JSONObject();
-                        createdStoredMessage.put("username", RepositoryAdapter.this.username);
-                        createdStoredMessage.put("project", project.id());
-                        createdStoredMessage.put("resource", resource.path());
-                        createdStoredMessage.put("timestamp", resource.timestamp());
-                        createdStoredMessage.put("hash", resource.hash());
-                        createdStoredMessage.put("type", resource.type().name().toLowerCase());
-                        RepositoryAdapter.this.messageConnector.send("resourceCreated", createdStoredMessage);
-                        RepositoryAdapter.this.messageConnector.send("resourceStored", createdStoredMessage);
+                        createdStoredMessage.put(MessageConstants.USERNAME, RepositoryAdapter.this.username);
+                        createdStoredMessage.put(MessageConstants.PROJECT_NAME, project.id());
+                        createdStoredMessage.put(MessageConstants.RESOURCE, resource.path());
+                        createdStoredMessage.put(MessageConstants.TIMESTAMP, resource.timestamp());
+                        createdStoredMessage.put(MessageConstants.HASH, resource.hash());
+                        createdStoredMessage.put(MessageConstants.TYPE, resource.type().name().toLowerCase());
+                        RepositoryAdapter.this.messageConnector.send(IMessageHandler.RESOURCE_CREATED, createdStoredMessage);
+                        RepositoryAdapter.this.messageConnector.send(IMessageHandler.RESOURCE_STORED, createdStoredMessage);
                         break;
                     case PROJECT_RESOURCE_MODIFIED:
                         JSONObject modifiedStoredMessage = new JSONObject();
-                        modifiedStoredMessage.put("username", RepositoryAdapter.this.username);
-                        modifiedStoredMessage.put("project", project.id());
-                        modifiedStoredMessage.put("resource", resource.path());
-                        modifiedStoredMessage.put("timestamp", resource.timestamp());
-                        modifiedStoredMessage.put("hash", resource.hash());
-                        RepositoryAdapter.this.messageConnector.send("resourceChanged", modifiedStoredMessage);
-                        RepositoryAdapter.this.messageConnector.send("resourceStored", modifiedStoredMessage);
+                        modifiedStoredMessage.put(MessageConstants.USERNAME, RepositoryAdapter.this.username);
+                        modifiedStoredMessage.put(MessageConstants.PROJECT_NAME, project.id());
+                        modifiedStoredMessage.put(MessageConstants.RESOURCE, resource.path());
+                        modifiedStoredMessage.put(MessageConstants.TIMESTAMP, resource.timestamp());
+                        modifiedStoredMessage.put(MessageConstants.HASH, resource.hash());
+                        RepositoryAdapter.this.messageConnector.send(IMessageHandler.RESOURCE_CHANGED, modifiedStoredMessage);
+                        RepositoryAdapter.this.messageConnector.send(IMessageHandler.RESOURCE_STORED, modifiedStoredMessage);
                         break;
                     case PROJECT_RESOURCE_DELETED:
                         JSONObject message = new JSONObject();
-                        message.put("username", RepositoryAdapter.this.username);
-                        message.put("project", project.id());
-                        message.put("resource", resource.path());
-                        message.put("timestamp", resource.timestamp());
-                        RepositoryAdapter.this.messageConnector.send("resourceDeleted", message);
+                        message.put(MessageConstants.USERNAME, RepositoryAdapter.this.username);
+                        message.put(MessageConstants.PROJECT_NAME, project.id());
+                        message.put(MessageConstants.RESOURCE, resource.path());
+                        message.put(MessageConstants.TIMESTAMP, resource.timestamp());
+                        RepositoryAdapter.this.messageConnector.send(IMessageHandler.RESOURCE_DELETED, message);
                         break;
                     default:
                         break;

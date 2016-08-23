@@ -17,7 +17,7 @@ public class LiveResourceChangedHandler extends AbstractMsgHandler {
     @Override
     protected void onMessage(String type, JSONObject message) throws Exception {
         String username = message.getString(MessageConstants.USERNAME);
-        String projectName = message.getString(MessageConstants.PROJECT);
+        String projectName = message.getString(MessageConstants.PROJECT_NAME);
         String resourcePath = message.getString(MessageConstants.RESOURCE);
         int offset = message.getInt(MessageConstants.OFFSET);
         int removedCharCount = message.getInt(MessageConstants.REMOVED_CHAR_COUNT);

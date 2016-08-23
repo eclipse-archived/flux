@@ -33,7 +33,7 @@ public class ProjectResponseHandler extends AbstractMsgHandler {
                     if(localResource == null || IsResourcesNotEquals(localResource, hash, timestamp)){
                         JSONObject content = new JSONObject();
                         content.put(MessageConstants.CALLBACK_ID, callbackID);
-                        content.put(MessageConstants.PROJECT, project.id());
+                        content.put(MessageConstants.PROJECT_NAME, project.id());
                         content.put(MessageConstants.RESOURCE, path);
                         content.put(MessageConstants.TIMESTAMP, timestamp);
                         content.put(MessageConstants.HASH, hash);

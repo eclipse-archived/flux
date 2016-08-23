@@ -21,6 +21,8 @@ import org.json.JSONObject;
 public interface IMessageHandler {
     public static final String GET_PROJECT_REQUEST = "getProjectRequest";
     public static final String GET_PROJECT_RESPONSE = "getProjectResponse";
+    public static final String GET_PROJECTS_REQUEST = "getProjectsRequest";
+    public static final String GET_PROJECTS_RESPONSE = "getProjectsResponse";
     public static final String GET_LIVE_RESOURCE_REQUEST = "getLiveResourcesRequest";
     public static final String GET_METADATA_REQUEST = "getMetadataRequest";
     public static final String GET_METADATA_RESPONSE = "getMetadataResponse";

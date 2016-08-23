@@ -19,7 +19,7 @@ public class LiveResourceStartedHandler extends AbstractMsgHandler {
         String requestSenderID = message.getString(MessageConstants.REQUEST_SENDER_ID);
         int callbackID = message.getInt(MessageConstants.CALLBACK_ID);
         String username = message.getString(MessageConstants.USERNAME);
-        String projectName = message.getString(MessageConstants.PROJECT);
+        String projectName = message.getString(MessageConstants.PROJECT_NAME);
         String resourcePath = message.getString(MessageConstants.RESOURCE);
         String hash = message.getString(MessageConstants.HASH);
         long timestamp = message.getLong(MessageConstants.TIMESTAMP);

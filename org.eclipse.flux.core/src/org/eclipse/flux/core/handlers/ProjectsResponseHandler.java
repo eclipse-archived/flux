@@ -9,7 +9,7 @@ import org.json.JSONObject;
 public class ProjectsResponseHandler extends AbstractMsgHandler {
 
     public ProjectsResponseHandler(IRepositoryCallback repositoryCallback) {
-        super(repositoryCallback, "getProjectsRequest");
+        super(repositoryCallback, GET_PROJECTS_REQUEST);
     }
 
     @Override
@@ -21,16 +21,16 @@ public class ProjectsResponseHandler extends AbstractMsgHandler {
         JSONArray projects = new JSONArray();
         for (Project fluxProject : repositoryCallback.getSynchronizedProjects()) {
             JSONObject project = new JSONObject();
-            project.put("name", fluxProject.id());
+            project.put(MessageConstants.NAME, fluxProject.id());
             projects.put(project);
         }
 
         JSONObject content = new JSONObject();
-        content.put("callback_id", callbackID);
-        content.put("requestSenderID", requestSenderId);
-        content.put("username", username);
-        content.put("projects", projects);
+        content.put(MessageConstants.CALLBACK_ID, callbackID);
+        content.put(MessageConstants.REQUEST_SENDER_ID, requestSenderId);
+        content.put(MessageConstants.USERNAME, username);
+        content.put(MessageConstants.PROJECTS, projects);
 
-        repositoryCallback.sendMessage("getProjectsResponse", content);
+        repositoryCallback.sendMessage(GET_PROJECTS_RESPONSE, content);
     }
 }
