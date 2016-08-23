@@ -1,7 +1,9 @@
 package org.eclipse.flux.core.handlers;
 
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.core.IRepositoryCallback;
+import org.eclipse.flux.core.sync.ISystemSync;
+import org.eclipse.flux.watcher.core.RepositoryEvent;
+import org.eclipse.flux.watcher.core.RepositoryEventType;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.eclipse.flux.watcher.core.spi.Project;
@@ -10,7 +12,7 @@ import org.json.JSONObject;
 public class ResourceChangedHandler extends AbstractMsgHandler {
     private int callbackId;
     
-    public ResourceChangedHandler(IRepositoryCallback repositoryCallback, int callbackID) {
+    public ResourceChangedHandler(ISystemSync repositoryCallback, int callbackID) {
         super(repositoryCallback, RESOURCE_CHANGED);
         this.callbackId = callbackID;
     }
@@ -37,7 +39,8 @@ public class ResourceChangedHandler extends AbstractMsgHandler {
             content.put(MessageConstants.TIMESTAMP, resourceTimestamp);
             content.put(MessageConstants.HASH, resourceHash);
             repositoryCallback.sendMessage(GET_RESOURCE_REQUEST, content);
-            repositoryCallback.notifyResourceChanged(localResource, project);
+            RepositoryEvent event = new RepositoryEvent(RepositoryEventType.PROJECT_RESOURCE_MODIFIED, localResource, project);
+            repositoryCallback.onEvent(event);
         }
     }
 }

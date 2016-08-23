@@ -37,7 +37,6 @@ import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
 import org.eclipse.flux.core.util.ExceptionUtil;
-import org.eclipse.flux.watcher.core.Repository;
 import org.eclipse.flux.watcher.core.RepositoryModule;
 import org.eclipse.flux.watcher.fs.JDKProjectModule;
 import org.osgi.framework.BundleContext;
@@ -70,8 +69,6 @@ public class Activator extends Plugin {
 	private CloudSyncMetadataListener metadataListener;
 	private IRepositoryListener repositoryListener;
 	private IResourceChangeListener workspaceListener;
-	
-	private Repository fluxRepository;
 	
 	private final IChannelListener SERVICE_STARTER = new IChannelListener() {
 		@Override
@@ -117,7 +114,6 @@ public class Activator extends Plugin {
 			final String userChannel = lazyStart ? MessageConstants.SUPER_USER : channel;
 			
 			Injector injector = Guice.createInjector(new RepositoryModule(), new JDKProjectModule());
-			fluxRepository = injector.getInstance(Repository.class);
 			//Connecting to channel done asynchronously. To avoid blocking plugin state initialization.
 			FluxClient.DEFAULT_INSTANCE.getExecutor().execute(new Runnable() {
 				@Override
@@ -174,7 +170,7 @@ public class Activator extends Plugin {
 	}
 	
 	private void initCoreService(String userChannel) throws CoreException {
-		repository = new RepositoryAdapter(messageConnector, fluxRepository, userChannel);
+		repository = new RepositoryAdapter(messageConnector, userChannel);
 		liveEditCoordinator = new LiveEditCoordinator(messageConnector);
 		
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();

@@ -1,7 +1,7 @@
 package org.eclipse.flux.core.handlers;
 
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.core.IRepositoryCallback;
+import org.eclipse.flux.core.sync.ISystemSync;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONObject;
@@ -9,7 +9,7 @@ import org.json.JSONObject;
 public class ResourceCreatedHandler extends AbstractMsgHandler {
     private int callbackID;
 
-    public ResourceCreatedHandler(IRepositoryCallback repositoryCallback, int callbackID) {
+    public ResourceCreatedHandler(ISystemSync repositoryCallback, int callbackID) {
         super(repositoryCallback, RESOURCE_CREATED);
         this.callbackID = callbackID;
     }

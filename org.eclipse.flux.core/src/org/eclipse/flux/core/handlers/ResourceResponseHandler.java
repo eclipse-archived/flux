@@ -2,8 +2,10 @@ package org.eclipse.flux.core.handlers;
 
 import org.eclipse.core.resources.IResource;
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.core.IRepositoryCallback;
+import org.eclipse.flux.core.sync.ISystemSync;
 import org.eclipse.flux.core.util.Utils;
+import org.eclipse.flux.watcher.core.RepositoryEvent;
+import org.eclipse.flux.watcher.core.RepositoryEventType;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.eclipse.flux.watcher.core.spi.Project;
@@ -12,7 +14,7 @@ import org.json.JSONObject;
 public class ResourceResponseHandler extends AbstractMsgHandler {
     private int callbackID;
 
-    public ResourceResponseHandler(IRepositoryCallback repositoryCallback, int callbackID) {
+    public ResourceResponseHandler(ISystemSync repositoryCallback, int callbackID) {
         super(repositoryCallback, GET_RESOURCE_RESPONSE);
         this.callbackID = callbackID;
     }
@@ -54,8 +56,10 @@ public class ResourceResponseHandler extends AbstractMsgHandler {
             content.put(MessageConstants.HASH, resourceHash);
             content.put(MessageConstants.TYPE, "file");
             repositoryCallback.sendMessage(RESOURCE_STORED, content);
-            if(localResource != null)
-                repositoryCallback.notifyResourceChanged(localResource, project);
+            if(localResource != null){
+                RepositoryEvent event = new RepositoryEvent(RepositoryEventType.PROJECT_RESOURCE_MODIFIED, localResource, project);
+                repositoryCallback.onEvent(event);
+            }
         }
     }
     

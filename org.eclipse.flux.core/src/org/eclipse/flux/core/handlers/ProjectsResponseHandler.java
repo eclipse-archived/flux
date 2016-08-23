@@ -1,14 +1,14 @@
 package org.eclipse.flux.core.handlers;
 
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.core.IRepositoryCallback;
+import org.eclipse.flux.core.sync.ISystemSync;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class ProjectsResponseHandler extends AbstractMsgHandler {
 
-    public ProjectsResponseHandler(IRepositoryCallback repositoryCallback) {
+    public ProjectsResponseHandler(ISystemSync repositoryCallback) {
         super(repositoryCallback, GET_PROJECTS_REQUEST);
     }
 

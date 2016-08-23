@@ -1,14 +1,14 @@
 package org.eclipse.flux.core.handlers;
 
 import org.eclipse.flux.client.MessageConstants;
-import org.eclipse.flux.core.IRepositoryCallback;
+import org.eclipse.flux.core.sync.ISystemSync;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.spi.Project;
 import org.json.JSONObject;
 
 public class ResourceDeletedHandler extends AbstractMsgHandler {
 
-    public ResourceDeletedHandler(IRepositoryCallback repositoryCallback) {
+    public ResourceDeletedHandler(ISystemSync repositoryCallback) {
         super(repositoryCallback, RESOURCE_DELETED);
     }
 

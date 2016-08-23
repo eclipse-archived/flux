@@ -2,15 +2,15 @@ package org.eclipse.flux.core.handlers;
 
 import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.MessageHandler;
-import org.eclipse.flux.core.IRepositoryCallback;
+import org.eclipse.flux.core.sync.ISystemSync;
 import org.eclipse.flux.watcher.core.Resource;
 import org.eclipse.flux.watcher.core.Resource.ResourceType;
 import org.json.JSONObject;
 
 public abstract class AbstractMsgHandler extends MessageHandler {
-    protected IRepositoryCallback repositoryCallback;
+    protected ISystemSync repositoryCallback;
     
-    public AbstractMsgHandler(IRepositoryCallback repositoryCallback, String type) {
+    public AbstractMsgHandler(ISystemSync repositoryCallback, String type) {
         super(type);
         this.repositoryCallback = repositoryCallback;
     }
