@@ -21,21 +21,18 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.core.sync.FluxSystemSync;
-import org.eclipse.flux.core.util.Utils;
-import org.eclipse.flux.watcher.core.RepositoryEvent;
-import org.eclipse.flux.watcher.core.RepositoryListener;
 import org.eclipse.flux.watcher.core.spi.Project;
 
 /**
  * @author Martin Lippert
  */
-public class RepositoryAdapter implements RepositoryListener{
+public class RepositoryAdapter{
 	private FluxSystemSync systemSync;
 
 	private Collection<IRepositoryListener> repositoryListeners;
 
 	public RepositoryAdapter(MessageConnector messageConnector, String user) {
-	    this.systemSync = new FluxSystemSync(messageConnector, user, this);
+	    this.systemSync = new FluxSystemSync(messageConnector, user);
 		this.repositoryListeners = new ConcurrentLinkedDeque<>();
 	}
 	
@@ -115,12 +112,4 @@ public class RepositoryAdapter implements RepositoryListener{
 	public void dispose() {
 	    systemSync.dispose();
 	}
-
-    @Override
-    public void onEvent(RepositoryEvent event) throws Exception {
-        String projectName = event.project().id();
-        String path = event.resource().path();
-        notifyResourceChanged(Utils.getResourceByPath(projectName, path));
-    }
-
 }
