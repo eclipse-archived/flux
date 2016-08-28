@@ -8,8 +8,8 @@
   "license": "Eclipse Public License + Eclipse Distribution License",
   "dependencies" : {
     "express"          :  "3.0.x",
-    "socket.io"        :  "0.9.x",
-    "socket.io-client" :  "0.9.x",
+    "socket.io"        :  "1.4.8",
+    "socket.io-client" :  "1.4.8",
 	"mongodb"          :  "1.3.x",
 	"URIjs"            :  "1.13.2",
 	"passport"         :  "0.2.0",

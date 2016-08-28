@@ -142,16 +142,17 @@ var server = app.listen(port, host);
 console.log('Express server started on port ' + port);
 
 // create and configure socket.io
-var io = require('socket.io').listen(server);
-io.set('transports', ['websocket']);
-io.set('log level', 1); //socket.io makes too much noise otherwise
+var io = require('socket.io')(server, {
+	transports : ['websocket']
+});
 
 if (ENABLE_AUTH) {
 	io.set('authorization', authentication.socketIoHandshake);
 }
 
-io.sockets.on('connection', function (socket) {
+io.use(function(socket, next){
 	rabbitConnector.connectWebSocket(socket);
+	next();
 });
 
 /////////////////////////////////////////////////////////////////////////
@@ -189,10 +190,10 @@ MongoClient.connect("mongodb://localhost:27017/flight-db", function(err, db) {
 	var messagesrepository = new MessagesRepository(repository);
 
 	var client_io = require('socket.io-client');
-
-	var client_socket = client_io.connect(messagingHost, authentication.asSuperUser({
-		port : messagingPort
-	}));
+	var client_url = 'http://' + host + ':' + port;
+	var client_socket = client_io.connect(client_url, {
+		transports : ['websocket']
+	});
 
 	client_socket.on('connect', function() {
 		console.log('client socket connected to '+messagingHost);

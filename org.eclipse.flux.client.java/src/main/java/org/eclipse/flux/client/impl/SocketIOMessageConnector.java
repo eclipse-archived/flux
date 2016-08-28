@@ -10,26 +10,35 @@
 *******************************************************************************/
 package org.eclipse.flux.client.impl;
 
-import io.socket.IOAcknowledge;
-import io.socket.IOCallback;
-import io.socket.SocketIO;
-import io.socket.SocketIOException;
-
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
 
+import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.config.FluxConfig;
 import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.client.util.BasicFuture;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+
+import io.socket.client.Ack;
+import io.socket.client.IO;
+import io.socket.client.IO.Options;
+import io.socket.client.Manager;
+import io.socket.client.Socket;
+import io.socket.emitter.Emitter.Listener;
+import io.socket.engineio.client.Transport;
 
 /**
  * Connector to Flux web socket
@@ -44,7 +53,8 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 	 */
 	private static final long CONNECT_TO_CHANNEL_TIMEOUT = 15000;
 	
-	private SocketIO socket;
+	private Options opts;
+	private Socket socket;
 	private final SocketIOFluxConfig conf;
 	private Set<String> channels = Collections.synchronizedSet(new HashSet<String>());
 	private AtomicBoolean isConnected = new AtomicBoolean(false);
@@ -53,21 +63,18 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 		super(executor);
 		this.conf = conf;
 		try {
-			SocketIO.setDefaultSSLSocketFactory(SSLContext.getInstance("Default"));
-			this.socket = createSocket();
 			final BasicFuture<Void> connectedFuture = new BasicFuture<Void>();
-			this.socket.connect(new IOCallback() {
-				
-				@Override
-				public void on(String messageType, IOAcknowledge arg1, Object... data) {
-					if (data.length == 1 && data[0] instanceof JSONObject) {
-						handleIncomingMessage(messageType, (JSONObject)data[0]);
-					}
-				}
-	
-				@Override
-				public void onConnect() {
-					connectionStatus.setValue(connectionStatus.getValue().connect());
+			System.out.println("Creating websocket to: "+conf.getHost());
+			IO.setDefaultSSLContext(SSLContext.getDefault());
+	        opts = new IO.Options();
+	        opts.transports = new String[]{"websocket"};
+			socket = IO.socket(conf.getHost(), opts);
+			addHeaders();
+			System.out.println("Created websocket: "+socket);
+	        socket.on(Socket.EVENT_CONNECT, new Listener() {
+	            @Override
+	            public void call(Object... objects) {
+	            	connectionStatus.setValue(connectionStatus.getValue().connect());
 					isConnected.compareAndSet(false, true);
 					String[] channelsArray = channels.toArray(new String[channels.size()]);
 					for (String channel : channelsArray) {
@@ -75,20 +82,24 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 					}
 					connectedFuture.resolve(null);
 				}
-	
-				@Override
-				public void onDisconnect() {
-					connectionStatus.setValue(connectionStatus.getValue().close());
+	        });
+	        socket.on(Socket.EVENT_DISCONNECT, new Listener() {
+	            @Override
+	            public void call(Object... objects) {
+	            	connectionStatus.setValue(connectionStatus.getValue().close());
 					System.out.println("Socket disconnected: "+socket);
 					for (String channel : channels) {
 						notifyChannelDisconnected(channel);
 					}
 					isConnected.compareAndSet(true, false);
-				}
-	
-				@Override
-				public void onError(SocketIOException ex) {
-					connectionStatus.setValue(connectionStatus.getValue().error(ex));
+	            }
+	        });
+	        socket.on(Socket.EVENT_ERROR, new Listener() {
+	            @Override
+	            public void call(Object... objects) {
+	            	System.out.println(objects);
+	            	//connectionStatus.setValue(connectionStatus.getValue().error(ex));
+	            	/*connectionStatus.setValue(connectionStatus.getValue().error(ex));
 					connectedFuture.reject(ex);
 					ex.printStackTrace();
 					if (connectionStatus.getValue().isAuthFailure()) {
@@ -101,20 +112,10 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 						socket.connect(this);
 					} catch (MalformedURLException e) {
 						e.printStackTrace();
-					}
-				}
-	
-				@Override
-				public void onMessage(String arg0, IOAcknowledge arg1) {
-					// Nothing
-				}
-	
-				@Override
-				public void onMessage(JSONObject arg0, IOAcknowledge arg1) {
-					// Nothing
-				}
-				
-			});
+					}*/
+	            }
+	        });
+			socket.connect();
 			connectedFuture.get();
 			return;
 		} catch (Exception e) {
@@ -171,22 +172,23 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 				JSONObject message = new JSONObject();
 				message.put("channel", channel);
 				channels.add(channel);
-				socket.emit("connectToChannel", new IOAcknowledge() {
-
-					public void ack(Object... answer) {
+				socket.emit("connectToChannel", message, new Ack() {
+					@Override
+					public void call(Object... args) {
 						try {
-							if (answer.length == 1
-									&& answer[0] instanceof JSONObject
-									&& ((JSONObject) answer[0])
-											.getBoolean("connectedToChannel")) {
-								notifyChannelConnected(channel);
-								if (sync) {
-									connectedFuture.resolve(null);
+							if(args.length == 1 && args[0] instanceof JSONObject){
+								boolean connectedToChannel = ((JSONObject) args[0]).getBoolean("connectedToChannel");
+								if(connectedToChannel){
+									notifyChannelConnected(channel);
+									if (sync) {
+										connectedFuture.resolve(null);
+									}
 								}
-							} else {
-								//TODO: add a better explanation?
-								connectedFuture.reject(new IOException("Couldn't connect to channel "+channel));
+								else {
+									connectedFuture.reject(new IOException("Couldn't connect to channel "+channel));
+								}
 							}
+							
 						} catch (Exception e) {
 							e.printStackTrace();
 							if (sync) {
@@ -194,8 +196,7 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 							}
 						}
 					}
-
-				}, message);
+				});
 			} catch (JSONException e) {
 				if (sync) {
 					connectedFuture.reject(e);
@@ -222,20 +223,23 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 			try {
 				JSONObject message = new JSONObject();
 				message.put("channel", channel);
-				socket.emit("disconnectFromChannel", new IOAcknowledge() {
-	
-					public void ack(Object... answer) {
+				socket.emit("disconnectFromChannel", message, new Ack() {
+					
+					@Override
+					public void call(Object... args) {
 						try {
-							if (answer.length == 1 && answer[0] instanceof JSONObject && ((JSONObject)answer[0]).getBoolean("disconnectedFromChannel")) {
-								notifyChannelDisconnected(channel);
+							if(args.length == 1 && args[0] instanceof JSONObject){
+								boolean disconnectedFromChannel = ((JSONObject) args[0]).getBoolean("disconnectedFromChannel");
+								if(disconnectedFromChannel){
+									notifyChannelDisconnected(channel);
+								}
 							}
 						}
 						catch (Exception e) {
 							e.printStackTrace();
-						}
+						}						
 					}
-					
-				}, message);
+				});
 			} catch (JSONException e) {
 				e.printStackTrace();
 			}
@@ -248,16 +252,43 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 		throw new Error("Not implemented");
 	}
 	
-	private SocketIO createSocket() throws MalformedURLException {
-		System.out.println("Creating websocket to: "+conf.getHost());
-		SocketIO socket = new SocketIO(conf.getHost());
-		if (conf.getToken() != null) {
-			socket.addHeader("X-flux-user-name", conf.getUser());
-			socket.addHeader("X-flux-user-token", conf.getToken());
-		}
-		System.out.println("Created websocket: "+socket);
-		return socket;
+	@Override
+	public void addMessageHandler(final IMessageHandler messageHandler) {
+		super.addMessageHandler(messageHandler);
+		this.socket.on(messageHandler.getMessageType(), new Listener() {
+			@Override
+			public void call(Object... args) {
+				if(args.length == 1 && args[0] instanceof JSONObject){
+					messageHandler.handle(messageHandler.getMessageType(), (JSONObject) args[0]);
+                }
+			}
+		});
 	}
+
+	@Override
+	public void removeMessageHandler(IMessageHandler messageHandler) {
+		super.removeMessageHandler(messageHandler);
+		socket.off(messageHandler.getMessageType());
+	}
+
+    private void addHeaders() {
+        socket.io().on(Manager.EVENT_TRANSPORT, new Listener() {
+            @Override
+            public void call(Object... args) {
+                Transport transport = (Transport) args[0];
+
+                transport.on(Transport.EVENT_REQUEST_HEADERS, new Listener() {
+                    @Override
+                    public void call(Object... args) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, List<String>> headers = (Map<String, List<String>>) args[0];
+                        headers.put("X-flux-user-name", Collections.singletonList(conf.getUser()));
+                        headers.put("X-flux-user-token", Collections.singletonList(conf.getToken()));
+                    }
+                });
+            }
+        });
+    }
 	
 	public void send(String messageType, JSONObject message) {
 		socket.emit(messageType, message);

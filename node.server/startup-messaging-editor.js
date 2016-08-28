@@ -24,12 +24,14 @@ var server = app.listen(port, host);
 console.log('Express server started on port ' + port);
 
 // create and configure socket.io
-var io = require('socket.io').listen(server);
-io.set('transports', ['websocket']);
+var io = require('socket.io')(server, {
+	transports : ['websocket']
+});
 
 // create and configure services
 var rabbitConnector = require('./rabbit-connector');
 
-io.sockets.on('connection', function (socket) {
-	rabbitConnector.connectWebsocket(socket);
+io.use(function(socket, next){
+	rabbitConnector.connectWebSocket(socket);
+	next();
 });
