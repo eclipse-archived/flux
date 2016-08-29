@@ -16,9 +16,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.net.ssl.SSLContext;
 
@@ -28,9 +30,6 @@ import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.client.util.BasicFuture;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 import io.socket.client.Ack;
 import io.socket.client.IO;
@@ -62,6 +61,11 @@ public final class SocketIOMessageConnector extends AbstractMessageConnector {
 	public SocketIOMessageConnector(SocketIOFluxConfig conf, ExecutorService executor) {
 		super(executor);
 		this.conf = conf;
+		ConsoleHandler handler = new ConsoleHandler();
+        Logger logger = Logger.getLogger("");
+        handler.setLevel(Level.FINE);
+        logger.addHandler(handler);
+        logger.setLevel(Level.FINE);
 		try {
 			final BasicFuture<Void> connectedFuture = new BasicFuture<Void>();
 			System.out.println("Creating websocket to: "+conf.getHost());
