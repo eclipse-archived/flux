@@ -8,3 +8,7 @@ target
 classes
 /org.eclipse.flux.client.java.osgi/lib
 *~
+
+.settings/
+.classpath
+.project
