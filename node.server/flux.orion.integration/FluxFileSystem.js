@@ -10,9 +10,8 @@
  ******************************************************************************/
 /*global define console CryptoJS */
 define(function(require) {
-
 var Deferred = require('orion/Deferred');
-var io = require('lib/socket.io');
+var io = require('socketio');
 require('lib/sha1'); //Not AMD. Defines 'CryptoJS global.
 
 var authorize = require('authorize');
@@ -103,11 +102,13 @@ var FluxFileSystem = (function() {
 				console.log('STOP! no second socket!');
 				return;
 			}
+
 			console.log('Create socket for ', user);
 			this._connectedToChannel = new Deferred();
-			this.socket = io.connect(this._host, {
-				port: this._port
-			});
+			this.socket = io({
+			    transports : ['websocket']
+            });
+			this.socket.connect('http://' + this._host + ':' + this._port);
 
 			var self = this;
 

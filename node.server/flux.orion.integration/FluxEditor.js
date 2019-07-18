@@ -18,7 +18,7 @@ define(function (require) {
 
 require('lib/sha1'); //Not AMD defines 'CryptoJS global variable.
 
-var io = require('lib/socket.io');
+var io = require('socketio');
 var Deferred = require('orion/Deferred');
 var authorize = require('authorize');
 
@@ -72,10 +72,10 @@ var FluxEditor = (function() {
 	FluxEditor.prototype = /**@lends eclipse.FluxEditor.prototype */
 	{
 		_createSocket: function (user) {
-			this.socket = io.connect(
-				this._host, {
-				port: this._port
+			this.socket = io({
+				transports : ['websocket']
 			});
+			this.socket.connect('http://' + this._host + ':' + this._port);
 
 			this._resourceUrl = null;
 

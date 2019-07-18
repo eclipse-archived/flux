@@ -10,8 +10,6 @@
 *******************************************************************************/
 package org.eclipse.flux.client;
 
-import io.socket.SocketIOException;
-
 import org.eclipse.flux.client.util.ExceptionUtil;
 
 /**
@@ -89,11 +87,11 @@ public class ConnectionStatus {
 	}
 
 	public boolean isAuthFailure() {
-		if (error instanceof SocketIOException) {
+		/*if (error instanceof SocketIOException) {
 			SocketIOException e = (SocketIOException) error;
 			String msg = e.getMessage();
 			return msg!=null && msg.contains("handshaking");
-		}
+		}*/
 		return false;
 	}
 

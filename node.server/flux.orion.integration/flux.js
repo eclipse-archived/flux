@@ -11,6 +11,9 @@
 
 /*global require window location console*/
 require.config({
+	paths: {
+		socketio: '/socket.io/socket.io'
+	},
     packages: [
         {name: "when", location: "bower_components/when", main: "when"},
         {name: "rest", location: "bower_components/rest", main: "rest"}
