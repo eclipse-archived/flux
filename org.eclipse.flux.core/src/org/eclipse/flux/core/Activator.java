@@ -10,6 +10,7 @@
 *******************************************************************************/
 package org.eclipse.flux.core;
 
+import java.net.URL;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.concurrent.Executors;
@@ -35,10 +36,14 @@ import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.client.config.SocketIOFluxConfig;
 import org.eclipse.flux.core.internal.CloudSyncMetadataListener;
-import org.eclipse.flux.core.internal.CloudSyncResourceListener;
 import org.eclipse.flux.core.util.ExceptionUtil;
+import org.eclipse.flux.watcher.core.RepositoryModule;
+import org.eclipse.flux.watcher.fs.JDKProjectModule;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.prefs.BackingStoreException;
+
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 
 /**
  * @author Martin Lippert
@@ -57,11 +62,10 @@ public class Activator extends Plugin {
 	private MessageConnector messageConnector;
 	private ChannelSwitcher channelSwitcher;
 	
-	private Repository repository;
+	private RepositoryAdapter repository;
 	private LiveEditCoordinator liveEditCoordinator;
 	private boolean lazyStart = false;
 	
-	private CloudSyncResourceListener resourceListener;
 	private CloudSyncMetadataListener metadataListener;
 	private IRepositoryListener repositoryListener;
 	private IResourceChangeListener workspaceListener;
@@ -109,6 +113,7 @@ public class Activator extends Plugin {
 			
 			final String userChannel = lazyStart ? MessageConstants.SUPER_USER : channel;
 			
+			Injector injector = Guice.createInjector(new RepositoryModule(), new JDKProjectModule());
 			//Connecting to channel done asynchronously. To avoid blocking plugin state initialization.
 			FluxClient.DEFAULT_INSTANCE.getExecutor().execute(new Runnable() {
 				@Override
@@ -165,14 +170,11 @@ public class Activator extends Plugin {
 	}
 	
 	private void initCoreService(String userChannel) throws CoreException {
-		repository = new Repository(messageConnector, userChannel);
+		repository = new RepositoryAdapter(messageConnector, userChannel);
 		liveEditCoordinator = new LiveEditCoordinator(messageConnector);
 		
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
 		
-		resourceListener = new CloudSyncResourceListener(repository);
-		workspace.addResourceChangeListener(resourceListener, IResourceChangeEvent.POST_CHANGE);
-
 		metadataListener = new CloudSyncMetadataListener(repository);
 		workspace.addResourceChangeListener(metadataListener, IResourceChangeEvent.POST_BUILD);
 		
@@ -225,7 +227,6 @@ public class Activator extends Plugin {
 		if (userChannel.equals(repository.getUsername())) {
 			IWorkspace workspace = ResourcesPlugin.getWorkspace();
 			workspace.removeResourceChangeListener(workspaceListener);
-			workspace.removeResourceChangeListener(resourceListener);
 			workspace.removeResourceChangeListener(metadataListener);
 			repository.removeRepositoryListener(repositoryListener);
 			liveEditCoordinator.dispose();
@@ -242,7 +243,7 @@ public class Activator extends Plugin {
 				if (!project.isOpen()) {
 					project.open(null);
 				}
-				Repository repository = org.eclipse.flux.core.Activator.getDefault()
+				RepositoryAdapter repository = org.eclipse.flux.core.Activator.getDefault()
 						.getRepository();
 				repository.addProject(project);
 			}
@@ -310,7 +311,7 @@ public class Activator extends Plugin {
 		return messageConnector;
 	}
 	
-	public Repository getRepository() {
+	public RepositoryAdapter getRepository() {
 		return repository;
 	}
 	

@@ -56,5 +56,28 @@ public abstract class MessageConstants {
 	 * Name of the Flux super user.
 	 */
 	public static final String SUPER_USER = "$super$";
-
+	
+    public static final String CHANNEL = "channel";
+    public static final String CONNECTED_TO_CHANNEL = "connectedToChannel";
+    public static final String CONTENT = "content";
+    public static final String DELETED = "deleted";
+    public static final String FILES = "files";
+    public static final String HASH = "hash";
+    public static final String INCLUDE_DELETED = "includeDeleted";
+    public static final String PATH = "path";
+    public static final String RESOURCE = "resource";
+    public static final String TIMESTAMP = "timestamp";
+    public static final String TYPE = "type";
+    public static final String SAVE_POINT_HASH = "savePointHash";
+    public static final String SAVE_POINT_TIMESTAMP = "savePointTimestamp";
+    public static final String LIVE_CONTENT = "liveContent";
+    public static final String OFFSET = "offset";
+    public static final String REMOVED_CHAR_COUNT = "removedCharCount";
+    public static final String ADDED_CHARACTERS = "addedCharacters";
+    public static final String PROJECT_REG_EX = "projectRegEx";
+    public static final String RESOURCE_REG_EX = "resourceRegEx";
+    public static final String METADATA = "metadata";
+    public static final String PROJECTS = "projects";
+    public static final String NAME = "name";
+    public static final String MARKER = "marker";
 }

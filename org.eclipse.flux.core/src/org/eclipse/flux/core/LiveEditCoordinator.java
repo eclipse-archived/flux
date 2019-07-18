@@ -18,7 +18,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.flux.client.IMessageHandler;
 import org.eclipse.flux.client.MessageConnector;
-import org.eclipse.flux.client.MessageHandler;
+import org.eclipse.flux.core.handlers.LiveResourceChangedHandler;
+import org.eclipse.flux.core.handlers.LiveResourceRequestHandler;
+import org.eclipse.flux.core.handlers.LiveResourceStartedHandler;
+import org.eclipse.flux.core.handlers.LiveResourceStartedResponseHandler;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -28,129 +31,21 @@ import org.json.JSONObject;
  */
 public class LiveEditCoordinator {
 	
-	private MessageConnector messagingConnector;
+    private MessageConnector messagingConnector;
 	private Collection<ILiveEditConnector> liveEditConnectors;
-	private Collection<IMessageHandler> messageHandlers;
+    private Collection<IMessageHandler> messageHandlers;
 	
-	public LiveEditCoordinator(MessageConnector messagingConnector) {
-		this.messagingConnector = messagingConnector;
+	public LiveEditCoordinator(MessageConnector messageConnector) {
+	    this.messagingConnector = messageConnector;
 		this.liveEditConnectors = new CopyOnWriteArrayList<>();
-		this.messageHandlers = new ArrayList<IMessageHandler>(4);
+	    this.messageHandlers = new ArrayList<IMessageHandler>(4);
 		
-		IMessageHandler startLiveUnit = new MessageHandler("liveResourceStarted") {
-			@Override
-			public void handle(String messageType, JSONObject message) {
-				startLiveUnit(message);
-			}
-		};
-		messagingConnector.addMessageHandler(startLiveUnit);
-		messageHandlers.add(startLiveUnit);
-		
-		IMessageHandler startLiveUnitResponse = new MessageHandler("liveResourceStartedResponse") {
-			@Override
-			public void handle(String messageType, JSONObject message) {
-				startLiveUnitResponse(message);
-			}
-		};
-		messagingConnector.addMessageHandler(startLiveUnitResponse);
-		messageHandlers.add(startLiveUnitResponse);
-		
-		IMessageHandler modelChangedHandler = new MessageHandler("liveResourceChanged") {
-			@Override
-			public void handle(String messageType, JSONObject message) {
-				modelChanged(message);
-			}
-		};
-		messagingConnector.addMessageHandler(modelChangedHandler);
-		messageHandlers.add(modelChangedHandler);
-		
-		// Listen to the internal broadcast channel to send out info about current live edit units
-		IMessageHandler liveUnits = new MessageHandler("getLiveResourcesRequest") {
-			@Override
-			public void handle(String messageType, JSONObject message) {
-				sendLiveUnits(message);
-			}
-		};
-		messagingConnector.addMessageHandler(liveUnits);
-		messageHandlers.add(liveUnits);
+		addMessageHandler(new LiveResourceStartedHandler(liveEditConnectors));
+		addMessageHandler(new LiveResourceStartedResponseHandler(liveEditConnectors));
+		addMessageHandler(new LiveResourceChangedHandler(liveEditConnectors));
+		addMessageHandler(new LiveResourceRequestHandler(liveEditConnectors));
 	}
 	
-	protected void startLiveUnit(JSONObject message) {
-		try {
-			String requestSenderID = message.getString("requestSenderID");
-			int callbackID = message.getInt("callback_id");
-			String username = message.getString("username");
-			String projectName = message.getString("project");
-			String resourcePath = message.getString("resource");
-			String hash = message.getString("hash");
-			long timestamp = message.getLong("timestamp");
-
-			String liveEditID = projectName + "/" + resourcePath;
-			for (ILiveEditConnector connector : liveEditConnectors) {
-				connector.liveEditingStarted(requestSenderID, callbackID, username, liveEditID, hash, timestamp);
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
-	protected void startLiveUnitResponse(JSONObject message) {
-		try {
-			String requestSenderID = message.getString("requestSenderID");
-			int callbackID = message.getInt("callback_id");
-			String username = message.getString("username");
-			String projectName = message.getString("project");
-			String resourcePath = message.getString("resource");
-			String savePointHash = message.getString("savePointHash");
-			long savePointTimestamp = message.getLong("savePointTimestamp");
-			String content = message.getString("liveContent");
-
-			for (ILiveEditConnector connector : liveEditConnectors) {
-				connector.liveEditingStartedResponse(requestSenderID, callbackID, username, projectName, resourcePath, savePointHash, savePointTimestamp, content);
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
-	protected void modelChanged(JSONObject message) {
-		try {
-			String username = message.getString("username");
-			String projectName = message.getString("project");
-			String resourcePath = message.getString("resource");
-
-			int offset = message.getInt("offset");
-			int removedCharCount = message.getInt("removedCharCount");
-			String addedChars = message.has("addedCharacters") ? message.getString("addedCharacters") : "";
-
-			String liveEditID = projectName + "/" + resourcePath;
-
-			for (ILiveEditConnector connector : liveEditConnectors) {
-				connector.liveEditingEvent(username, liveEditID, offset, removedCharCount, addedChars);
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
-	protected void sendLiveUnits(JSONObject message) {
-		try {
-			String username = message.has("username") ? message.getString("username") : null;
-			String requestSenderID = message.getString("requestSenderID");
-			String projectRegEx = message.has("projectRegEx") ? message.getString("projectRegEx") : null;
-			String resourceRegEx = message.has("resourceRegEx") ? message.getString("resourceRegEx") : null;
-			int callbackID = message.getInt("callback_id");
-			for (ILiveEditConnector connector : liveEditConnectors) {
-				connector.liveEditors(requestSenderID, callbackID, username, projectRegEx, resourceRegEx);
-			}
-		} catch (JSONException e) {
-			e.printStackTrace();
-		}
-	}
-
 	public void addLiveEditConnector(ILiveEditConnector connector) {
 		liveEditConnectors.add(connector);
 	}
@@ -166,11 +61,9 @@ public class LiveEditCoordinator {
 			message.put("project", projectName);
 			message.put("resource", resourcePath);
 			message.put("offset", offset);
-			message.put("offset", offset);
 			message.put("removedCharCount", removedCharactersCount);
 			message.put("addedCharacters", newText != null ? newText : "");
-
-			this.messagingConnector.send("liveResourceChanged", message);
+            this.messagingConnector.send(IMessageHandler.LIVE_RESOURCE_CHANGED, message);           
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -194,8 +87,7 @@ public class LiveEditCoordinator {
 			message.put("resource", resourcePath);
 			message.put("hash", hash);
 			message.put("timestamp", timestamp);
-			
-			this.messagingConnector.send("liveResourceStarted", message);
+            this.messagingConnector.send(IMessageHandler.LIVE_RESOURCE_STARTED, message);			
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -220,8 +112,7 @@ public class LiveEditCoordinator {
 			message.put("savePointTimestamp", savePointTimestamp);
 			message.put("savePointHash", savePointHash);
 			message.put("liveContent", content);
-	
-			this.messagingConnector.send("liveResourceStartedResponse", message);
+			this.messagingConnector.send(IMessageHandler.LIVE_RESOURCE_STARTED_RESPONSE, message);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -251,8 +142,7 @@ public class LiveEditCoordinator {
 				liveEditUnits.put(entry.getKey(), new JSONArray(entry.getValue()));
 			}
 			message.put("liveEditUnits", liveEditUnits);
-
-			this.messagingConnector.send("getLiveResourcesResponse", message);
+            this.messagingConnector.send(IMessageHandler.GET_LIVE_RESOURCE_REQUEST, message);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -274,9 +164,14 @@ public class LiveEditCoordinator {
 	}
 	
 	public void dispose() {
-		for (IMessageHandler messageHanlder : messageHandlers) {
-			messagingConnector.removeMessageHandler(messageHanlder);
-		}
+        for (IMessageHandler messageHanlder : messageHandlers) {
+            messagingConnector.removeMessageHandler(messageHanlder);
+        }
 	}
+	
+	private void addMessageHandler(IMessageHandler messageHandler){
+        this.messagingConnector.addMessageHandler(messageHandler);
+        this.messageHandlers.add(messageHandler);
+    }
 
 }

@@ -17,7 +17,7 @@ import org.eclipse.flux.client.MessageConstants;
 import org.eclipse.flux.core.ChannelSwitcher;
 import org.eclipse.flux.core.KeepAliveConnector;
 import org.eclipse.flux.core.LiveEditCoordinator;
-import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.RepositoryAdapter;
 import org.eclipse.flux.core.ServiceDiscoveryConnector;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -109,7 +109,7 @@ public class JDTComponent {
 			}
 			MessageConnector messagingConnector = org.eclipse.flux.core.Activator
 					.getDefault().getMessageConnector();
-			Repository repository = org.eclipse.flux.core.Activator.getDefault()
+			RepositoryAdapter repository = org.eclipse.flux.core.Activator.getDefault()
 					.getRepository();
 			LiveEditCoordinator liveEditCoordinator = org.eclipse.flux.core.Activator
 					.getDefault().getLiveEditCoordinator();

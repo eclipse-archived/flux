@@ -235,8 +235,11 @@ MessagesRepository.prototype.resourceCreated = function(data) {
 	var hash = data.hash;
 	var type = data.type;
 
+	var repoProject = this.repository._getProjectStorage(username, projectName);
+	var repoResource = repoProject.resources[resource];
+
 	this.repository.hasResource(username, projectName, resource, function(err, resourceExists) {
-		if (err === null && !resourceExists) {
+		if (err === null && (!resourceExists || repoResource.hash !== hash)) {
 			this.socket.emit('getResourceRequest', {
 				'callback_id' : 0,
 				'username' : username,

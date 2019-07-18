@@ -10,93 +10,78 @@
 *******************************************************************************/
 package org.eclipse.flux.core;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.commons.codec.digest.DigestUtils;
-import org.eclipse.core.resources.IContainer;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.IResourceVisitor;
-import org.eclipse.core.runtime.CoreException;
+import org.eclipse.flux.watcher.core.Resource;
+import org.eclipse.flux.watcher.core.spi.Project;
 
 /**
  * @author Martin Lippert
  */
 public class ConnectedProject {
-	
-	private IProject project;
-	private Map<String, String> resourceHash;
-	private Map<String, Long> resourceTimestamp;
-	
-	public ConnectedProject(IProject project) {
-		this.project = project;
-		this.resourceHash = new ConcurrentHashMap<String, String>();
-		this.resourceTimestamp = new ConcurrentHashMap<String, Long>();
-		
-		try {
-			project.refreshLocal(IResource.DEPTH_INFINITE, null);
-			project.accept(new IResourceVisitor() {
-				@Override
-				public boolean visit(IResource resource) throws CoreException {
-					String path = resource.getProjectRelativePath().toString();
-					ConnectedProject.this.setTimestamp(path, resource.getLocalTimeStamp());
-					
-					if (resource instanceof IFile) {
-						try {
-							IFile file = (IFile) resource;
-							ConnectedProject.this.setHash(path, DigestUtils.shaHex(file.getContents()));
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-					else if (resource instanceof IFolder) {
-						ConnectedProject.this.setHash(path, "0");
-					}
-					
-					return true;
-				}
-			}, IResource.DEPTH_INFINITE, IContainer.EXCLUDE_DERIVED);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 
-	}
-	
-	public IProject getProject() {
-		return project;
-	}
-	
-	public String getName() {
-		return this.project.getName();
-	}
+    private String name;
+    private Project project;
 
-	public static ConnectedProject readFromJSON(InputStream inputStream, IProject project) {
-		return new ConnectedProject(project);
-	}
-	
-	public void setTimestamp(String resourcePath, long newTimestamp) {
-		this.resourceTimestamp.put(resourcePath, newTimestamp);
-	}
-	
-	public long getTimestamp(String resourcePath) {
-		return this.resourceTimestamp.get(resourcePath);
-	}
+    public ConnectedProject(Project project) {
+        this.project = project;
+        this.name = project.id();
+    }
 
-	public void setHash(String resourcePath, String hash) {
-		this.resourceHash.put(resourcePath, hash);
-	}
-	
-	public String getHash(String resourcePath) {
-		return this.resourceHash.get(resourcePath);
-	}
+    public IProject getProject() {
+        return null;
+    }
+    
+    public String getName() {
+        return this.project.id();
+    }
+    
+    public static ConnectedProject readFromJSON(InputStream inputStream, IProject project) {
+        return null;
+    }
 
-	public boolean containsResource(String resourcePath) {
-		return this.resourceTimestamp.containsKey(resourcePath);
-	}
-	
+    public long getTimestamp(String resourcePath) {
+        Resource resource = this.project.getResource(resourcePath);
+        return resource.timestamp();
+    }
+
+    public String getHash(String resourcePath) {
+        Resource resource = this.project.getResource(resourcePath);
+        return resource.hash();
+    }
+
+    public boolean containsResource(String resourcePath) {
+        return this.project.hasResource(resourcePath);
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((name == null) ? 0 : name.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (!(obj instanceof ConnectedProject)) {
+            return false;
+        }
+        ConnectedProject other = (ConnectedProject)obj;
+        if (name == null) {
+            if (other.name != null) {
+                return false;
+            }
+        } else if (!name.equals(other.name)) {
+            return false;
+        }
+        return true;
+    }
+
 }

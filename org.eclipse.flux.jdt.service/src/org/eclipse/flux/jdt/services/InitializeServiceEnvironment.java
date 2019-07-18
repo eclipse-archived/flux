@@ -19,7 +19,7 @@ import org.eclipse.flux.client.MessageConnector;
 import org.eclipse.flux.client.MessageHandler;
 import org.eclipse.flux.core.DownloadProject;
 import org.eclipse.flux.core.DownloadProject.CompletionCallback;
-import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.RepositoryAdapter;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,12 +34,12 @@ public class InitializeServiceEnvironment {
 	private static int GET_PROJECTS_CALLBACK = "InitializeServiceEnvironment - getProjectsCallback".hashCode();
 
 	private final MessageConnector messagingConnector;
-	final Repository repository;
+	final RepositoryAdapter repository;
 
 	private IMessageHandler getProjectsResponseHandler;
 	private IMessageHandler projectConnectedHandler;
 
-	public InitializeServiceEnvironment(MessageConnector messagingConnector, Repository repository) {
+	public InitializeServiceEnvironment(MessageConnector messagingConnector, RepositoryAdapter repository) {
 		this.messagingConnector = messagingConnector;
 		this.repository = repository;
 	}

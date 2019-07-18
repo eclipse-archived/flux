@@ -42,9 +42,9 @@ public class TypeBindingVisitor {
 		return true;  // continue traversal.
 	}
 	
-	public boolean visit(IntersectionCastTypeBinding intersectionCastTypeBinding) {
+	/*public boolean visit(IntersectionCastTypeBinding intersectionCastTypeBinding) {
 		return true;  // continue traversal.
-	}
+	}*/
 	
 	public boolean visit(RawTypeBinding rawTypeBinding) {
 		return true;  // continue traversal.
@@ -128,11 +128,11 @@ public class TypeBindingVisitor {
 				}
 				break;
 			
-			case Binding.INTERSECTION_CAST_TYPE:
+			/*case Binding.INTERSECTION_CAST_TYPE:
 				IntersectionCastTypeBinding intersectionCastTypeBinding = (IntersectionCastTypeBinding) type;
 				if (visitor.visit(intersectionCastTypeBinding))
 					visit(visitor, intersectionCastTypeBinding.intersectingTypes);
-				break;
+				break;*/
 				
 			case Binding.POLY_TYPE:
 				visitor.visit((PolyTypeBinding) type);

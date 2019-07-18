@@ -44,7 +44,7 @@ import org.eclipse.flux.core.ILiveEditConnector;
 import org.eclipse.flux.core.IRepositoryListener;
 import org.eclipse.flux.core.LiveEditCoordinator;
 import org.eclipse.flux.core.LiveEditCoordinator.ResourceData;
-import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.RepositoryAdapter;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentListener;
@@ -73,7 +73,7 @@ public class LiveEditConnector {
 	private IResourceChangeListener workspaceListener;
 	private IPartListener2 partListener;
 	private ILiveEditConnector liveEditConnector;
-	private Repository repository;
+	private RepositoryAdapter repository;
 	
 	private ConcurrentMap<IDocument, String> resourceMappings;
 	private ConcurrentMap<String, IDocument> documentMappings;
@@ -81,7 +81,7 @@ public class LiveEditConnector {
 
 	private ConcurrentHashMap<String, PendingLiveEditStartedResponse> pendingLiveEditStartedResponses;
 
-	public LiveEditConnector(LiveEditCoordinator liveEditCoordinator, Repository repository) {
+	public LiveEditConnector(LiveEditCoordinator liveEditCoordinator, RepositoryAdapter repository) {
 		this.liveEditCoordinator = liveEditCoordinator;
 		this.repository = repository;
 		
@@ -151,7 +151,7 @@ public class LiveEditConnector {
 					}
 					
 					// Send a message to get the latest edits.
-					Repository repository = LiveEditConnector.this.repository;
+					RepositoryAdapter repository = LiveEditConnector.this.repository;
 					if (repository.isConnected(project)) {
 						ConnectedProject connectedProject = repository.getProject(project);
 						String hash = connectedProject.getHash(resourcePath);

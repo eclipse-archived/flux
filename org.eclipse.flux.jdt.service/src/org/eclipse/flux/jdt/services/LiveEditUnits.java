@@ -32,7 +32,7 @@ import org.eclipse.flux.core.ChannelSwitcher;
 import org.eclipse.flux.core.ILiveEditConnector;
 import org.eclipse.flux.core.IRepositoryListener;
 import org.eclipse.flux.core.LiveEditCoordinator;
-import org.eclipse.flux.core.Repository;
+import org.eclipse.flux.core.RepositoryAdapter;
 import org.eclipse.jdt.core.IBuffer;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IProblemRequestor;
@@ -53,7 +53,7 @@ public class LiveEditUnits {
 	private static int GET_LIVE_RESOURCES_CALLBACK = "LiveEditUnits - getLiveResourcesCallback".hashCode();
 
 	private ConcurrentMap<String, ICompilationUnit> liveEditUnits;
-	private Repository repository;
+	private RepositoryAdapter repository;
 	private MessageConnector messagingConnector;
 	private LiveEditCoordinator liveEditCoordinator;
 	
@@ -62,7 +62,7 @@ public class LiveEditUnits {
 	private IResourceChangeListener metadataChangeListener;
 	private IMessageHandler liveResourcesResponseHandler;
 
-	public LiveEditUnits(MessageConnector messagingConnector, LiveEditCoordinator liveEditCoordinator, Repository repository) {
+	public LiveEditUnits(MessageConnector messagingConnector, LiveEditCoordinator liveEditCoordinator, RepositoryAdapter repository) {
 		this.messagingConnector = messagingConnector;
 		this.liveEditCoordinator = liveEditCoordinator;
 		this.repository = repository;
